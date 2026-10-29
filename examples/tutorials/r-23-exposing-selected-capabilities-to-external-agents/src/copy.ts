@@ -1,0 +1,87 @@
+export type DemoLocale = "en" | "zh";
+
+const copy = {
+  en: {
+    eyebrow: "External agent surface",
+    title: "Expose a few business capabilities, not the DOM",
+    lead: "This page keeps its own assistant while a second client discovers and invokes the same selected actions through pling.surface/0.1.",
+    counter: (open: number) => `${open} open`,
+    newTask: "New task",
+    add: "Add",
+    region: "Todo list",
+    regionDescription: "The task list and its existing operations.",
+    overview: "Read the task counts and current records.",
+    addDescription: "Add one task with the supplied text.",
+    taskLabel: "Task text",
+    completed: (count: number) => `${count} completed`,
+    toggle: (text: string, done: boolean) => `Mark “${text}” as ${done ? "open" : "completed"}.`,
+    remove: (text: string) => `Delete the task “${text}”.`,
+    clear: "Clear completed",
+    clearDescription: "Delete every completed task after explicit confirmation.",
+    panelEyebrow: "Second client",
+    panelTitle: "External agent console",
+    panelLead: "It receives only the protocol description and responses. It has no access to this component's state, registry, or DOM.",
+    describe: "Describe surface",
+    addExternal: "Add through protocol",
+    tryHidden: "Try an unexposed delete",
+    requestClear: "Request clear completed",
+    response: "Last response",
+    approved: "The page operator approved the request.",
+    denied: "The page operator denied the request.",
+    approvalEyebrow: "Human decision required",
+    approvalHint: "The external client cannot approve its own destructive request.",
+    deny: "Deny",
+    allow: "Allow once",
+    externalTask: "Follow up with the external agent",
+    dockTitle: "Page assistant · external surface",
+    quick: ["What is still open?", "Add a task called Review the surface allowlist"],
+  },
+  zh: {
+    eyebrow: "外部 Agent 能力面",
+    title: "开放少量业务能力，而不是开放 DOM",
+    lead: "页面保留自己的助手；另一个客户端通过 pling.surface/0.1 发现并调用同一批选定动作。",
+    counter: (open: number) => `${open} 条未完成`,
+    newTask: "新待办",
+    add: "添加",
+    region: "待办列表",
+    regionDescription: "待办列表及现有的操作。",
+    overview: "读取待办计数和当前记录。",
+    addDescription: "用给定文本新增一条待办。",
+    taskLabel: "待办内容",
+    completed: (count: number) => `${count} 条已完成`,
+    toggle: (text: string, done: boolean) => `将“${text}”标记为${done ? "未完成" : "已完成"}。`,
+    remove: (text: string) => `删除待办“${text}”。`,
+    clear: "清除已完成",
+    clearDescription: "经过明确确认后，删除所有已完成的待办。",
+    panelEyebrow: "第二个客户端",
+    panelTitle: "外部 Agent 控制台",
+    panelLead: "它只收到协议描述和响应，无法访问这个组件的状态、注册表或 DOM。",
+    describe: "读取能力描述",
+    addExternal: "通过协议新增",
+    tryHidden: "尝试未开放的删除",
+    requestClear: "请求清除已完成",
+    response: "最近响应",
+    approved: "页面操作者已批准本次请求。",
+    denied: "页面操作者拒绝了本次请求。",
+    approvalEyebrow: "需要真人决定",
+    approvalHint: "外部客户端不能替用户批准自己的破坏性请求。",
+    deny: "拒绝",
+    allow: "允许本次",
+    externalTask: "跟进外部 Agent 的请求",
+    dockTitle: "页面助手 · 外部能力面",
+    quick: ["现在还有什么没完成？", "添加一条“检查能力面白名单”"],
+  },
+} as const;
+
+export function copyFor(locale: DemoLocale) {
+  return copy[locale];
+}
+
+export function resolveDemoLocale(): DemoLocale {
+  const value = new URLSearchParams(window.location.search).get("lang")?.toLowerCase();
+  return value === "zh" || value === "cn" || value?.startsWith("zh-") ? "zh" : "en";
+}
+
+export function plingLocale(locale: DemoLocale): "en-US" | "zh-CN" {
+  return locale === "zh" ? "zh-CN" : "en-US";
+}

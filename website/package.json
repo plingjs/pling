@@ -1,0 +1,20 @@
+{
+  "name": "@plingjs/website",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pling 文档站（VitePress）：英文为根、中文在 /zh/ 的双语教程、规范与参考",
+  "scripts": {
+    "docs:generate": "node ../scripts/generate-api-reference.mjs && node ../scripts/generate-docs-skeleton.mjs",
+    "dev": "pnpm docs:generate && vitepress dev --port 5190 --strictPort",
+    "build": "pnpm docs:generate && pnpm --filter @plingjs/examples build && node ../scripts/build-tutorial-previews.mjs && node ../scripts/check-public-build.mjs && vitepress build && node ../scripts/copy-examples.mjs",
+    "preview": "node ../scripts/serve-docs-preview.mjs"
+  },
+  "devDependencies": {
+    "shiki": "^2.5.0",
+    "vitepress": "^1.6.3"
+  },
+  "dependencies": {
+    "vue": "^3.5.13"
+  }
+}

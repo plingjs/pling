@@ -1,0 +1,49 @@
+{
+  "title": "Pling API 参考",
+  "locale": "zh",
+  "version": "0.1.0-alpha.2",
+  "since": "0.1.0-alpha.2",
+  "stability": "preview",
+  "pages": [
+    {
+      "id": "vue3",
+      "title": "Vue 3 API",
+      "route": "/zh/reference/api/vue-3",
+      "json": "/zh/api-index/vue-3.json",
+      "package": "@plingjs/vue",
+      "entries": 41
+    },
+    {
+      "id": "react",
+      "title": "React API",
+      "route": "/zh/reference/api/react",
+      "json": "/zh/api-index/react.json",
+      "package": "@plingjs/react",
+      "entries": 39
+    },
+    {
+      "id": "vue2",
+      "title": "Vue 2.7 API",
+      "route": "/zh/reference/api/vue-2",
+      "json": "/zh/api-index/vue-2.json",
+      "package": "@plingjs/vue2",
+      "entries": 25
+    },
+    {
+      "id": "vanilla",
+      "title": "原生 JS API",
+      "route": "/zh/reference/api/vanilla",
+      "json": "/zh/api-index/vanilla.json",
+      "package": "@plingjs/vanilla",
+      "entries": 27
+    },
+    {
+      "id": "shared",
+      "title": "共享包 API",
+      "route": "/zh/reference/api/shared",
+      "json": "/zh/api-index/shared.json",
+      "package": "@plingjs/core",
+      "entries": 33
+    }
+  ]
+}

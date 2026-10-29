@@ -1,0 +1,31 @@
+{
+  "name": "@plingjs/examples",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Curated, production-facing Pling examples used by the online playground",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite --config ./vite.config.ts --port 5191 --strictPort",
+    "dev:gateway": "node gateway.mjs",
+    "build": "vite build --config ./vite.config.ts",
+    "typecheck": "tsc --noEmit",
+    "surface:mcp": "node demos/external-agent-surface/mcp-server.mjs",
+    "surface:smoke": "node demos/external-agent-surface/scripts/mcp-smoke.mjs"
+  },
+  "dependencies": {
+    "@plingjs/agent": "workspace:*",
+    "@plingjs/core": "workspace:*",
+    "@plingjs/server": "workspace:*",
+    "@plingjs/surface": "workspace:*",
+    "@plingjs/vue": "workspace:*",
+    "vue": "^3",
+    "vue-router": "^4",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5",
+    "typescript": "^5",
+    "vite": "^6"
+  }
+}

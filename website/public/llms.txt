@@ -1,0 +1,227 @@
+# Pling documentation
+
+> Pling (Page Intelligence) is an open capability layer for real web applications. An agent executes explicitly declared page capabilities instead of guessing the DOM or bypassing business logic.
+
+The protocol is `pling.surface/0.1` and remains a public draft. The only methods implemented by 0.1 are `describe` and `invoke`. Business failures stay inside a successful protocol response as `result.error`; protocol failures use `ok: false`.
+
+Specification entry point: https://plingjs.dev/spec/0.1/. Full text: https://plingjs.dev/llms-full.txt.
+
+## Mission
+
+- [Why a capability layer](https://plingjs.dev/about/mission/why-a-capability-layer)
+- [What Pling is, and is not](https://plingjs.dev/about/mission/what-pling-is-and-is-not)
+- [Trust, authority, and audit](https://plingjs.dev/about/mission/trust-authority-and-audit)
+- [From single-site bridge to open protocol](https://plingjs.dev/about/mission/from-single-site-bridge-to-open-protocol)
+
+## Shared concepts
+
+- [How Pling works](https://plingjs.dev/concepts/how-pling-works)
+- [The page capability model](https://plingjs.dev/concepts/the-page-capability-model)
+- [What the agent can see](https://plingjs.dev/concepts/what-the-agent-can-see)
+- [Execution lifecycle](https://plingjs.dev/concepts/execution-lifecycle)
+- [Approval and human handoff](https://plingjs.dev/concepts/approval-and-human-handoff)
+- [Sensitive data and trust boundaries](https://plingjs.dev/concepts/sensitive-data-and-trust-boundaries)
+- [How one agent run works](https://plingjs.dev/concepts/how-one-agent-run-works)
+- [Connecting external agents](https://plingjs.dev/concepts/connecting-external-agents)
+- [Model access and trust boundaries](https://plingjs.dev/concepts/model-access-and-trust-boundaries)
+- [Diagnostics and observability](https://plingjs.dev/concepts/diagnostics-and-observability)
+- [Failure model and error codes](https://plingjs.dev/concepts/failure-model-and-error-codes)
+- [Versioning and compatibility](https://plingjs.dev/concepts/versioning-and-compatibility)
+- [Task continuity across pages and tabs](https://plingjs.dev/concepts/task-continuity-across-pages-and-tabs)
+- [Projection: Shadow DOM and iframes](https://plingjs.dev/concepts/projection-shadow-dom-and-iframes)
+
+## Operations
+
+- [Add the assistant UI](https://plingjs.dev/operations/add-the-assistant-ui)
+- [Theme, locale, and accessibility](https://plingjs.dev/operations/theme-locale-and-accessibility)
+- [Connect a model gateway](https://plingjs.dev/operations/connect-a-model-gateway)
+- [Deploy to production](https://plingjs.dev/operations/deploy-to-production)
+- [Test and debug capabilities](https://plingjs.dev/operations/test-and-debug-capabilities)
+- [Expose capabilities to external agents](https://plingjs.dev/operations/expose-capabilities-to-external-agents)
+- [Upgrade Pling safely](https://plingjs.dev/operations/upgrade-pling-safely)
+
+## Vue 3
+
+- [Vue 3 learning path](https://plingjs.dev/vue/)
+- [Installation and model configuration](https://plingjs.dev/vue/installation-and-model-configuration)
+- [Quick start: a complete Todo agent](https://plingjs.dev/vue/quick-start-add-pling-to-a-vue-app)
+- [Inspect one agent run](https://plingjs.dev/vue/inspect-one-agent-run)
+- [Actions with input and verified results](https://plingjs.dev/vue/actions-with-input-and-verified-results)
+- [Real controls and custom components](https://plingjs.dev/vue/real-controls-and-custom-components)
+- [Records, row actions, and change evidence](https://plingjs.dev/vue/records-row-actions-and-change-evidence)
+- [Function-level tools](https://plingjs.dev/vue/function-level-tools)
+- [Regions, visibility, and overlays](https://plingjs.dev/vue/regions-visibility-and-overlays)
+- [Long lists, scrolling, and offscreen actions](https://plingjs.dev/vue/long-lists-scrolling-and-offscreen-actions)
+- [State exposure](https://plingjs.dev/vue/state-exposure)
+- [Page identity and routing](https://plingjs.dev/vue/page-identity-and-routing)
+- [Assistant surfaces, layout, and task entry points](https://plingjs.dev/vue/assistant-surfaces-layout-and-task-entry-points)
+- [Page feedback, target highlighting, and human guidance](https://plingjs.dev/vue/page-feedback-target-highlighting-and-human-guidance)
+- [Confirmation and human handoff](https://plingjs.dev/vue/confirmation-and-human-handoff)
+- [Flows, async work, and recovery](https://plingjs.dev/vue/flows-async-work-and-recovery)
+- [Runtime limits, observability, and error codes](https://plingjs.dev/vue/runtime-limits-observability-and-error-codes)
+- [Sensitive data](https://plingjs.dev/vue/sensitive-data)
+- [Model gateway and authentication](https://plingjs.dev/vue/model-gateway-and-authentication)
+- [Testing, coverage, and evaluation](https://plingjs.dev/vue/testing-coverage-and-evaluation)
+- [Production release](https://plingjs.dev/vue/production-release)
+- [Migrating an existing Vue app](https://plingjs.dev/vue/migrating-an-existing-vue-app)
+- [Exposing selected capabilities to external agents](https://plingjs.dev/vue/exposing-selected-capabilities-to-external-agents)
+- [Nuxt and SSR](https://plingjs.dev/vue/nuxt-and-ssr)
+
+## React
+
+- [React learning path](https://plingjs.dev/react/)
+- [Install, provider, and mount](https://plingjs.dev/react/install-provider-and-mount)
+- [Quick start: add Pling to a React app](https://plingjs.dev/react/quick-start-add-pling-to-a-react-app)
+- [Inspect one agent run](https://plingjs.dev/react/inspect-one-agent-run)
+- [Actions with input and verified results](https://plingjs.dev/react/actions-with-input-and-verified-results)
+- [Real controls and custom components](https://plingjs.dev/react/real-controls-and-custom-components)
+- [Records, row actions, and change evidence](https://plingjs.dev/react/records-row-actions-and-change-evidence)
+- [Function-level tools](https://plingjs.dev/react/function-level-tools)
+- [Regions, visibility, and overlays](https://plingjs.dev/react/regions-visibility-and-overlays)
+- [Long lists, scrolling, and offscreen actions](https://plingjs.dev/react/long-lists-scrolling-and-offscreen-actions)
+- [State exposure](https://plingjs.dev/react/state-exposure)
+- [Page identity and routing](https://plingjs.dev/react/page-identity-and-routing)
+- [Assistant surfaces, layout, and task entry points](https://plingjs.dev/react/assistant-surfaces-layout-and-task-entry-points)
+- [Page feedback, target highlighting, and guidance](https://plingjs.dev/react/page-feedback-target-highlighting-and-guidance)
+- [Confirmation and human handoff](https://plingjs.dev/react/confirmation-and-human-handoff)
+- [Flows, async work, and recovery](https://plingjs.dev/react/flows-async-work-and-recovery)
+- [Runtime limits, observability, and error codes](https://plingjs.dev/react/runtime-limits-observability-and-error-codes)
+- [Sensitive data](https://plingjs.dev/react/sensitive-data)
+- [Model gateway and authentication](https://plingjs.dev/react/model-gateway-and-authentication)
+- [Testing, coverage, and evaluation](https://plingjs.dev/react/testing-coverage-and-evaluation)
+- [Production release](https://plingjs.dev/react/production-release)
+- [Migrating an existing React app](https://plingjs.dev/react/migrating-an-existing-react-app)
+- [Exposing selected capabilities to external agents](https://plingjs.dev/react/exposing-selected-capabilities-to-external-agents)
+- [Next.js and SSR](https://plingjs.dev/react/next-js-and-ssr)
+
+## Vanilla / jQuery
+
+- [Vanilla and jQuery overview](https://plingjs.dev/vanilla/)
+- [Script setup and first mount](https://plingjs.dev/vanilla/script-setup-and-first-mount)
+- [Quick start: add Pling to a vanilla page](https://plingjs.dev/vanilla/quick-start-add-pling-to-a-vanilla-page)
+- [Declarative actions with data attributes](https://plingjs.dev/vanilla/declarative-actions-with-data-attributes)
+- [Imperative actions for dynamic DOM](https://plingjs.dev/vanilla/imperative-actions-for-dynamic-dom)
+- [Records and tables](https://plingjs.dev/vanilla/records-and-tables)
+- [Forms, async updates, and dialogs](https://plingjs.dev/vanilla/forms-async-updates-and-dialogs)
+- [Mount the assistant UI](https://plingjs.dev/vanilla/mount-the-assistant-ui)
+- [Protect sensitive data and destructive actions](https://plingjs.dev/vanilla/protect-sensitive-data-and-destructive-actions)
+- [Connect vanilla pages to the model gateway](https://plingjs.dev/vanilla/connect-vanilla-pages-to-the-model-gateway)
+- [MPA and task continuity](https://plingjs.dev/vanilla/mpa-and-task-continuity)
+- [Test and debug vanilla capabilities](https://plingjs.dev/vanilla/test-and-debug-vanilla-capabilities)
+- [Add Pling to an existing jQuery app](https://plingjs.dev/vanilla/add-pling-to-an-existing-jquery-app)
+- [Expose selected capabilities to external agents](https://plingjs.dev/vanilla/expose-selected-capabilities-to-external-agents)
+
+## Vue 2 Legacy
+
+- [Vue 2 support statement](https://plingjs.dev/vue2/)
+- [Install and first mount](https://plingjs.dev/vue2/install-and-first-mount)
+- [Quick start](https://plingjs.dev/vue2/quick-start)
+- [Directive-based actions](https://plingjs.dev/vue2/directive-based-actions)
+- [Records and dialogs](https://plingjs.dev/vue2/records-and-dialogs)
+- [Mount the assistant UI](https://plingjs.dev/vue2/mount-the-assistant-ui)
+- [Test and deploy a Vue 2 app](https://plingjs.dev/vue2/test-and-deploy-a-vue-2-app)
+- [Migrating from Vue 2 to Vue 3](https://plingjs.dev/vue2/migrating-from-vue-2-to-vue-3)
+
+## Agent Surface
+
+- [What is Agent Surface](https://plingjs.dev/surface/)
+- [Designing safe capabilities](https://plingjs.dev/surface/designing-safe-capabilities)
+- [Context and sensitive data](https://plingjs.dev/surface/context-and-sensitive-data)
+- [Identity, consent, and delegation](https://plingjs.dev/surface/identity-consent-and-delegation)
+- [Surface basics: describe and invoke](https://plingjs.dev/surface/surface-basics-describe-and-invoke)
+- [Transports and adapters](https://plingjs.dev/surface/transports-and-adapters)
+- [Build an external agent client](https://plingjs.dev/surface/build-an-external-agent-client)
+- [Deploy a Surface gateway](https://plingjs.dev/surface/deploy-a-surface-gateway)
+- [Revoke access and audit actions](https://plingjs.dev/surface/revoke-access-and-audit-actions)
+- [Conformance and interoperability](https://plingjs.dev/surface/conformance-and-interoperability)
+- [Threat model and legal boundaries](https://plingjs.dev/surface/threat-model-and-legal-boundaries)
+- [Versioning and governance](https://plingjs.dev/surface/versioning-and-governance)
+
+## Specification
+
+- [Scope and terminology](https://plingjs.dev/spec/0.1/scope-and-terminology)
+- [Capability model](https://plingjs.dev/spec/0.1/capability-model)
+- [Context model](https://plingjs.dev/spec/0.1/context-model)
+- [Control model](https://plingjs.dev/spec/0.1/control-model)
+- [Messages and envelopes](https://plingjs.dev/spec/0.1/messages-and-envelopes)
+- [Errors and execution results](https://plingjs.dev/spec/0.1/errors-and-execution-results)
+- [Transport bindings](https://plingjs.dev/spec/0.1/transport-bindings)
+- [Security and privacy](https://plingjs.dev/spec/0.1/security-and-privacy)
+- [Conformance](https://plingjs.dev/spec/0.1/conformance)
+- [Versioning and governance](https://plingjs.dev/spec/0.1/versioning-and-governance)
+
+## Recipes
+
+- [Login, session, and protected pages](https://plingjs.dev/recipes/login-session-and-protected-pages)
+- [Table rows and batch actions](https://plingjs.dev/recipes/table-rows-and-batch-actions)
+- [Form fill, validation, and submit](https://plingjs.dev/recipes/form-fill-validation-and-submit)
+- [Multi-step modal and wizard](https://plingjs.dev/recipes/multi-step-modal-and-wizard)
+- [Dangerous actions and confirmation](https://plingjs.dev/recipes/dangerous-actions-and-confirmation)
+- [File upload and asynchronous work](https://plingjs.dev/recipes/file-upload-and-asynchronous-work)
+- [Search, filters, and long lists](https://plingjs.dev/recipes/search-filters-and-long-lists)
+- [Multi-page task continuity](https://plingjs.dev/recipes/multi-page-task-continuity)
+- [Expose three safe capabilities to an external agent](https://plingjs.dev/recipes/expose-three-safe-capabilities-to-an-external-agent)
+- [Connect an external agent through MCP](https://plingjs.dev/recipes/connect-an-external-agent-through-mcp)
+- [Delegated access with user consent](https://plingjs.dev/recipes/delegated-access-with-user-consent)
+- [Approval, audit, and revocation for agent actions](https://plingjs.dev/recipes/approval-audit-and-revocation-for-agent-actions)
+- [Use your own model key](https://plingjs.dev/recipes/use-your-own-model-key)
+- [Pass Surface conformance with another implementation](https://plingjs.dev/recipes/pass-surface-conformance-with-another-implementation)
+
+## Reference
+
+- [Core declarations: actions, records, regions, state](https://plingjs.dev/reference/core-declarations-actions-records-regions-state)
+- [Agent runtime, sessions, context, limits](https://plingjs.dev/reference/agent-runtime-sessions-context-limits)
+- [UI messages, theme, locale](https://plingjs.dev/reference/ui-messages-theme-locale)
+- [Surface protocol](https://plingjs.dev/reference/surface-protocol)
+- [Delegation and trust boundaries](https://plingjs.dev/reference/delegation-and-trust-boundaries)
+- [Node gateway](https://plingjs.dev/reference/node-gateway)
+- [Vue 3 adapter](https://plingjs.dev/reference/vue-3-adapter)
+- [React adapter](https://plingjs.dev/reference/react-adapter)
+- [Vanilla / jQuery adapter](https://plingjs.dev/reference/vanilla-jquery-adapter)
+- [Vue 2 adapter](https://plingjs.dev/reference/vue-2-adapter)
+- [Error codes and diagnostics](https://plingjs.dev/reference/error-codes-and-diagnostics)
+- [Continuity and projection](https://plingjs.dev/reference/continuity-and-projection)
+- [Surface conformance and interoperability](https://plingjs.dev/reference/surface-conformance-and-interoperability)
+- [Protocol schemas and registries](https://plingjs.dev/reference/protocol-schemas-and-registries)
+
+## Troubleshooting
+
+- [Nothing happens when the agent acts](https://plingjs.dev/troubleshooting/nothing-happens-when-the-agent-acts)
+- [Action not found](https://plingjs.dev/troubleshooting/action-not-found)
+- [Action is unavailable](https://plingjs.dev/troubleshooting/action-is-unavailable)
+- [Confirmation denied or stuck](https://plingjs.dev/troubleshooting/confirmation-denied-or-stuck)
+- [Model request fails](https://plingjs.dev/troubleshooting/model-request-fails)
+- [Records stale or duplicated](https://plingjs.dev/troubleshooting/records-stale-or-duplicated)
+- [Navigation loses the task](https://plingjs.dev/troubleshooting/navigation-loses-the-task)
+- [Sensitive value leaks or is missing](https://plingjs.dev/troubleshooting/sensitive-value-leaks-or-is-missing)
+- [Too many tokens or steps](https://plingjs.dev/troubleshooting/too-many-tokens-or-steps)
+- [SSR or hydration breaks the page](https://plingjs.dev/troubleshooting/ssr-or-hydration-breaks-the-page)
+
+## Project and trust
+
+- [Home](https://plingjs.dev/)
+- [Start here](https://plingjs.dev/start/)
+- [Live examples](https://plingjs.dev/examples/)
+- [Examples and recipes index](https://plingjs.dev/recipes/)
+- [Security and trust center](https://plingjs.dev/security/)
+- [Releases, support matrix, and upgrades](https://plingjs.dev/releases/)
+- [Governance, RFC, and community](https://plingjs.dev/governance/)
+- [License and trademark](https://plingjs.dev/license/)
+
+## API reference
+
+- [Overview](https://plingjs.dev/reference/api/)
+- [Vue 3 API](https://plingjs.dev/reference/api/vue-3)
+- [React API](https://plingjs.dev/reference/api/react)
+- [Vue 2.7 API](https://plingjs.dev/reference/api/vue-2)
+- [Vanilla JS API](https://plingjs.dev/reference/api/vanilla)
+- [Shared package API](https://plingjs.dev/reference/api/shared)
+
+### Machine-readable JSON
+
+- [API overview JSON](https://plingjs.dev/api-index.json)
+- [Vue 3 API JSON](https://plingjs.dev/api-index/vue-3.json)
+- [React API JSON](https://plingjs.dev/api-index/react.json)
+- [Vue 2.7 API JSON](https://plingjs.dev/api-index/vue-2.json)
+- [Vanilla JS API JSON](https://plingjs.dev/api-index/vanilla.json)
+- [Shared package API JSON](https://plingjs.dev/api-index/shared.json)

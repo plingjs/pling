@@ -1,0 +1,1560 @@
+{
+  "r-02": {
+    "dir": "r-02-install-provider",
+    "title": "Install, provider, and first mount",
+    "port": 5238,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-02-install-provider-and-mount.en.md",
+      "content/tutorial/R-02-install-provider-and-mount.zh.md"
+    ],
+    "docMarkers": [
+      "@plingjs/react",
+      "createPling",
+      "<PlingProvider",
+      "<AgentDock",
+      "pnpm tutorial:dev r-02",
+      "examples/tutorials/r-02-install-provider"
+    ]
+  },
+  "r-03": {
+    "dir": "r-03-quickstart",
+    "title": "Quick start: a complete Todo agent in React",
+    "port": 5239,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-03-quick-start-add-pling-to-a-react-app.en.md",
+      "content/tutorial/R-03-quick-start-add-pling-to-a-react-app.zh.md"
+    ],
+    "docMarkers": [
+      "@plingjs/react",
+      "usePlingScope",
+      "usePlingRecord",
+      "usePlingTool",
+      "id: \"composer_text\"",
+      "id: `toggle@${task.id}`",
+      "<AgentDock",
+      "pnpm tutorial:dev r-03"
+    ]
+  },
+  "r-04": {
+    "dir": "r-04-inspect-one-agent-run",
+    "title": "Inspect one React agent run",
+    "port": 5244,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-04-inspect-one-agent-run.en.md",
+      "content/tutorial/R-04-inspect-one-agent-run.zh.md"
+    ],
+    "docMarkers": [
+      "debug={{ maxCalls: 8 }}",
+      "pnpm tutorial:dev r-04",
+      "examples/tutorials/r-04-inspect-one-agent-run",
+    { "anyOf": ["Request messages", "请求消息"] }
+    ]
+  },
+  "r-05": {
+    "dir": "r-05-actions-with-input-and-verified-results",
+    "title": "Actions with input and verified results",
+    "port": 5245,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-05-actions-with-input-and-verified-results.en.md",
+      "content/tutorial/R-05-actions-with-input-and-verified-results.zh.md"
+    ],
+    "docMarkers": [
+      "usePlingTool",
+      "id: \"add_task\"",
+      "params: [{",
+      "available: ()",
+      "run: (args: Record<string, unknown>)",
+      "expect: {",
+      "pnpm tutorial:dev r-05",
+      "examples/tutorials/r-05-actions-with-input-and-verified-results"
+    ]
+  },
+  "r-06": {
+    "dir": "r-06-real-controls-and-custom-components",
+    "title": "Real controls and custom components",
+    "port": 5246,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-06-real-controls-and-custom-components.en.md",
+      "content/tutorial/R-06-real-controls-and-custom-components.zh.md"
+    ],
+    "docMarkers": [
+      "usePlingTool",
+      "id: \"search_text\"",
+      "target: 'button[data-filter=\"active\"]'",
+      { "anyOf": ["fidelity: \"high\"", "claims `high` fidelity"] },
+      "pnpm tutorial:dev r-06",
+      "examples/tutorials/r-06-real-controls-and-custom-components"
+    ]
+  },
+  "r-07": {
+    "dir": "r-07-records-row-actions-and-change-evidence",
+    "title": "Records, row actions, and change evidence",
+    "port": 5247,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-07-records-row-actions-and-change-evidence.en.md",
+      "content/tutorial/R-07-records-row-actions-and-change-evidence.zh.md"
+    ],
+    "docMarkers": [
+      "usePlingRecord",
+      "id: `remove@${task.id}`",
+      "changed",
+      "buildProtocol",
+      "pnpm tutorial:dev r-07",
+      "examples/tutorials/r-07-records-row-actions-and-change-evidence"
+    ]
+  },
+  "r-08": {
+    "dir": "r-08-function-level-tools",
+    "title": "Function-level tools",
+    "port": 5248,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-08-function-level-tools.en.md",
+      "content/tutorial/R-08-function-level-tools.zh.md"
+    ],
+    "docMarkers": [
+      "useAgentTool",
+      "id: \"complete_open_tasks\"",
+      "available: () =>",
+      "expect: {",
+      "\"data\": { \"completed\": 2 }",
+      "\"observed\": true",
+      "pnpm tutorial:dev r-08",
+      "examples/tutorials/r-08-function-level-tools"
+    ]
+  },
+  "r-09": {
+    "dir": "r-09-regions-visibility-and-overlays",
+    "title": "Regions, visibility, and overlays",
+    "port": 5249,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-09-regions-visibility-and-overlays.en.md",
+      "content/tutorial/R-09-regions-visibility-and-overlays.zh.md"
+    ],
+    "docMarkers": [
+      "usePlingScope",
+      "parent: \"todo\"",
+      "scope: \"edit_dialog\"",
+      "inert",
+      "## Actions that exist but are unavailable right now",
+      "pnpm tutorial:dev r-09",
+      "examples/tutorials/r-09-regions-visibility-and-overlays"
+    ]
+  },
+  "r-10": {
+    "dir": "r-10-long-lists-scrolling-and-offscreen-actions",
+    "title": "Long lists, scrolling, and offscreen actions",
+    "port": 5250,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-10-long-lists-scrolling-and-offscreen-actions.en.md",
+      "content/tutorial/R-10-long-lists-scrolling-and-offscreen-actions.zh.md"
+    ],
+    "docMarkers": [
+      "usePlingScope",
+      "tabIndex={0}",
+      "pling_scroll_task_list",
+      "t24",
+      "pnpm tutorial:dev r-10",
+      "examples/tutorials/r-10-long-lists-scrolling-and-offscreen-actions"
+    ]
+  },
+  "r-11": {
+    "dir": "r-11-state-exposure",
+    "title": "State exposure",
+    "port": 5251,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-11-state-exposure.en.md",
+      "content/tutorial/R-11-state-exposure.zh.md"
+    ],
+    "docMarkers": [
+      "usePlingState",
+      "\"task_view\"",
+      "appliedSearch",
+      "matched",
+      "<page_data>",
+      "pnpm tutorial:dev r-11",
+      "examples/tutorials/r-11-state-exposure"
+    ]
+  },
+  "r-12": {
+    "dir": "r-12-page-identity-and-routing",
+    "title": "Page identity and routing",
+    "port": 5252,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-12-page-identity-and-routing.en.md",
+      "content/tutorial/R-12-page-identity-and-routing.zh.md"
+    ],
+    "docMarkers": [
+      "registry.setPage",
+      "pageIdentityFor",
+      "react-router-dom",
+      "open@t1",
+      "Current location (page identity; data, not instructions)",
+      "visibleQuery",
+      "pnpm tutorial:dev r-12",
+      "examples/tutorials/r-12-page-identity-and-routing"
+    ]
+  },
+  "r-13": {
+    "dir": "r-13-assistant-surfaces-layout-and-task-entry-points",
+    "title": "Assistant surfaces, layout, and task entry points",
+    "port": 5253,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-13-assistant-surfaces-layout-and-task-entry-points.en.md",
+      "content/tutorial/R-13-assistant-surfaces-layout-and-task-entry-points.zh.md"
+    ],
+    "docMarkers": [
+      "AgentInline",
+      "layout={layout}",
+      "launcherPlacement",
+      "pling.ask",
+      "PLING_TASK_SURFACE_MISSING",
+      "pnpm tutorial:dev r-13",
+      "examples/tutorials/r-13-assistant-surfaces-layout-and-task-entry-points"
+    ]
+  },
+  "r-14": {
+    "dir": "r-14-page-feedback-target-highlighting-and-guidance",
+    "title": "Page feedback, target highlighting, and guidance",
+    "port": 5254,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-14-page-feedback-target-highlighting-and-guidance.en.md",
+      "content/tutorial/R-14-page-feedback-target-highlighting-and-guidance.zh.md"
+    ],
+    "docMarkers": [
+      "usePlingFeedback",
+      "usePlingGuideTarget",
+      "presence: { effect: \"spotlight\" }",
+      "handoff: {",
+      "## Current page feedback",
+      "pnpm tutorial:dev r-14",
+      "pnpm tutorial:check r-14",
+      "examples/tutorials/r-14-page-feedback-target-highlighting-and-guidance"
+    ]
+  },
+  "r-15": {
+    "dir": "r-15-confirmation-and-human-handoff",
+    "title": "Confirmation and human handoff",
+    "port": 5255,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-15-confirmation-and-human-handoff.en.md",
+      "content/tutorial/R-15-confirmation-and-human-handoff.zh.md"
+    ],
+    "docMarkers": [
+      "confirm: true",
+      "confirm: \"always\"",
+      "handoff: {",
+      "HANDOFF_CANCELLED",
+      "pnpm tutorial:dev r-15",
+      "pnpm tutorial:check r-15",
+      "examples/tutorials/r-15-confirmation-and-human-handoff"
+    ]
+  },
+  "r-16": {
+    "dir": "r-16-flows-async-work-and-recovery",
+    "title": "Flows, async work, and recovery",
+    "port": 5256,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-16-flows-async-work-and-recovery.en.md",
+      "content/tutorial/R-16-flows-async-work-and-recovery.zh.md"
+    ],
+    "docMarkers": [
+      "steps: [",
+      "pling_resume_flow",
+      "STEP_FAILED",
+      "pnpm tutorial:dev r-16",
+      "pnpm tutorial:check r-16",
+      "examples/tutorials/r-16-flows-async-work-and-recovery"
+    ]
+  },
+  "r-17": {
+    "dir": "r-17-runtime-limits-observability-and-error-codes",
+    "title": "Runtime limits, observability, and error codes",
+    "port": 5257,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-17-runtime-limits-observability-and-error-codes.en.md",
+      "content/tutorial/R-17-runtime-limits-observability-and-error-codes.zh.md"
+    ],
+    "docMarkers": [
+      "contextTokens",
+      "turnsUsed",
+      "Telemetry",
+      "STEP_FAILED",
+      "pnpm tutorial:dev r-17",
+      "pnpm tutorial:check r-17",
+      "examples/tutorials/r-17-runtime-limits-observability-and-error-codes"
+    ]
+  },
+  "r-18": {
+    "dir": "r-18-sensitive-data",
+    "title": "Sensitive data",
+    "port": 5258,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-18-sensitive-data.en.md",
+      "content/tutorial/R-18-sensitive-data.zh.md"
+    ],
+    "docMarkers": [
+      "sensitive(order.phone",
+      "sensitive(order.idCard",
+      "unknown sensitive-value tokens",
+      "pnpm tutorial:dev r-18",
+      "pnpm tutorial:check r-18",
+      "examples/tutorials/r-18-sensitive-data"
+    ]
+  },
+  "r-19": {
+    "dir": "r-19-model-gateway-and-authentication",
+    "title": "Model gateway and authentication",
+    "port": 5259,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/server",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-19-model-gateway-and-authentication.en.md",
+      "content/tutorial/R-19-model-gateway-and-authentication.zh.md"
+    ],
+    "docMarkers": [
+      "baseUrl: '/api/llm/v1'",
+      "HttpOnly",
+      "x-pling-request-id",
+      "pnpm tutorial:dev r-19",
+      "pnpm tutorial:check r-19",
+      "examples/tutorials/r-19-model-gateway-and-authentication"
+    ]
+  },
+  "r-20": {
+    "dir": "r-20-testing-coverage-and-evaluation",
+    "title": "Testing, coverage, and evaluation",
+    "port": 5260,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-20-testing-coverage-and-evaluation.en.md",
+      "content/tutorial/R-20-testing-coverage-and-evaluation.zh.md"
+    ],
+    "docMarkers": [
+      "inspectCoverage(document.querySelector(\"main\"))",
+      "createReplayLlm",
+      "runEvaluation",
+      "flushSync",
+      "pnpm tutorial:dev r-20",
+      "pnpm tutorial:check r-20",
+      "examples/tutorials/r-20-testing-coverage-and-evaluation"
+    ]
+  },
+  "r-21": {
+    "dir": "r-21-production-release",
+    "title": "Production release",
+    "port": 5261,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-21-production-release.en.md",
+      "content/tutorial/R-21-production-release.zh.md"
+    ],
+    "docMarkers": [
+      "evaluateRelease",
+      "data-pling-ignore",
+      "release_status",
+      "pnpm tutorial:dev r-21",
+      "pnpm tutorial:check r-21",
+      "examples/tutorials/r-21-production-release"
+    ]
+  },
+  "r-22": {
+    "dir": "r-22-migrating-an-existing-react-app",
+    "title": "Migrating an existing React app",
+    "port": 5262,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-22-migrating-an-existing-react-app.en.md",
+      "content/tutorial/R-22-migrating-an-existing-react-app.zh.md"
+    ],
+    "docMarkers": [
+      "PlingProvider",
+      "usePlingTool<HTMLFormElement>",
+      "usePlingState",
+      "data-pling-ignore",
+      "pnpm tutorial:dev r-22",
+      "pnpm tutorial:check r-22",
+      "examples/tutorials/r-22-migrating-an-existing-react-app"
+    ]
+  },
+  "r-23": {
+    "dir": "r-23-exposing-selected-capabilities-to-external-agents",
+    "title": "Exposing selected capabilities to external agents",
+    "port": 5263,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/surface",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-23-exposing-selected-capabilities-to-external-agents.en.md",
+      "content/tutorial/R-23-exposing-selected-capabilities-to-external-agents.zh.md"
+    ],
+    "docMarkers": [
+      "createTodoSurface",
+      "CAPABILITY_NOT_EXPOSED",
+      "todo.clear_completed",
+      "pnpm tutorial:dev r-23",
+      "pnpm tutorial:check r-23",
+      "examples/tutorials/r-23-exposing-selected-capabilities-to-external-agents"
+    ]
+  },
+  "r-24": {
+    "dir": "r-24-next-js-and-ssr",
+    "title": "Next.js and SSR",
+    "port": 5264,
+    "devCommand": ["node", "server.mjs"],
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/react"
+    ],
+    "docs": [
+      "content/tutorial/R-24-next-js-and-ssr.en.md",
+      "content/tutorial/R-24-next-js-and-ssr.zh.md"
+    ],
+    "docMarkers": [
+      "renderToString",
+      "hydrateRoot",
+      "createPling",
+      "PlingProvider",
+      "useAgentTool",
+      "usePlingState",
+      "pnpm tutorial:check r-24"
+    ]
+  },
+  "j-02": {
+    "dir": "j-02-script-setup",
+    "title": "Script setup and first mount",
+    "port": 5240,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-02-script-setup-and-first-mount.en.md",
+      "content/tutorial/J-02-script-setup-and-first-mount.zh.md"
+    ],
+    "docMarkers": [
+      "createPling()",
+      "pling.dock(",
+      "VITE_AGENT_BASE_URL",
+      "pnpm tutorial:dev j-02"
+    ]
+  },
+  "j-03": {
+    "dir": "j-03-quickstart",
+    "title": "Quick start: a complete Todo agent on a vanilla page",
+    "port": 5241,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-03-quick-start-add-pling-to-a-vanilla-page.en.md",
+      "content/tutorial/J-03-quick-start-add-pling-to-a-vanilla-page.zh.md"
+    ],
+    "docMarkers": [
+      "pling.scope(",
+      "pling.record(",
+      "composer_text",
+      "toggle@${task.id}",
+      "pnpm tutorial:dev j-03"
+    ]
+  },
+  "j-04": {
+    "dir": "j-04-data-attributes",
+    "title": "Declarative actions with data attributes",
+    "port": 5269,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-04-declarative-actions-with-data-attributes.en.md",
+      "content/tutorial/J-04-declarative-actions-with-data-attributes.zh.md"
+    ],
+    "docMarkers": [
+      "data-agent-tool",
+      "pling.tool(",
+      "pling.record(",
+      "pnpm tutorial:dev j-04"
+    ]
+  },
+  "j-05": {
+    "dir": "j-05-dynamic-dom",
+    "title": "Imperative actions for dynamic DOM",
+    "port": 5270,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-05-imperative-actions-for-dynamic-dom.en.md",
+      "content/tutorial/J-05-imperative-actions-for-dynamic-dom.zh.md"
+    ],
+    "docMarkers": [
+      "rows.set(task.id",
+      "remove@${task.id}",
+      "entry.cleanups.reverse()",
+      "pnpm tutorial:dev j-05"
+    ]
+  },
+  "j-06": {
+    "dir": "j-06-records-and-tables",
+    "title": "Records and tables",
+    "port": 5271,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-06-records-and-tables.en.md",
+      "content/tutorial/J-06-records-and-tables.zh.md"
+    ],
+    "docMarkers": [
+      "<table class=\"tasks\">",
+      "pling.record(row",
+      "toggle@${task.id}",
+      "pnpm tutorial:dev j-06"
+    ]
+  },
+  "j-07": {
+    "dir": "j-07-forms-async-dialogs",
+    "title": "Forms, async updates, and dialogs",
+    "port": 5272,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-07-forms-async-updates-and-dialogs.en.md",
+      "content/tutorial/J-07-forms-async-updates-and-dialogs.zh.md"
+    ],
+    "docMarkers": [
+      "edit_dialog",
+      "edit_save",
+      "expect: {",
+      "pnpm tutorial:dev j-07"
+    ]
+  },
+  "j-08": {
+    "dir": "j-08-assistant-ui",
+    "title": "Mounting the assistant UI",
+    "port": 5273,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-08-mount-the-assistant-ui.en.md",
+      "content/tutorial/J-08-mount-the-assistant-ui.zh.md"
+    ],
+    "docMarkers": [
+      "pling.dock(",
+      "onOpenChange",
+      "pnpm tutorial:dev j-08"
+    ]
+  },
+  "j-09": {
+    "dir": "j-09-sensitive-data",
+    "title": "Sensitive data and destructive actions",
+    "port": 5274,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-09-protect-sensitive-data-and-destructive-actions.en.md",
+      "content/tutorial/J-09-protect-sensitive-data-and-destructive-actions.zh.md"
+    ],
+    "docMarkers": [
+      "sensitive(task.phone, \"token\")",
+      "confirm: \"always\"",
+      "pnpm tutorial:dev j-09"
+    ]
+  },
+  "j-10": {
+    "dir": "j-10-model-gateway",
+    "title": "Connecting vanilla pages to the model gateway",
+    "port": 5275,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/server",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-10-connect-vanilla-pages-to-the-model-gateway.en.md",
+      "content/tutorial/J-10-connect-vanilla-pages-to-the-model-gateway.zh.md"
+    ],
+    "docMarkers": [
+      "baseUrl: \"/api/llm/v1\"",
+      "createPlingGateway",
+      "pnpm tutorial:dev j-10"
+    ]
+  },
+  "j-11": {
+    "dir": "j-11-mpa-continuity",
+    "title": "MPA and task continuity",
+    "port": 5276,
+    "distIndex": "dist/demo/index.html",
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-11-mpa-and-task-continuity.en.md",
+      "content/tutorial/J-11-mpa-and-task-continuity.zh.md"
+    ],
+    "docMarkers": [
+      "resume: \"auto\"",
+      "returnOnDone",
+      "pnpm tutorial:dev j-11"
+    ]
+  },
+  "j-12": {
+    "dir": "j-12-testing-and-debugging",
+    "title": "Test and debug vanilla capabilities",
+    "port": 5277,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-12-test-and-debug-vanilla-capabilities.en.md",
+      "content/tutorial/J-12-test-and-debug-vanilla-capabilities.zh.md"
+    ],
+    "docMarkers": [
+      "trace: { maxCalls: 8 }",
+      "createReplayLlm",
+      "pnpm tutorial:dev j-12"
+    ]
+  },
+  "j-13": {
+    "dir": "j-13-existing-jquery-app",
+    "title": "Add Pling to an existing jQuery app",
+    "port": 5278,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-13-add-pling-to-an-existing-jquery-app.en.md",
+      "content/tutorial/J-13-add-pling-to-an-existing-jquery-app.zh.md"
+    ],
+    "docMarkers": [
+      "pling.tool(input[0]",
+      "jQuery",
+      "pnpm tutorial:dev j-13"
+    ]
+  },
+  "j-14": {
+    "dir": "j-14-external-agents",
+    "title": "Expose selected capabilities to external agents",
+    "port": 5279,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/surface",
+      "@plingjs/vanilla"
+    ],
+    "docs": [
+      "content/tutorial/J-14-expose-selected-capabilities-to-external-agents.en.md",
+      "content/tutorial/J-14-expose-selected-capabilities-to-external-agents.zh.md"
+    ],
+    "docMarkers": [
+      "EXTERNAL_SCOPE",
+      "CAPABILITY_NOT_EXPOSED",
+      "pnpm tutorial:dev j-14"
+    ]
+  },
+  "v2-02": {
+    "dir": "v2-02-install-mount",
+    "title": "Vue 2.7 installation and first mount",
+    "port": 5242,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla",
+      "@plingjs/vue2"
+    ],
+    "docs": [
+      "content/tutorial/V2-02-install-and-first-mount.en.md",
+      "content/tutorial/V2-02-install-and-first-mount.zh.md"
+    ],
+    "docMarkers": [
+      "Vue.use(pling.plugin)",
+      "pling.dock(",
+      "maxTurns: 100",
+      "pnpm tutorial:dev v2-02"
+    ]
+  },
+  "v2-03": {
+    "dir": "v2-03-quickstart",
+    "title": "Quick start: a complete Todo agent in Vue 2.7",
+    "port": 5243,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla",
+      "@plingjs/vue2"
+    ],
+    "docs": [
+      "content/tutorial/V2-03-quick-start-a-complete-todo-agent.en.md",
+      "content/tutorial/V2-03-quick-start-a-complete-todo-agent.zh.md"
+    ],
+    "docMarkers": [
+      "v-scope",
+      "v-record",
+      "composer_text",
+      "toggle@${task.id}",
+      "pnpm tutorial:dev v2-03"
+    ]
+  },
+  "v2-04": {
+    "dir": "v2-04-directive-actions",
+    "title": "Directive-based actions in Vue 2.7",
+    "port": 5265,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla",
+      "@plingjs/vue2"
+    ],
+    "docs": [
+      "content/tutorial/V2-04-directive-based-actions.en.md",
+      "content/tutorial/V2-04-directive-based-actions.zh.md"
+    ],
+    "docMarkers": [
+      "Vue.use(pling.plugin)",
+      "v-tool",
+      "v-scope",
+      "v-record",
+      "kind: \"danger\"",
+      "pnpm tutorial:dev v2-04"
+    ]
+  },
+  "v2-05": {
+    "dir": "v2-05-records-and-dialogs",
+    "title": "Records and dialogs in Vue 2.7",
+    "port": 5266,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla",
+      "@plingjs/vue2"
+    ],
+    "docs": [
+      "content/tutorial/V2-05-records-and-dialogs.en.md",
+      "content/tutorial/V2-05-records-and-dialogs.zh.md"
+    ],
+    "docMarkers": [
+      "v-record",
+      "edit_dialog",
+      "edit_save",
+      "role=\"dialog\"",
+      "pnpm tutorial:dev v2-05"
+    ]
+  },
+  "v2-06": {
+    "dir": "v2-06-assistant-dock",
+    "title": "Mounting the assistant dock in Vue 2.7",
+    "port": 5267,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla",
+      "@plingjs/vue2"
+    ],
+    "docs": [
+      "content/tutorial/V2-06-mount-the-assistant-ui.en.md",
+      "content/tutorial/V2-06-mount-the-assistant-ui.zh.md"
+    ],
+    "docMarkers": [
+      "pling.dock(",
+      "defaultOpen",
+      "onOpenChange",
+      "dock.destroy()",
+      "pnpm tutorial:dev v2-06"
+    ]
+  },
+  "v2-07": {
+    "dir": "v2-07-test-and-deploy",
+    "title": "Testing and deploying a Vue 2.7 app",
+    "port": 5268,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vanilla",
+      "@plingjs/vue2"
+    ],
+    "docs": [
+      "content/tutorial/V2-07-test-and-deploy-a-vue-2-app.en.md",
+      "content/tutorial/V2-07-test-and-deploy-a-vue-2-app.zh.md"
+    ],
+    "docMarkers": [
+      "createReplayLlm([])",
+      "createExecutor(",
+      "base: \"./\"",
+      "pnpm tutorial:check v2-07"
+    ]
+  },
+  "v3-02": {
+    "dir": "v3-02-install-first-render",
+    "title": "Installation and model configuration",
+    "port": 5199,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-02-install-model-configuration-and-first-render.en.md",
+      "content/tutorial/V3-02-install-model-configuration-and-first-render.zh.md"
+    ],
+    "docMarkers": [
+      "@plingjs/vue",
+      "createPling",
+      "<AgentDock",
+      "pnpm tutorial:dev v3-02",
+      "git clone https://github.com/plingjs/pling.git",
+      "examples/tutorials/v3-02-install-first-render"
+    ]
+  },
+  "v3-03": {
+    "dir": "v3-03-quickstart",
+    "title": "Quick start: a complete Todo agent",
+    "port": 5196,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-03-quick-start-add-pling-to-a-vue-app.en.md",
+      "content/tutorial/V3-03-quick-start-add-pling-to-a-vue-app.zh.md"
+    ],
+    "docMarkers": [
+      "@plingjs/vue",
+      "v-scope=\"",
+      "v-record=\"",
+      "id: 'composer_text'",
+      "id: 'composer_submit'",
+      "id: `toggle@${task.id}`",
+      "<AgentDock"
+    ]
+  },
+  "v3-04": {
+    "dir": "v3-04-declared-action",
+    "title": "Inspect one agent run",
+    "port": 5197,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-04-your-first-declared-action.en.md",
+      "content/tutorial/V3-04-your-first-declared-action.zh.md"
+    ],
+    "docMarkers": [
+      ":debug=\"{ maxCalls: 8 }\"",
+      "## Page structure (regions)",
+      "## Available actions on this page",
+      "## Records on this page"
+    ]
+  },
+  "v3-05": {
+    "dir": "v3-05-actions-with-input",
+    "title": "Actions with input and verified results",
+    "port": 5198,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-05-actions-with-input-and-verified-results.en.md",
+      "content/tutorial/V3-05-actions-with-input-and-verified-results.zh.md"
+    ],
+    "docMarkers": [
+      "@plingjs/vue",
+      "v-scope=\"",
+      "v-record=\"",
+      "id: \"add_task\"",
+      "id: `toggle@${task.id}`",
+      "params: [",
+      "expect: {",
+      "\"changed\": {",
+      "<AgentDock"
+    ]
+  },
+  "v3-06": {
+    "dir": "v3-06-real-controls-and-custom-components",
+    "title": "Real controls and custom components",
+    "port": 5216,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-06-real-controls-and-custom-components.en.md",
+      "content/tutorial/V3-06-real-controls-and-custom-components.zh.md"
+    ],
+    "docMarkers": [
+      "id: 'select_priority'",
+      "id: 'search_enter'",
+      "target: 'button[data-filter=\"all\"]'",
+      "autoTarget: false"
+    ]
+  },
+  "v3-07": {
+    "dir": "v3-07-records-row-actions-and-change-evidence",
+    "title": "Records, row actions, and change evidence",
+    "port": 5217,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-07-records-row-actions-and-change-evidence.en.md",
+      "content/tutorial/V3-07-records-row-actions-and-change-evidence.zh.md"
+    ],
+    "docMarkers": [
+      "v-record=\"{",
+      "id: `toggle@${task.id}`",
+      "id: `remove@${task.id}`",
+      "\"changed\": {"
+    ]
+  },
+  "v3-08": {
+    "dir": "v3-08-function-level-tools",
+    "title": "Function-level tools",
+    "port": 5218,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-08-function-level-tools.en.md",
+      "content/tutorial/V3-08-function-level-tools.zh.md"
+    ],
+    "docMarkers": [
+      "useAgentTool",
+      "id: \"complete_open_tasks\"",
+      "available: () =>",
+      "expect: {",
+      "\"data\": { \"completed\": 2 }",
+      "\"observed\": true"
+    ]
+  },
+  "v3-09": {
+    "dir": "v3-09-regions-visibility-and-overlays",
+    "title": "Regions, visibility, and overlays",
+    "port": 5222,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-09-regions-visibility-and-overlays.en.md",
+      "content/tutorial/V3-09-regions-visibility-and-overlays.zh.md"
+    ],
+    "docMarkers": [
+      "role: 'form'",
+      "parent: 'todo'",
+      "inert",
+      "edit_note",
+      "edit_save",
+      "## Actions that exist but are unavailable right now"
+    ]
+  },
+  "v3-10": {
+    "dir": "v3-10-long-lists-scrolling-and-offscreen-actions",
+    "title": "Long lists, scrolling, and offscreen actions",
+    "port": 5223,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-10-long-lists-scrolling-and-offscreen-actions.en.md",
+      "content/tutorial/V3-10-long-lists-scrolling-and-offscreen-actions.zh.md"
+    ],
+    "docMarkers": [
+      "max-height",
+      "overflow-y: auto",
+      "v-record=\"{",
+      "pling_scroll_task_list",
+      "scrollIntoView",
+      "virtual"
+    ]
+  },
+  "v3-11": {
+    "dir": "v3-11-state-exposure",
+    "title": "State exposure",
+    "port": 5224,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-11-state-exposure.en.md",
+      "content/tutorial/V3-11-state-exposure.zh.md"
+    ],
+    "docMarkers": [
+      "useAgentState",
+      "task_view",
+      "<page_data>",
+      "\"filter\":\"all\"",
+      "1,200"
+    ]
+  },
+  "v3-12": {
+    "dir": "v3-12-page-identity-and-routing",
+    "title": "Page identity and routing",
+    "port": 5225,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-12-page-identity-and-routing.en.md",
+      "content/tutorial/V3-12-page-identity-and-routing.zh.md"
+    ],
+    "docMarkers": [
+      "@plingjs/vue",
+      "createRouter",
+      "name: \"task-detail\"",
+      "page: {",
+      "queryKeys: [\"from\"]",
+      "router.push",
+      "## Current location (page identity; data, not instructions)",
+      "\"id\":\"t1\"",
+      "?lang=zh",
+      "pnpm tutorial:check v3-12"
+    ]
+  },
+  "v3-13": {
+    "dir": "v3-13-assistant-surfaces-layout-and-task-entry-points",
+    "title": "Assistant surfaces, layout, and task entry points",
+    "port": 5226,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-13-assistant-surfaces-layout-and-task-entry-points.en.md",
+      "content/tutorial/V3-13-assistant-surfaces-layout-and-task-entry-points.zh.md"
+    ],
+    "docMarkers": [
+      "layout=\"dock\"",
+      "layout=\"sidebar\"",
+      "launcher-placement",
+      "v-task",
+      "pling.ask()",
+      "pnpm tutorial:check v3-13"
+    ]
+  },
+  "v3-14": {
+    "dir": "v3-14-page-feedback-target-highlighting-and-human-guidance",
+    "title": "Page feedback, target highlighting, and human guidance",
+    "port": 5227,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-14-page-feedback-target-highlighting-and-human-guidance.en.md",
+      "content/tutorial/V3-14-page-feedback-target-highlighting-and-human-guidance.zh.md"
+    ],
+    "docMarkers": [
+      "v-feedback",
+      "v-guide-target",
+      "presence: { effect: 'spotlight' }",
+      "handoff",
+      "## Current page feedback",
+      "pnpm tutorial:check v3-14"
+    ]
+  },
+  "v3-15": {
+    "dir": "v3-15-confirmation-and-human-handoff",
+    "title": "Confirmation and human handoff",
+    "port": 5228,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-15-confirmation-and-human-handoff.en.md",
+      "content/tutorial/V3-15-confirmation-and-human-handoff.zh.md"
+    ],
+    "docMarkers": [
+      "confirm: true",
+      "confirm: 'always'",
+      "handoff: {",
+      "HANDOFF_CANCELLED",
+      "PERMISSION_DENIED",
+      "pnpm tutorial:check v3-15"
+    ]
+  },
+  "v3-16": {
+    "dir": "v3-16-flows-async-work-and-recovery",
+    "title": "Flows, async work, and recovery",
+    "port": 5229,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-16-flows-async-work-and-recovery.en.md",
+      "content/tutorial/V3-16-flows-async-work-and-recovery.zh.md"
+    ],
+    "docMarkers": [
+      "steps: [",
+      "pling_resume_flow",
+      "STEP_FAILED",
+      "expect: {",
+      "pnpm tutorial:check v3-16"
+    ]
+  },
+  "v3-17": {
+    "dir": "v3-17-runtime-limits-observability-and-error-codes",
+    "title": "Runtime limits, observability, and error codes",
+    "port": 5230,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-17-runtime-limits-observability-and-error-codes.en.md",
+      "content/tutorial/V3-17-runtime-limits-observability-and-error-codes.zh.md"
+    ],
+    "docMarkers": [
+      "maxTurns",
+      "contextTokens",
+      "maxCalls",
+      "turnsUsed",
+      "STEP_FAILED",
+      "pnpm tutorial:check v3-17"
+    ]
+  },
+  "v3-18": {
+    "dir": "v3-18-sensitive-data",
+    "title": "Sensitive data",
+    "port": 5231,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-18-sensitive-data.en.md",
+      "content/tutorial/V3-18-sensitive-data.zh.md"
+    ],
+    "docMarkers": [
+      "sensitive(",
+      "'token'",
+      "'masked'",
+      "'hidden'",
+      "unknown sensitive-value tokens",
+      "pnpm tutorial:check v3-18"
+    ]
+  },
+  "v3-19": {
+    "dir": "v3-19-model-gateway-and-authentication",
+    "title": "Model gateway and authentication",
+    "port": 5232,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/server",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-19-model-gateway-and-authentication.en.md",
+      "content/tutorial/V3-19-model-gateway-and-authentication.zh.md"
+    ],
+    "docMarkers": [
+      "baseUrl: '/api/llm/v1'",
+      "apiKey: ''",
+      "authorize: auth.authorize",
+      "allowAnonymous: false",
+      "allowedModels",
+      "onAudit",
+      "pnpm tutorial:check v3-19"
+    ]
+  },
+  "v3-20": {
+    "dir": "v3-20-testing-coverage-and-evaluation",
+    "title": "Testing, coverage, and evaluation",
+    "port": 5233,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-20-testing-coverage-and-evaluation.en.md",
+      "content/tutorial/V3-20-testing-coverage-and-evaluation.zh.md"
+    ],
+    "docMarkers": [
+      "createReplayLlm",
+      "runEvaluation",
+      "inspectCoverage()",
+      "expectNotTools",
+      "maxToolErrors: 0",
+      "verify",
+      "pnpm tutorial:check v3-20"
+    ]
+  },
+  "v3-21": {
+    "dir": "v3-21-production-release",
+    "title": "Production release",
+    "port": 5234,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-21-production-release.en.md",
+      "content/tutorial/V3-21-production-release.zh.md"
+    ],
+    "docMarkers": [
+      "evaluateRelease",
+      "browserApiKey",
+      "modelPolicy",
+      "maxTurns",
+      "telemetry",
+      "allowedOrigins",
+      "killSwitchUrl",
+      "pnpm tutorial:check v3-21"
+    ]
+  },
+  "v3-22": {
+    "dir": "v3-22-migrating-an-existing-vue-app",
+    "title": "Migrating an existing Vue app",
+    "port": 5235,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-22-migrating-an-existing-vue-app.en.md",
+      "content/tutorial/V3-22-migrating-an-existing-vue-app.zh.md"
+    ],
+    "docMarkers": [
+      "createPling()",
+      "pling.plugin",
+      "v-scope",
+      "v-record",
+      "useAgentState(",
+      "data-pling-ignore",
+      "pnpm tutorial:check v3-22"
+    ]
+  },
+  "v3-23": {
+    "dir": "v3-23-exposing-selected-capabilities-to-external-agents",
+    "title": "Exposing selected capabilities to external agents",
+    "port": 5236,
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/surface",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-23-exposing-selected-capabilities-to-external-agents.en.md",
+      "content/tutorial/V3-23-exposing-selected-capabilities-to-external-agents.zh.md"
+    ],
+    "docMarkers": [
+      "EXTERNAL_SCOPE",
+      "createSurface(",
+      "SURFACE_PROTOCOL",
+      "CAPABILITY_NOT_EXPOSED",
+      "PERMISSION_DENIED",
+      "pnpm tutorial:check v3-23"
+    ]
+  },
+  "v3-24": {
+    "dir": "v3-24-nuxt-and-ssr",
+    "title": "Nuxt and SSR",
+    "port": 5237,
+    "devCommand": ["node", "server.mjs"],
+    "packages": [
+      "@plingjs/core",
+      "@plingjs/ui",
+      "@plingjs/dom",
+      "@plingjs/agent",
+      "@plingjs/vue"
+    ],
+    "docs": [
+      "content/tutorial/V3-24-nuxt-and-ssr.en.md",
+      "content/tutorial/V3-24-nuxt-and-ssr.zh.md"
+    ],
+    "docMarkers": [
+      "renderToString",
+      "createSSRApp",
+      "createSSRApp(App",
+      "useAgentTool",
+      "useAgentState",
+      "ClientOnly",
+      "pnpm tutorial:check v3-24"
+    ]
+  }
+}

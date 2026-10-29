@@ -1,0 +1,22 @@
+{
+  "name": "@plingjs/recipe-vue2",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable Vue 2.7 recipe lab: directives, form validation, dangerous actions, search, state, continuity, and host-owned connection settings",
+  "scripts": {
+    "dev": "vite --config ./vite.config.ts --port 5233 --strictPort",
+    "build": "vite build --config ./vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plingjs/agent": "workspace:*",
+    "@plingjs/core": "workspace:*",
+    "@plingjs/vue2": "workspace:*",
+    "vue": "2.7.16"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vite": "^6"
+  }
+}

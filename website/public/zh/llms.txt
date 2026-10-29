@@ -1,0 +1,227 @@
+# Pling 文档
+
+> Pling（页灵）是面向真实 Web 应用的开放能力层。Agent 从页面显式声明的能力中执行操作，而不是猜 DOM 或绕过业务逻辑。
+
+协议版本为 `pling.surface/0.1`，当前是公开草案；0.1 已实现的方法只有 `describe` 与 `invoke`。业务失败放在成功协议响应的 `result.error` 中，协议失败使用 `ok: false`。
+
+规范入口：https://plingjs.dev/zh/spec/0.1/。完整正文：https://plingjs.dev/zh/llms-full.txt。
+
+## 使命与定位
+
+- [为什么需要能力层](https://plingjs.dev/zh/about/mission/why-a-capability-layer)
+- [Pling 是什么，不是什么](https://plingjs.dev/zh/about/mission/what-pling-is-and-is-not)
+- [信任、授权与审计](https://plingjs.dev/zh/about/mission/trust-authority-and-audit)
+- [从单站点桥到开放协议](https://plingjs.dev/zh/about/mission/from-single-site-bridge-to-open-protocol)
+
+## 共享概念
+
+- [Pling 如何工作](https://plingjs.dev/zh/concepts/how-pling-works)
+- [页面能力模型](https://plingjs.dev/zh/concepts/the-page-capability-model)
+- [Agent 能看到什么](https://plingjs.dev/zh/concepts/what-the-agent-can-see)
+- [执行生命周期](https://plingjs.dev/zh/concepts/execution-lifecycle)
+- [审批与人工接力](https://plingjs.dev/zh/concepts/approval-and-human-handoff)
+- [敏感数据与信任边界](https://plingjs.dev/zh/concepts/sensitive-data-and-trust-boundaries)
+- [一次 Agent 运行如何发生](https://plingjs.dev/zh/concepts/how-one-agent-run-works)
+- [接入外部 Agent](https://plingjs.dev/zh/concepts/connecting-external-agents)
+- [模型访问与信任边界](https://plingjs.dev/zh/concepts/model-access-and-trust-boundaries)
+- [诊断与可观测性](https://plingjs.dev/zh/concepts/diagnostics-and-observability)
+- [失败模型与错误码](https://plingjs.dev/zh/concepts/failure-model-and-error-codes)
+- [版本与兼容性](https://plingjs.dev/zh/concepts/versioning-and-compatibility)
+- [跨页面与标签页的任务连续性](https://plingjs.dev/zh/concepts/task-continuity-across-pages-and-tabs)
+- [投影：Shadow DOM 与 iframe](https://plingjs.dev/zh/concepts/projection-shadow-dom-and-iframes)
+
+## 跨框架运维
+
+- [添加问答入口与助手界面](https://plingjs.dev/zh/operations/add-the-assistant-ui)
+- [主题、语言与可访问性](https://plingjs.dev/zh/operations/theme-locale-and-accessibility)
+- [接入模型网关](https://plingjs.dev/zh/operations/connect-a-model-gateway)
+- [生产部署](https://plingjs.dev/zh/operations/deploy-to-production)
+- [测试与调试页面能力](https://plingjs.dev/zh/operations/test-and-debug-capabilities)
+- [向外部 Agent 开放能力](https://plingjs.dev/zh/operations/expose-capabilities-to-external-agents)
+- [安全升级 Pling](https://plingjs.dev/zh/operations/upgrade-pling-safely)
+
+## Vue 3
+
+- [Vue 3 学习路径](https://plingjs.dev/zh/vue/)
+- [安装与模型配置](https://plingjs.dev/zh/vue/installation-and-model-configuration)
+- [Vue 快速上手：一个可用的 Todo Agent](https://plingjs.dev/zh/vue/quick-start-add-pling-to-a-vue-app)
+- [查看一次 Agent 运行](https://plingjs.dev/zh/vue/inspect-one-agent-run)
+- [带输入的动作与结果验证](https://plingjs.dev/zh/vue/actions-with-input-and-verified-results)
+- [真实控件与自定义组件](https://plingjs.dev/zh/vue/real-controls-and-custom-components)
+- [记录、行内动作与变更证据](https://plingjs.dev/zh/vue/records-row-actions-and-change-evidence)
+- [函数级工具](https://plingjs.dev/zh/vue/function-level-tools)
+- [区域、可见性与遮挡](https://plingjs.dev/zh/vue/regions-visibility-and-overlays)
+- [长列表、滚动与视口外动作](https://plingjs.dev/zh/vue/long-lists-scrolling-and-offscreen-actions)
+- [状态暴露](https://plingjs.dev/zh/vue/state-exposure)
+- [页面身份与路由](https://plingjs.dev/zh/vue/page-identity-and-routing)
+- [助手入口、布局与任务入口](https://plingjs.dev/zh/vue/assistant-surfaces-layout-and-task-entry-points)
+- [页面反馈、目标高亮与人工指引](https://plingjs.dev/zh/vue/page-feedback-target-highlighting-and-human-guidance)
+- [确认与人工接力](https://plingjs.dev/zh/vue/confirmation-and-human-handoff)
+- [流程、异步与失败续跑](https://plingjs.dev/zh/vue/flows-async-work-and-recovery)
+- [运行时限额、观测与错误码](https://plingjs.dev/zh/vue/runtime-limits-observability-and-error-codes)
+- [敏感数据](https://plingjs.dev/zh/vue/sensitive-data)
+- [模型网关与鉴权](https://plingjs.dev/zh/vue/model-gateway-and-authentication)
+- [测试、覆盖率与评测](https://plingjs.dev/zh/vue/testing-coverage-and-evaluation)
+- [生产上线](https://plingjs.dev/zh/vue/production-release)
+- [在存量 Vue 应用中接入 Pling](https://plingjs.dev/zh/vue/migrating-an-existing-vue-app)
+- [向外部 Agent 开放选定能力](https://plingjs.dev/zh/vue/exposing-selected-capabilities-to-external-agents)
+- [Nuxt 与服务端渲染](https://plingjs.dev/zh/vue/nuxt-and-ssr)
+
+## React
+
+- [React 学习路径](https://plingjs.dev/zh/react/)
+- [安装、Provider 与首次挂载](https://plingjs.dev/zh/react/install-provider-and-mount)
+- [React 快速上手：一个可用的 Todo Agent](https://plingjs.dev/zh/react/quick-start-add-pling-to-a-react-app)
+- [查看一次 Agent 运行](https://plingjs.dev/zh/react/inspect-one-agent-run)
+- [带输入的动作与结果验证](https://plingjs.dev/zh/react/actions-with-input-and-verified-results)
+- [真实控件与自定义组件](https://plingjs.dev/zh/react/real-controls-and-custom-components)
+- [记录、行内动作与变更证据](https://plingjs.dev/zh/react/records-row-actions-and-change-evidence)
+- [函数级工具](https://plingjs.dev/zh/react/function-level-tools)
+- [区域、可见性与遮挡](https://plingjs.dev/zh/react/regions-visibility-and-overlays)
+- [长列表、滚动与视口外动作](https://plingjs.dev/zh/react/long-lists-scrolling-and-offscreen-actions)
+- [状态暴露](https://plingjs.dev/zh/react/state-exposure)
+- [页面身份与路由](https://plingjs.dev/zh/react/page-identity-and-routing)
+- [助手入口、布局与任务入口](https://plingjs.dev/zh/react/assistant-surfaces-layout-and-task-entry-points)
+- [页面反馈、目标高亮与人工指引](https://plingjs.dev/zh/react/page-feedback-target-highlighting-and-guidance)
+- [确认与人工接力](https://plingjs.dev/zh/react/confirmation-and-human-handoff)
+- [复合动作、异步与失败续跑](https://plingjs.dev/zh/react/flows-async-work-and-recovery)
+- [运行时限额、观测与错误码](https://plingjs.dev/zh/react/runtime-limits-observability-and-error-codes)
+- [敏感数据](https://plingjs.dev/zh/react/sensitive-data)
+- [模型网关与鉴权](https://plingjs.dev/zh/react/model-gateway-and-authentication)
+- [测试、覆盖率与评测](https://plingjs.dev/zh/react/testing-coverage-and-evaluation)
+- [生产上线](https://plingjs.dev/zh/react/production-release)
+- [在存量 React 应用中接入 Pling](https://plingjs.dev/zh/react/migrating-an-existing-react-app)
+- [向外部 Agent 开放选定能力](https://plingjs.dev/zh/react/exposing-selected-capabilities-to-external-agents)
+- [Next.js 与 SSR](https://plingjs.dev/zh/react/next-js-and-ssr)
+
+## 原生 JS / jQuery
+
+- [原生 JS 与 jQuery 概览](https://plingjs.dev/zh/vanilla/)
+- [脚本接入与首次挂载](https://plingjs.dev/zh/vanilla/script-setup-and-first-mount)
+- [原生页面快速上手](https://plingjs.dev/zh/vanilla/quick-start-add-pling-to-a-vanilla-page)
+- [用 data 属性声明动作](https://plingjs.dev/zh/vanilla/declarative-actions-with-data-attributes)
+- [动态 DOM 的命令式动作](https://plingjs.dev/zh/vanilla/imperative-actions-for-dynamic-dom)
+- [记录与表格](https://plingjs.dev/zh/vanilla/records-and-tables)
+- [表单、异步更新与弹窗](https://plingjs.dev/zh/vanilla/forms-async-updates-and-dialogs)
+- [挂载问答入口与助手界面](https://plingjs.dev/zh/vanilla/mount-the-assistant-ui)
+- [保护敏感数据与危险操作](https://plingjs.dev/zh/vanilla/protect-sensitive-data-and-destructive-actions)
+- [原生页面接入模型网关](https://plingjs.dev/zh/vanilla/connect-vanilla-pages-to-the-model-gateway)
+- [MPA 与任务连续性](https://plingjs.dev/zh/vanilla/mpa-and-task-continuity)
+- [测试与调试原生页面能力](https://plingjs.dev/zh/vanilla/test-and-debug-vanilla-capabilities)
+- [在存量 jQuery 应用中接入 Pling](https://plingjs.dev/zh/vanilla/add-pling-to-an-existing-jquery-app)
+- [向外部 Agent 开放选定能力](https://plingjs.dev/zh/vanilla/expose-selected-capabilities-to-external-agents)
+
+## Vue 2 Legacy
+
+- [Vue 2 支持声明](https://plingjs.dev/zh/vue2/)
+- [安装与首次挂载](https://plingjs.dev/zh/vue2/install-and-first-mount)
+- [快速上手](https://plingjs.dev/zh/vue2/quick-start)
+- [基于指令的动作声明](https://plingjs.dev/zh/vue2/directive-based-actions)
+- [记录与弹窗](https://plingjs.dev/zh/vue2/records-and-dialogs)
+- [挂载问答入口与助手界面](https://plingjs.dev/zh/vue2/mount-the-assistant-ui)
+- [测试与部署 Vue 2 应用](https://plingjs.dev/zh/vue2/test-and-deploy-a-vue-2-app)
+- [从 Vue 2 迁移到 Vue 3](https://plingjs.dev/zh/vue2/migrating-from-vue-2-to-vue-3)
+
+## Agent Surface
+
+- [什么是 Agent Surface](https://plingjs.dev/zh/surface/)
+- [设计安全的能力](https://plingjs.dev/zh/surface/designing-safe-capabilities)
+- [上下文与敏感数据](https://plingjs.dev/zh/surface/context-and-sensitive-data)
+- [身份、同意与委托](https://plingjs.dev/zh/surface/identity-consent-and-delegation)
+- [Surface 基础：describe 与 invoke](https://plingjs.dev/zh/surface/surface-basics-describe-and-invoke)
+- [传输与适配器](https://plingjs.dev/zh/surface/transports-and-adapters)
+- [构建外部 Agent 客户端](https://plingjs.dev/zh/surface/build-an-external-agent-client)
+- [部署 Surface 网关](https://plingjs.dev/zh/surface/deploy-a-surface-gateway)
+- [撤销访问与审计操作](https://plingjs.dev/zh/surface/revoke-access-and-audit-actions)
+- [一致性与互操作](https://plingjs.dev/zh/surface/conformance-and-interoperability)
+- [威胁模型与法律边界](https://plingjs.dev/zh/surface/threat-model-and-legal-boundaries)
+- [版本与治理](https://plingjs.dev/zh/surface/versioning-and-governance)
+
+## 协议规范
+
+- [范围与术语](https://plingjs.dev/zh/spec/0.1/scope-and-terminology)
+- [能力模型](https://plingjs.dev/zh/spec/0.1/capability-model)
+- [上下文模型](https://plingjs.dev/zh/spec/0.1/context-model)
+- [控制模型](https://plingjs.dev/zh/spec/0.1/control-model)
+- [消息与包络](https://plingjs.dev/zh/spec/0.1/messages-and-envelopes)
+- [错误与执行结果](https://plingjs.dev/zh/spec/0.1/errors-and-execution-results)
+- [传输绑定](https://plingjs.dev/zh/spec/0.1/transport-bindings)
+- [安全与隐私](https://plingjs.dev/zh/spec/0.1/security-and-privacy)
+- [一致性](https://plingjs.dev/zh/spec/0.1/conformance)
+- [版本与治理](https://plingjs.dev/zh/spec/0.1/versioning-and-governance)
+
+## 实战方案
+
+- [登录、会话与受保护页面](https://plingjs.dev/zh/recipes/login-session-and-protected-pages)
+- [表格行与批量操作](https://plingjs.dev/zh/recipes/table-rows-and-batch-actions)
+- [表单填写、校验与提交](https://plingjs.dev/zh/recipes/form-fill-validation-and-submit)
+- [多步弹窗与向导](https://plingjs.dev/zh/recipes/multi-step-modal-and-wizard)
+- [危险操作与确认](https://plingjs.dev/zh/recipes/dangerous-actions-and-confirmation)
+- [文件上传与异步任务](https://plingjs.dev/zh/recipes/file-upload-and-asynchronous-work)
+- [搜索、筛选与长列表](https://plingjs.dev/zh/recipes/search-filters-and-long-lists)
+- [多页任务连续性](https://plingjs.dev/zh/recipes/multi-page-task-continuity)
+- [向外部 Agent 开放三个安全能力](https://plingjs.dev/zh/recipes/expose-three-safe-capabilities-to-an-external-agent)
+- [通过 MCP 接入外部 Agent](https://plingjs.dev/zh/recipes/connect-an-external-agent-through-mcp)
+- [经用户同意的委托访问](https://plingjs.dev/zh/recipes/delegated-access-with-user-consent)
+- [Agent 操作的审批、审计与撤销](https://plingjs.dev/zh/recipes/approval-audit-and-revocation-for-agent-actions)
+- [使用自己的模型密钥](https://plingjs.dev/zh/recipes/use-your-own-model-key)
+- [让另一实现通过 Surface 一致性验证](https://plingjs.dev/zh/recipes/pass-surface-conformance-with-another-implementation)
+
+## 参考
+
+- [核心声明：动作、记录、区域、状态](https://plingjs.dev/zh/reference/core-declarations-actions-records-regions-state)
+- [Agent 运行时、会话、上下文与限额](https://plingjs.dev/zh/reference/agent-runtime-sessions-context-limits)
+- [UI 文案、主题与语言](https://plingjs.dev/zh/reference/ui-messages-theme-locale)
+- [Surface 协议](https://plingjs.dev/zh/reference/surface-protocol)
+- [委托与信任边界](https://plingjs.dev/zh/reference/delegation-and-trust-boundaries)
+- [Node 网关](https://plingjs.dev/zh/reference/node-gateway)
+- [Vue 3 适配器](https://plingjs.dev/zh/reference/vue-3-adapter)
+- [React 适配器](https://plingjs.dev/zh/reference/react-adapter)
+- [原生 JS 与 jQuery 适配器](https://plingjs.dev/zh/reference/vanilla-jquery-adapter)
+- [Vue 2 适配器](https://plingjs.dev/zh/reference/vue-2-adapter)
+- [错误码与诊断](https://plingjs.dev/zh/reference/error-codes-and-diagnostics)
+- [连续性与投影](https://plingjs.dev/zh/reference/continuity-and-projection)
+- [Surface 一致性与互操作](https://plingjs.dev/zh/reference/surface-conformance-and-interoperability)
+- [协议 Schema 与注册表](https://plingjs.dev/zh/reference/protocol-schemas-and-registries)
+
+## 排障
+
+- [Agent 执行后没有任何反应](https://plingjs.dev/zh/troubleshooting/nothing-happens-when-the-agent-acts)
+- [找不到动作](https://plingjs.dev/zh/troubleshooting/action-not-found)
+- [动作不可用](https://plingjs.dev/zh/troubleshooting/action-is-unavailable)
+- [确认被拒绝或卡住](https://plingjs.dev/zh/troubleshooting/confirmation-denied-or-stuck)
+- [模型请求失败](https://plingjs.dev/zh/troubleshooting/model-request-fails)
+- [记录过期或重复](https://plingjs.dev/zh/troubleshooting/records-stale-or-duplicated)
+- [导航后任务丢失](https://plingjs.dev/zh/troubleshooting/navigation-loses-the-task)
+- [敏感值泄露或缺失](https://plingjs.dev/zh/troubleshooting/sensitive-value-leaks-or-is-missing)
+- [Token 或步数过多](https://plingjs.dev/zh/troubleshooting/too-many-tokens-or-steps)
+- [SSR 或 hydration 破坏页面](https://plingjs.dev/zh/troubleshooting/ssr-or-hydration-breaks-the-page)
+
+## 项目与信任
+
+- [首页](https://plingjs.dev/zh/)
+- [开始](https://plingjs.dev/zh/start/)
+- [在线案例](https://plingjs.dev/zh/examples/)
+- [示例与任务索引](https://plingjs.dev/zh/recipes/)
+- [安全与信任中心](https://plingjs.dev/zh/security/)
+- [发布、支持矩阵与升级](https://plingjs.dev/zh/releases/)
+- [治理、RFC 与社区](https://plingjs.dev/zh/governance/)
+- [许可证与商标](https://plingjs.dev/zh/license/)
+
+## API 参考
+
+- [总览](https://plingjs.dev/zh/reference/api/)
+- [Vue 3 API](https://plingjs.dev/zh/reference/api/vue-3)
+- [React API](https://plingjs.dev/zh/reference/api/react)
+- [Vue 2.7 API](https://plingjs.dev/zh/reference/api/vue-2)
+- [原生 JS API](https://plingjs.dev/zh/reference/api/vanilla)
+- [共享包 API](https://plingjs.dev/zh/reference/api/shared)
+
+### 机器可读 JSON
+
+- [API 总览 JSON](https://plingjs.dev/zh/api-index.json)
+- [Vue 3 API JSON](https://plingjs.dev/zh/api-index/vue-3.json)
+- [React API JSON](https://plingjs.dev/zh/api-index/react.json)
+- [Vue 2.7 API JSON](https://plingjs.dev/zh/api-index/vue-2.json)
+- [原生 JS API JSON](https://plingjs.dev/zh/api-index/vanilla.json)
+- [共享包 API JSON](https://plingjs.dev/zh/api-index/shared.json)

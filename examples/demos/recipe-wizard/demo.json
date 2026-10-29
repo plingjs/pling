@@ -1,0 +1,24 @@
+{
+  "id": "recipe-wizard", "title": "Recipe 04: Multi-step modal and wizard", "titleZh": "方案04：多步弹窗与向导",
+  "eyebrow": "Runnable recipe", "eyebrowZh": "可运行方案",
+  "summary": "A three-step supplier flow with async options and an approval chain. Each step declares only the controls that exist in that state.", "summaryZh": "三步供应商流程，包含异步选项与审批链。每一步只声明该状态真实存在的控件。",
+  "url": "/demos/recipe-wizard/", "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Wizard steps, records, and transitions", "roleZh": "向导步骤、记录与切换", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Local run and flow", "roleZh": "本地运行与流程", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": { "steps": { "selector": ".steps", "match": "<ol class=\"steps\">" }, "records": { "selector": "v-record", "match": "v-record=\"" }, "dock": { "selector": "AgentDock", "match": "<AgentDock" } },
+  "guide": {
+    "title": "Expose the current step, not every hidden control", "titleZh": "暴露当前步骤，而不是所有隐藏控件",
+    "intro": ["The wizard is conditional rendering. Earlier inputs and buttons stop existing when the step changes.", "Industry options arrive asynchronously, so the next action must wait for a real available state."],
+    "introZh": ["向导使用条件渲染。步骤切换后，旧输入与按钮不再存在。", "行业选项异步到达，因此下一步动作必须等待真实可用状态。"],
+    "steps": [
+      { "title": "Declare step-scoped tools", "titleZh": "声明步骤内工具", "body": "The company tool is unavailable once the page moves to contact details.", "bodyZh": "页面进入联系人步骤后，公司工具就不可用。", "file": "src/App.vue", "match": "id: \"wizard_fill_company\"", "lines": 10 },
+      { "title": "Report the visible state", "titleZh": "报告可见状态", "body": "The state view tells the agent which step is active and whether options have loaded.", "bodyZh": "状态视图告知 Agent 当前步骤与选项是否已加载。", "file": "src/App.vue", "match": "useAgentState(\"wizard_view\"", "lines": 9 },
+      { "title": "Verify before advancing", "titleZh": "推进前校验", "body": "The same function used by the button checks the current step before moving on.", "bodyZh": "按钮与助手调用同一个函数，推进前检查当前步骤。", "file": "src/App.vue", "match": "function next()", "lines": 6 }
+    ],
+    "note": "Wait for the industry options, fill the company step, continue to contact, then reorder the approval chain before submit.", "noteZh": "等待行业选项加载，填写公司步骤，进入联系人，再在提交前调整审批链顺序。"
+  }
+}

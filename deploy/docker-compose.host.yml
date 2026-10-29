@@ -1,0 +1,53 @@
+version: "3.4"
+
+services:
+  api:
+    image: ${PLING_IMAGE:-plingjs:amd64}
+    command: ["node", "examples/gateway.mjs"]
+    environment:
+      PLING_UPSTREAM_BASE_URL: ${PLING_UPSTREAM_BASE_URL:?set PLING_UPSTREAM_BASE_URL in deploy/.env}
+      PLING_UPSTREAM_API_KEY: ${PLING_UPSTREAM_API_KEY:?set PLING_UPSTREAM_API_KEY in deploy/.env}
+      PLING_MODEL: ${PLING_MODEL:-}
+      PLING_DEMO_RATE_LIMIT: ${PLING_DEMO_RATE_LIMIT:-80}
+      PLING_DEMO_RATE_WINDOW_MS: ${PLING_DEMO_RATE_WINDOW_MS:-600000}
+      PLING_TIMEOUT_MS: ${PLING_TIMEOUT_MS:-60000}
+      PLING_GATEWAY_HOST: 0.0.0.0
+      PLING_GATEWAY_PORT: "5192"
+      PLING_TRUST_PROXY: "1"
+    ports:
+      - "127.0.0.1:5192:5192"
+    restart: unless-stopped
+
+  surface:
+    image: ${PLING_IMAGE:-plingjs:amd64}
+    command: ["node", "services/surface-gateway/src/index.mjs"]
+    environment:
+      SURFACE_CONFIG: /etc/pling/surface.json
+      SURFACE_ADMIN_TOKEN: ${SURFACE_ADMIN_TOKEN:?set SURFACE_ADMIN_TOKEN in deploy/.env}
+      SURFACE_PUBLIC_BASE_URL: ${SURFACE_PUBLIC_BASE_URL:-https://surface.plingjs.dev}
+      SURFACE_HOST: 0.0.0.0
+      SURFACE_PORT: "5219"
+    volumes:
+      - ./surface.config.json:/etc/pling/surface.json:ro
+    ports:
+      - "127.0.0.1:5219:5219"
+    restart: unless-stopped
+
+  todo:
+    image: ${PLING_IMAGE:-plingjs:amd64}
+    command: ["node", "examples/apps/todo-surface-auth/server/index.mjs"]
+    depends_on:
+      - surface
+    environment:
+      NODE_ENV: production
+      TODO_BFF_HOST: 0.0.0.0
+      TODO_BFF_PORT: "5221"
+      TODO_DIST: /app/examples/apps/todo-surface-auth/dist
+      TODO_ALLOWED_ORIGINS: ${TODO_ALLOWED_ORIGINS:-https://todo.plingjs.dev}
+      SURFACE_GATEWAY_URL: http://surface:5219
+      SURFACE_ADMIN_TOKEN: ${SURFACE_ADMIN_TOKEN:?set SURFACE_ADMIN_TOKEN in deploy/.env}
+      SURFACE_TENANT_ID: ${SURFACE_TENANT_ID:-demo}
+      TODO_SURFACE_SCOPES: ${TODO_SURFACE_SCOPES:-add_task,toggle@,delete@,clear_completed}
+    ports:
+      - "127.0.0.1:5221:5221"
+    restart: unless-stopped

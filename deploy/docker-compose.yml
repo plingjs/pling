@@ -1,0 +1,77 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: runtime
+    command: ["node", "examples/gateway.mjs"]
+    environment:
+      PLING_UPSTREAM_BASE_URL: ${PLING_UPSTREAM_BASE_URL:?set PLING_UPSTREAM_BASE_URL in deploy/.env}
+      PLING_UPSTREAM_API_KEY: ${PLING_UPSTREAM_API_KEY:?set PLING_UPSTREAM_API_KEY in deploy/.env}
+      PLING_MODEL: ${PLING_MODEL:-}
+      PLING_DEMO_RATE_LIMIT: ${PLING_DEMO_RATE_LIMIT:-80}
+      PLING_DEMO_RATE_WINDOW_MS: ${PLING_DEMO_RATE_WINDOW_MS:-600000}
+      PLING_TIMEOUT_MS: ${PLING_TIMEOUT_MS:-60000}
+      PLING_GATEWAY_HOST: 0.0.0.0
+      PLING_GATEWAY_PORT: "5192"
+      PLING_TRUST_PROXY: "1"
+    restart: unless-stopped
+
+  surface:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: runtime
+    command: ["node", "services/surface-gateway/src/index.mjs"]
+    environment:
+      SURFACE_CONFIG: /etc/pling/surface.json
+      SURFACE_ADMIN_TOKEN: ${SURFACE_ADMIN_TOKEN:?set SURFACE_ADMIN_TOKEN in deploy/.env}
+      SURFACE_PUBLIC_BASE_URL: ${SURFACE_PUBLIC_BASE_URL:-https://surface.plingjs.dev}
+      SURFACE_HOST: 0.0.0.0
+      SURFACE_PORT: "5219"
+    volumes:
+      - ./surface.config.json:/etc/pling/surface.json:ro
+    restart: unless-stopped
+
+  todo:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: runtime
+    command: ["node", "examples/apps/todo-surface-auth/server/index.mjs"]
+    depends_on:
+      - surface
+    environment:
+      NODE_ENV: production
+      TODO_BFF_HOST: 0.0.0.0
+      TODO_BFF_PORT: "5221"
+      TODO_DIST: /app/examples/apps/todo-surface-auth/dist
+      TODO_ALLOWED_ORIGINS: ${TODO_ALLOWED_ORIGINS:-https://todo.plingjs.dev}
+      SURFACE_GATEWAY_URL: http://surface:5219
+      SURFACE_ADMIN_TOKEN: ${SURFACE_ADMIN_TOKEN:?set SURFACE_ADMIN_TOKEN in deploy/.env}
+      SURFACE_TENANT_ID: ${SURFACE_TENANT_ID:-demo}
+      TODO_SURFACE_SCOPES: ${TODO_SURFACE_SCOPES:-add_task,toggle@,delete@,clear_completed}
+    restart: unless-stopped
+
+  caddy:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: caddy
+    depends_on:
+      - api
+      - surface
+      - todo
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:-admin@plingjs.dev}
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

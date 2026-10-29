@@ -1,0 +1,51 @@
+{
+  "name": "@plingjs/vue",
+  "version": "0.1.0-alpha.2",
+  "private": false,
+  "type": "module",
+  "description": "Pling 的 Vue 适配器：v-tool / v-scope 指令、交互覆盖率诊断、动作目标解析、可见性裁剪、通用调试面板",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/plingjs/pling.git",
+    "directory": "packages/vue"
+  },
+  "homepage": "https://plingjs.dev",
+  "bugs": "https://github.com/plingjs/pling/issues",
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "vite build --config vite.build.config.ts && vue-tsc -p tsconfig.build.json && node ../../scripts/write-package-manifest.mjs",
+    "prepack": "pnpm build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plingjs/agent": "workspace:*",
+    "@plingjs/core": "workspace:*",
+    "@plingjs/dom": "workspace:*",
+    "@plingjs/ui": "workspace:*",
+    "markdown-it": "^15.0.3"
+  },
+  "peerDependencies": {
+    "vue": "^3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5",
+    "@vue/test-utils": "^2",
+    "jsdom": "^25",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^2",
+    "vue": "^3",
+    "vue-tsc": "^3.3.13"
+  }
+}

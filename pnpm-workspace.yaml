@@ -1,0 +1,15 @@
+packages:
+  - "packages/*"
+  - "services/*"
+  - "examples"
+  - "examples/apps/*"
+  - "examples/recipes/*"
+  - "website"
+
+allowBuilds:
+  esbuild: true
+  vue-demi: true
+  workerd: true
+
+minimumReleaseAgeExclude:
+  - "@electric-sql/pglite@0.5.11"

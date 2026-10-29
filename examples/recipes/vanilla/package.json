@@ -1,0 +1,21 @@
+{
+  "name": "@plingjs/recipe-vanilla",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable vanilla JS recipe lab: form validation, dangerous actions, search, state, continuity, and host-owned connection settings",
+  "scripts": {
+    "dev": "vite --config ./vite.config.ts --port 5232 --strictPort",
+    "build": "vite build --config ./vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plingjs/agent": "workspace:*",
+    "@plingjs/core": "workspace:*",
+    "@plingjs/vanilla": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "vite": "^6"
+  }
+}

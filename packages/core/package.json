@@ -1,0 +1,36 @@
+{
+  "name": "@plingjs/core",
+  "version": "0.1.0-alpha.2",
+  "private": false,
+  "type": "module",
+  "description": "Pling 框架无关内核：动作注册表 / UI 原语 / 权限 / 执行流水线 / tool-calling 循环",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/plingjs/pling.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://plingjs.dev",
+  "bugs": "https://github.com/plingjs/pling/issues",
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup && node ../../scripts/write-package-manifest.mjs",
+    "prepack": "pnpm build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^9.0.0",
+    "typescript": "^5",
+    "vitest": "^2"
+  }
+}

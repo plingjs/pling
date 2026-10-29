@@ -1,0 +1,26 @@
+{
+  "id": "recipe-upload-async", "title": "Recipe 06: Upload and asynchronous work", "titleZh": "方案06：上传与异步任务",
+  "eyebrow": "Runnable recipe", "eyebrowZh": "可运行方案",
+  "summary": "Real file bytes create a server-side job with progress, cancellation, failure, and retry. The model sees job metadata, not the file.", "summaryZh": "真实文件字节创建服务端任务，包含进度、取消、失败与重试。模型看到任务元数据，而不是文件内容。",
+  "url": "/demos/recipe-upload-async/", "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Upload UI, polling, and job actions", "roleZh": "上传界面、轮询与任务动作", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Local run and failure paths", "roleZh": "本地运行与失败路径", "lang": "markdown" },
+    { "path": "recipe-backends/access-service/server.mjs", "scope": "workspace", "label": "server.mjs", "role": "Upload jobs and progress", "roleZh": "上传任务与进度", "lang": "js" },
+    { "path": "recipe-backends/access-service/README.md", "scope": "workspace", "label": "backend README", "role": "Backend purpose, routes, and limits", "roleZh": "后端用途、路由与边界", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": { "state": { "selector": "useAgentState", "match": "useAgentState(\"upload_view\"" }, "cancel": { "selector": "cancel", "match": "id: `cancel@" }, "dock": { "selector": "AgentDock", "match": "<AgentDock" } },
+  "guide": {
+    "title": "Separate starting work from finishing it", "titleZh": "把启动任务与完成任务分开",
+    "intro": ["The upload request returns a job, not a completed document. The page polls and reports a bounded state view.", "A filename containing “virus” deliberately fails so retry and cancellation can be inspected."],
+    "introZh": ["上传请求返回任务，而不是已完成的文档。页面轮询并报告有界状态。", "文件名包含 “virus” 会刻意失败，便于观察重试与取消。"],
+    "steps": [
+      { "title": "Send bytes to the application", "titleZh": "把字节发送给应用", "body": "The browser posts the file to the local service. The assistant is not given the file content.", "bodyZh": "浏览器把文件发送给本地服务。助手不会拿到文件内容。", "file": "src/App.vue", "match": "await file.arrayBuffer()", "lines": 8 },
+      { "title": "Expose job state", "titleZh": "暴露任务状态", "body": "Only ids, states, and progress enter the state view.", "bodyZh": "只有 id、状态与进度进入状态视图。", "file": "src/App.vue", "match": "useAgentState(\"upload_view\"", "lines": 9 },
+      { "title": "Make cancel and retry explicit", "titleZh": "显式提供取消与重试", "body": "Each row declares only the action valid for its current state.", "bodyZh": "每一行只声明当前状态有效的动作。", "file": "src/App.vue", "match": "id: `cancel@", "lines": 5 }
+    ],
+    "note": "Upload any small file, then upload a filename containing “virus”. Cancel one active job and retry the failed one.", "noteZh": "上传任意小文件，再上传一个名称含 “virus” 的文件。取消一个进行中任务，并重试失败任务。"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "id": "recipe-delegation",
+  "title": "Recipe 11: Delegated access with user consent",
+  "titleZh": "方案11：经用户同意的委托访问",
+  "eyebrow": "Runnable recipe",
+  "eyebrowZh": "可运行方案",
+  "summary": "A signed-in user chooses an agent, scopes, and lifetime. The server returns a short-lived token once; expiry and revocation fail before any business handler.",
+  "summaryZh": "已登录用户选择 Agent、能力范围与有效期。服务端只返回一次短期凭证；过期或撤销后，请求会在业务函数之前失败。",
+  "url": "/demos/recipe-delegation/",
+  "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Consent UI, records, and invoke checks", "roleZh": "授权界面、记录与调用检查", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Run and revocation walkthrough", "roleZh": "运行与撤销步骤", "lang": "markdown" },
+    { "path": "recipe-backends/access-service/server.mjs", "scope": "workspace", "label": "server.mjs", "role": "Delegation issue, inspect, invoke, and revoke", "roleZh": "委托签发、内省、调用与撤销", "lang": "js" },
+    { "path": "recipe-backends/access-service/README.md", "scope": "workspace", "label": "backend README", "role": "Routes, account, and security boundary", "roleZh": "路由、账号与安全边界", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": {
+    "records": { "selector": "v-record", "match": "v-record=\"" },
+    "tool": { "selector": "issue_delegation", "match": "id: \"issue_delegation\"" },
+    "dock": { "selector": "AgentDock", "match": "<AgentDock" }
+  },
+  "guide": {
+    "title": "Consent narrows authority before a token exists",
+    "titleZh": "先收窄授权，再签发凭证",
+    "intro": [
+      "The browser session remains separate from the delegated credential. The page displays the token once only because this is an inspection fixture.",
+      "Issue a two-minute read-only delegation, invoke it, revoke it, and invoke again. The second call must fail before invoice data is read."
+    ],
+    "introZh": [
+      "浏览器会话与委托凭证保持分离。只有为了便于检查，示例才在页面上显示一次原始凭证。",
+      "签发一份两分钟的只读委托，调用后撤销，再次调用。第二次请求必须在读取发票数据之前失败。"
+    ],
+    "steps": [
+      { "title": "Record the user's choices", "titleZh": "记录用户的选择", "body": "Agent name, scopes, and TTL are explicit inputs. The token is not part of page state.", "bodyZh": "Agent 名称、范围和有效期都是显式输入；凭证不进入页面状态。", "file": "src/App.vue", "match": "useAgentState(\"delegation_view\"", "lines": 7 },
+      { "title": "Issue through one page action", "titleZh": "通过一个页面动作签发", "body": "The action calls the backend after checking sign-in and at least one scope.", "bodyZh": "动作先检查登录状态与至少一个范围，再调用后端。", "file": "src/App.vue", "match": "id: \"issue_delegation\"", "lines": 2 },
+      { "title": "Reject after revocation", "titleZh": "撤销后拒绝", "body": "The backend stores a hash, checks scope on invoke, and rejects revoked credentials before the handler.", "bodyZh": "后端保存哈希，在调用时检查范围，并在业务函数前拒绝已撤销凭证。", "file": "recipe-backends/access-service/server.mjs", "scope": "workspace", "match": "delegations/invoke", "lines": 18 }
+    ],
+    "note": "Sign in with demo@example.com / pling-demo. The raw token is shown once for inspection; a production client keeps it outside page state and model context.",
+    "noteZh": "账号为 demo@example.com / pling-demo。原始凭证只显示一次供检查；生产客户端应让它远离页面状态与模型上下文。"
+  }
+}

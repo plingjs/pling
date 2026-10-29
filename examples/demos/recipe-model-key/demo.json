@@ -1,0 +1,41 @@
+{
+  "id": "recipe-model-key",
+  "title": "Recipe 13: Use your own model key",
+  "titleZh": "方案13：使用自己的模型密钥",
+  "eyebrow": "Runnable recipe",
+  "eyebrowZh": "可运行方案",
+  "summary": "The built-in Activity settings accept a compatible endpoint, model, and key. The key stays in runtime storage and is never exposed through records, page state, or model messages.",
+  "summaryZh": "内置 Activity 设置接受兼容端点、模型与密钥。密钥留在运行时存储中，不进入记录、页面状态或模型消息。",
+  "url": "/demos/recipe-model-key/",
+  "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Persistence choice and exposed status", "roleZh": "持久化选择与可见状态", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Model configuration walkthrough", "roleZh": "模型配置步骤", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": {
+    "tool": { "selector": "ask_with_current_model", "match": "id: 'ask_with_current_model'" },
+    "settings": { "selector": "model-settings", "match": ":model-settings=\"{ mode: 'byok'" },
+    "state": { "selector": "model_setting_view", "match": "useAgentState(\"model_setting_view\"" }
+  },
+  "guide": {
+    "title": "A model connection is runtime configuration",
+    "titleZh": "模型连接是运行时配置",
+    "intro": [
+      "The page reports endpoint, model, persistence, and request status. It never serializes the key.",
+      "Open Activity, configure a compatible endpoint, send a request, and inspect both the real messages and the page state."
+    ],
+    "introZh": [
+      "页面报告端点、模型、持久策略与请求状态，但从不序列化密钥。",
+      "打开 Activity，配置兼容端点并发送请求，同时检查真实消息与页面状态。"
+    ],
+    "steps": [
+      { "title": "Choose a persistence boundary", "titleZh": "选择持久化边界", "body": "The page exposes memory and session choices. Session keeps the key in this tab; production hosts often use a same-origin gateway instead.", "bodyZh": "页面提供 memory 与 session 两种选择。session 只在当前标签页保留密钥；生产宿主更常用同源网关。", "file": "src/App.vue", "match": "const persist = ref<", "lines": 2 },
+      { "title": "Keep the secret out of page state", "titleZh": "让密钥远离页面状态", "body": "State reports whether a key exists and where it persists, never the value itself.", "bodyZh": "状态只报告密钥是否存在、如何持久化，绝不报告值本身。", "file": "src/App.vue", "match": "keyVisibleToPageState: false", "lines": 8 },
+      { "title": "Expose the runtime settings entry", "titleZh": "开放运行时设置入口", "body": "AgentDock mounts the built-in BYOK panel and a bounded debug view in Activity.", "bodyZh": "AgentDock 在 Activity 中挂载内置 BYOK 面板与有界调试视图。", "file": "src/App.vue", "match": ":model-settings=\"{ mode: 'byok'", "lines": 1 }
+    ],
+    "note": "This page does not contain a provider key. Enter your own compatible endpoint in Activity. The key is never added to model context.",
+    "noteZh": "页面不包含供应商密钥。请在自己的 Activity 中填写兼容端点；密钥不会加入模型上下文。"
+  }
+}

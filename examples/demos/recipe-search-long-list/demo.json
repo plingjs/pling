@@ -1,0 +1,24 @@
+{
+  "id": "recipe-search-long-list", "title": "Recipe 07: Search, filters, and long lists", "titleZh": "方案07：搜索、筛选与长列表",
+  "eyebrow": "Runnable recipe", "eyebrowZh": "可运行方案",
+  "summary": "A bounded ticket view separates total, matched, and rendered counts, with search, status filtering, records, and paged rendering.", "summaryZh": "有界工单视图区分总数、匹配数与已渲染数，包含搜索、状态筛选、记录与分页渲染。",
+  "url": "/demos/recipe-search-long-list/", "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Long list, filters, state, and row actions", "roleZh": "长列表、筛选、状态与行内动作", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Local run and view contract", "roleZh": "本地运行与视图契约", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": { "state": { "selector": "useAgentState", "match": "useAgentState(\"ticket_view\"" }, "records": { "selector": "v-record", "match": "v-record=\"" }, "more": { "selector": "show_more_tickets", "match": "id: \"show_more_tickets\"" } },
+  "guide": {
+    "title": "Keep the list bounded and the counts honest", "titleZh": "保持列表有界，计数诚实",
+    "intro": ["The fixture has 160 tickets, but only a small rendered window enters the DOM.", "Ask for a search or show-more operation and compare total, matched, and rendered counts."],
+    "introZh": ["夹具共有 160 张工单，但只有一小段渲染窗口进入 DOM。", "执行搜索或显示更多，并比较总数、匹配数与已渲染数。"],
+    "steps": [
+      { "title": "Report the current view", "titleZh": "报告当前视图", "body": "The state view carries applied filters and counts, while records carry row fields.", "bodyZh": "状态视图携带已应用筛选与计数，记录携带行字段。", "file": "src/App.vue", "match": "useAgentState(\"ticket_view\"", "lines": 9 },
+      { "title": "Declare stable row fields", "titleZh": "声明稳定行字段", "body": "Each row has an id and only the business fields needed to choose an action.", "bodyZh": "每行有 id 与选择动作所需的业务字段。", "file": "src/App.vue", "match": "v-record=", "lines": 8 },
+      { "title": "Render more explicitly", "titleZh": "显式渲染更多", "body": "A separate tool grows the rendered window; it does not silently ship the whole table.", "bodyZh": "独立工具扩大渲染窗口，而不是悄悄发送整张表。", "file": "src/App.vue", "match": "id: \"show_more_tickets\"", "lines": 7 }
+    ],
+    "note": "Search for Globex or switch to urgent rows, then use Show 30 more. The matched count can exceed the rendered count.", "noteZh": "搜索 Globex 或切换紧急工单，再点“再显示 30 条”。匹配数可以大于已渲染数。"
+  }
+}

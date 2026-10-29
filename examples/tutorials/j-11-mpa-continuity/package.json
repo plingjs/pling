@@ -1,0 +1,24 @@
+{
+  "name": "pling-tutorial-j-11",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MPA task continuity across two real documents",
+  "scripts": {
+    "test": "vitest run",
+    "dev": "vite --config ./vite.config.ts --host 127.0.0.1 --port 5276 --strictPort",
+    "build": "vite build --config ./vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plingjs/agent": "0.1.0-alpha.2",
+    "@plingjs/core": "0.1.0-alpha.2",
+    "@plingjs/vanilla": "0.1.0-alpha.2"
+  },
+  "devDependencies": {
+    "jsdom": "^25",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^2"
+  }
+}

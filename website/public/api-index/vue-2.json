@@ -1,0 +1,2191 @@
+{
+  "title": "Vue 2.7 API",
+  "locale": "en",
+  "page": "vue2",
+  "route": "/reference/api/vue-2",
+  "package": "@plingjs/vue2",
+  "version": "0.1.0-alpha.2",
+  "since": "0.1.0-alpha.2",
+  "stability": "preview",
+  "categories": [
+    {
+      "id": "entry",
+      "title": "Entry and lifecycle",
+      "summary": "Create the application runtime, install the adapter, and release its observers.",
+      "entries": [
+        {
+          "id": "createPling",
+          "anchor": "api-createpling",
+          "name": "createPling",
+          "kind": "function",
+          "summary": "Creates the application-level Pling instance and returns the adapter-specific runtime object.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "createPling(options?: Vue2PlingOptions): Vue2Pling",
+          "parameters": [
+            {
+              "name": "ui.locale",
+              "type": "\"en-US\" | \"zh-CN\" | \"auto\" | string",
+              "required": false,
+              "defaultValue": "en-US",
+              "description": "Language used by the built-in assistant UI. \"auto\" follows the browser language.",
+              "descriptionZh": "内置助手界面的语言。传 `auto` 时跟随浏览器语言。"
+            },
+            {
+              "name": "ui.theme",
+              "type": "\"light\" | \"dark\" | \"auto\" | PlingThemeOverrides",
+              "required": false,
+              "defaultValue": "light",
+              "description": "Theme for the built-in surfaces. An object can override tokens or choose a mode.",
+              "descriptionZh": "内置界面的主题。传对象时可选择模式或覆盖设计令牌。"
+            },
+            {
+              "name": "ui.theme.mode",
+              "type": "\"light\" | \"dark\" | \"auto\"",
+              "required": false,
+              "defaultValue": "light",
+              "description": "Explicit mode when the theme is an object. \"auto\" follows the operating-system preference.",
+              "descriptionZh": "主题传对象时指定的模式。`auto` 跟随操作系统外观。"
+            },
+            {
+              "name": "ui.theme.tokens",
+              "type": "Partial<PlingThemeTokens>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Overrides individual design tokens such as colours, radii, shadows, and font families. Keys not supplied keep the selected light or dark defaults.",
+              "descriptionZh": "覆盖颜色、圆角、阴影、字体等单个设计令牌。未提供的键沿用所选明色或暗色主题的默认值。"
+            },
+            {
+              "name": "ui.messages",
+              "type": "PlingCatalogOverrides",
+              "required": false,
+              "defaultValue": "",
+              "description": "Adds or replaces message catalog entries for one or more locales.",
+              "descriptionZh": "为一个或多个语言补充或替换界面文案。"
+            },
+            {
+              "name": "ui.messages.<locale>",
+              "type": "Partial<Record<PlingMessageKey, string>>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Message overrides for one BCP 47 locale. Missing keys fall back to the built-in catalog.",
+              "descriptionZh": "某个 BCP 47 语言的文案覆盖。未提供的键回退到内置文案。"
+            },
+            {
+              "name": "ui.classNames",
+              "type": "PlingClassNames",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class names applied to the built-in chat, dock, launcher, and panel.",
+              "descriptionZh": "为内置对话、浮窗、启动按钮和面板附加 class。"
+            },
+            {
+              "name": "ui.classNames.dock",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class for the dock shell.",
+              "descriptionZh": "浮窗外壳的附加 class。"
+            },
+            {
+              "name": "ui.classNames.panel",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class for the panel shell.",
+              "descriptionZh": "面板外壳的附加 class。"
+            },
+            {
+              "name": "ui.classNames.launcher",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class for the launcher button.",
+              "descriptionZh": "启动按钮的附加 class。"
+            },
+            {
+              "name": "ui.classNames.chat",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class for the chat surface.",
+              "descriptionZh": "对话界面的附加 class。"
+            },
+            {
+              "name": "onWarn",
+              "type": "(message: string) => void",
+              "required": false,
+              "defaultValue": "console.warn",
+              "description": "Receives development warnings and declaration diagnostics. Defaults to console.warn.",
+              "descriptionZh": "接收开发期告警和声明诊断。默认输出到 `console.warn`。"
+            },
+            {
+              "name": "registry",
+              "type": "Registry",
+              "required": false,
+              "defaultValue": "",
+              "description": "Uses an existing action registry instead of creating one. Do not combine it with shared.",
+              "descriptionZh": "使用已有动作注册表，而不是新建一个。不要与 `shared` 同时传入。"
+            },
+            {
+              "name": "shared",
+              "type": "PlingPage",
+              "required": false,
+              "defaultValue": "",
+              "description": "Joins a page runtime shared by several framework islands. registry and scopes are then owned by that page runtime.",
+              "descriptionZh": "接入多个框架孤岛共用的页面运行时。此时 `registry` 与 `scopes` 由页面统一持有。"
+            },
+            {
+              "name": "namespace",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Prefixes action and record ids for this adapter instance, for example add becomes todo/add.",
+              "descriptionZh": "为该适配器实例的动作与记录 id 加前缀，例如 `add` 变成 `todo/add`。"
+            },
+            {
+              "name": "scopes",
+              "type": "ScopeControllerOptions",
+              "required": false,
+              "defaultValue": "",
+              "description": "Overrides visibility and hit-testing behavior. Intended for tests and unusual rendering hosts.",
+              "descriptionZh": "覆盖可见性与命中测试行为。主要用于测试和特殊渲染宿主。"
+            },
+            {
+              "name": "agent",
+              "type": "AgentSetup",
+              "required": false,
+              "defaultValue": "",
+              "description": "Wires the model, hooks, confirmation, continuity, and observability used by built-in assistant surfaces.",
+              "descriptionZh": "接线内置助手界面使用的模型、钩子、确认、连续性与观测能力。"
+            },
+            {
+              "name": "derive",
+              "type": "boolean | DeriveOptions",
+              "required": false,
+              "defaultValue": "false",
+              "description": "Enables optional L1 derivation from native clickable elements. Disabled by default; derived actions are marked as guesses.",
+              "descriptionZh": "开启可选的 L1 派生：从原生可点击元素推断动作。默认关闭；派生动作会标记为推断结果。"
+            },
+            {
+              "name": "presence",
+              "type": "boolean | PresenceOptions",
+              "required": false,
+              "defaultValue": "true",
+              "description": "Controls target highlighting while the agent operates the page.",
+              "descriptionZh": "控制 agent 操作页面时的目标高亮。"
+            },
+            {
+              "name": "revealSensitive",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "true",
+              "description": "Restores sensitive-value tokens to their real values in the rendered chat only. Model requests and storage keep the tokens.",
+              "descriptionZh": "仅在渲染层把敏感值代号还原为真值。发给模型的请求和存储中仍保留代号。"
+            },
+            {
+              "name": "defaultApproval",
+              "type": "\"danger\" | \"kind\"",
+              "required": false,
+              "defaultValue": "\"danger\"",
+              "description": "Sets the declaration-time default when a tool omits confirm. \"danger\" asks only for danger actions; \"kind\" uses the risk level of every action.",
+              "descriptionZh": "设置工具未写 `confirm` 时的声明期默认策略。`danger` 只询问危险动作；`kind` 按每个动作的风险等级决定。"
+            }
+          ],
+          "definition": null,
+          "returns": "The adapter instance. Vue 3 and React return PlingElement; Vue 2.7 and Vanilla return VanillaPling.",
+          "defaults": [
+            "No declaration means no action; derive is off by default.",
+            "Presence is on by default.",
+            "revealSensitive is true by default."
+          ],
+          "examples": [
+            {
+              "title": "Vue 2.7 application setup",
+              "titleZh": "Vue 2.7 应用初始化",
+              "code": "import Vue from \"vue\";\nimport { createPling } from \"@plingjs/vue2\";\n\nconst pling = createPling({ namespace: \"todo\" });\nVue.use(pling.plugin);\n\nnew Vue({ render: (h) => h(App) }).$mount(\"#app\");",
+              "lang": "ts"
+            },
+            {
+              "title": "Route model calls through a same-origin gateway",
+              "titleZh": "通过同源网关调用模型",
+              "code": "const pling = createPling({\n  agent: {\n    config: {\n      baseUrl: \"/llm/v1\",\n      model: \"gpt-4.1-mini\",\n    },\n    trace: true,\n  },\n});",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "createPling"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "createPling"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createPling"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "createPling"
+            }
+          ],
+          "reference": "/reference/vue-2-adapter"
+        },
+        {
+          "id": "usePling",
+          "anchor": "api-usepling",
+          "name": "usePling",
+          "kind": "function",
+          "summary": "Reads the nearest Pling instance from the framework tree.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "usePling(): Vue2Pling",
+          "parameters": [],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Read the installed runtime",
+              "titleZh": "读取已安装的运行时",
+              "code": "const pling = usePling();",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "usePling"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "usePling"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "usePling"
+            }
+          ],
+          "reference": "/reference/vue-2-adapter"
+        },
+        {
+          "id": "plugin",
+          "anchor": "api-plugin",
+          "name": "pling.plugin",
+          "kind": "plugin",
+          "summary": "Installs Vue directives and the runtime injection key. React uses PlingProvider instead.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "Vue.use(pling.plugin)",
+          "parameters": [],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Install Vue 2.7 directives",
+              "titleZh": "安装 Vue 2.7 指令",
+              "code": "Vue.use(pling.plugin);",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "native",
+            "vanilla": "none"
+          },
+          "symbols": [],
+          "reference": "/reference/vue-2-adapter"
+        },
+        {
+          "id": "VanillaPling",
+          "anchor": "api-vanillapling",
+          "name": "VanillaPling",
+          "kind": "interface",
+          "summary": "The DOM-first runtime used by Vanilla JS and Vue 2.7. It exposes tool, action, record, scope, state, dock, derived, and destroy.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "interface Vue2Pling extends VanillaPling {\n  plugin: { install(Vue: VueConstructor): void };\n}",
+          "parameters": [
+            {
+              "name": "plugin",
+              "type": "{ install(Vue: VueConstructor): void }",
+              "required": false,
+              "defaultValue": "",
+              "description": "Installs the Vue 2.7 directives and $pling property.",
+              "descriptionZh": "安装 Vue 2.7 指令与 `$pling` 属性。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Install the Vue 2.7 plugin",
+              "titleZh": "安装 Vue 2.7 插件",
+              "code": "Vue.use(pling.plugin);",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "VanillaPling"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "Vue2Pling"
+            }
+          ],
+          "reference": "/reference/vue-2-adapter"
+        },
+        {
+          "id": "destroy",
+          "anchor": "api-destroy",
+          "name": "pling.destroy",
+          "kind": "method",
+          "summary": "Stops observers, derived actions, scopes, presence, UI subscriptions, and mounted assistant surfaces.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "pling.destroy(): void",
+          "parameters": [],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Release the runtime",
+              "titleZh": "释放运行时",
+              "code": "beforeDestroy() {\n  this.$pling.destroy();\n}",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [],
+          "reference": "/reference/vue-2-adapter"
+        }
+      ]
+    },
+    {
+      "id": "declarations",
+      "title": "Page declarations",
+      "summary": "Declare actions, records, regions, state, feedback, task entrances, and sensitive values.",
+      "entries": [
+        {
+          "id": "element-action",
+          "anchor": "api-element-action",
+          "name": "Element action",
+          "kind": "declaration",
+          "summary": "Declares what a control does. The description is the model's only explanation; execution still goes through availability, approval, and expectations.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "v-tool=\"string | ToolOptions | readonly ToolOptions[]\"",
+          "parameters": [
+            {
+              "name": "v-tool",
+              "type": "string | ToolOptions | readonly ToolOptions[]",
+              "required": true,
+              "defaultValue": "",
+              "description": "A description shorthand or one or more declarations for the same element.",
+              "descriptionZh": "一句说明的简写，或同一元素上的一条/多条声明。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Vue 2.7 directive",
+              "titleZh": "Vue 2.7 指令",
+              "code": "<button v-tool=\"{ id: 'add', desc: '添加一条待办', run: () => add() }\">添加</button>",
+              "lang": "vue"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingTool"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "function-action",
+          "anchor": "api-function-action",
+          "name": "Function-level action",
+          "kind": "declaration",
+          "summary": "Registers a business operation that has no dedicated DOM control.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "pling.action(options: ActionOptions): () => void",
+          "parameters": [
+            {
+              "name": "options",
+              "type": "ActionOptions",
+              "required": true,
+              "defaultValue": "",
+              "description": "An action implemented in code rather than bound to a DOM control.",
+              "descriptionZh": "由代码实现、而不是绑定到 DOM 控件的动作。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Register an action",
+              "titleZh": "登记动作",
+              "code": "const unbind = pling.action({\n  id: \"clear_completed\",\n  desc: \"清除所有已完成待办\",\n  run: () => clearCompleted(),\n});",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "useAgentTool"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "useAgentTool"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "region",
+          "anchor": "api-region",
+          "name": "Region",
+          "kind": "declaration",
+          "summary": "Declares a structural region and its reachability. Regions explain context; they are not permission boundaries.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "v-scope=\"string | ScopeOptions\"",
+          "parameters": [
+            {
+              "name": "v-scope",
+              "type": "string | ScopeOptions",
+              "required": true,
+              "defaultValue": "",
+              "description": "Region id or metadata object.",
+              "descriptionZh": "区域 id 或元数据对象。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Describe a region",
+              "titleZh": "描述区域",
+              "code": "<section v-scope=\"{ id: 'todos', label: '待办列表' }\">...</section>",
+              "lang": "vue"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingScope"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "record",
+          "anchor": "api-record",
+          "name": "Record",
+          "kind": "declaration",
+          "summary": "Gives one row a stable identity and a bounded set of readable fields. Records are read-only.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "v-record=\"RecordValue | null | undefined\"",
+          "parameters": [
+            {
+              "name": "v-record",
+              "type": "RecordValue | null | undefined",
+              "required": true,
+              "defaultValue": "",
+              "description": "The row object or an explicit record envelope.",
+              "descriptionZh": "行对象或显式记录包装。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Expose a row",
+              "titleZh": "暴露一行记录",
+              "code": "<li v-for=\"todo in todos\" :key=\"todo.id\" v-record=\"todo\">...</li>",
+              "lang": "vue"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingRecord"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "state",
+          "anchor": "api-state",
+          "name": "Read-only state",
+          "kind": "declaration",
+          "summary": "Exposes a derived view of current UI state. State has no setter; writes must be declared as actions.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "useAgentState(key: string, source: StateSource, options?: AgentStateOptions | string): () => void",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Stable state-view name used in page context and diagnostics.",
+              "descriptionZh": "用于页面上下文与诊断的稳定状态名。"
+            },
+            {
+              "name": "source",
+              "type": "unknown | (() => unknown) | Ref<unknown> | Record<string, unknown>",
+              "required": true,
+              "defaultValue": "",
+              "description": "A value, ref, or read function. Prefer a function so the snapshot reflects current state.",
+              "descriptionZh": "值、ref 或读取函数。推荐传函数，让每次快照都反映当前状态。"
+            },
+            {
+              "name": "options",
+              "type": "StateOptions | string",
+              "required": false,
+              "defaultValue": "",
+              "description": "A description object or a description string. Name the view and explain what it means.",
+              "descriptionZh": "说明对象或说明字符串。写清这组状态是什么。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Expose filters and counts",
+              "titleZh": "暴露筛选与计数",
+              "code": "useAgentState(\"todo\", () => ({ filter: this.filter, total: this.todos.length }));",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "useAgentState"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingState"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "useAgentState"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "store-state",
+          "anchor": "api-store-state",
+          "name": "Store state",
+          "kind": "declaration",
+          "summary": "Selects named fields from a Pinia or Vuex store. It never exposes the whole store.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "useAgentStoreState<S extends object>(key: string, store: S, read: AgentStoreRead<S>, options?: AgentStateOptions | string): () => void",
+          "parameters": [
+            {
+              "name": "key",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Stable state-view name.",
+              "descriptionZh": "稳定状态名。"
+            },
+            {
+              "name": "store",
+              "type": "S extends object",
+              "required": true,
+              "defaultValue": "",
+              "description": "Pinia or Vuex store-like object.",
+              "descriptionZh": "Pinia 或 Vuex 风格的 store 对象。"
+            },
+            {
+              "name": "read",
+              "type": "readonly string[] | ((store: S) => unknown)",
+              "required": true,
+              "defaultValue": "",
+              "description": "An allowlist of fields or a selector that returns a bounded view.",
+              "descriptionZh": "字段白名单，或返回有界视图的 selector。"
+            },
+            {
+              "name": "options",
+              "type": "AgentStateOptions | string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Description shown with the state in model context.",
+              "descriptionZh": "随状态一起进入模型上下文的说明。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Expose a store allowlist",
+              "titleZh": "暴露 store 字段白名单",
+              "code": "const cart = this.$store.state.cart;\nuseAgentStoreState(\"cart\", cart, [\"count\", \"total\"], \"购物车件数与小计\");",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "native",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "useAgentStoreState"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "useAgentStoreState"
+            }
+          ],
+          "reference": "/reference/vue-2-adapter"
+        },
+        {
+          "id": "sensitive",
+          "anchor": "api-sensitive",
+          "name": "sensitive",
+          "kind": "function",
+          "summary": "Marks a value for outbound masking, tokenization, or a hint while keeping the field name visible.",
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signature": "sensitive<T>(value: T, options?: SensitivityMode | SensitiveOptions): SensitiveValue<T>",
+          "parameters": [
+            {
+              "name": "value",
+              "type": "T",
+              "required": true,
+              "defaultValue": "",
+              "description": "Value that enters page context and the model transcript.",
+              "descriptionZh": "会进入页面上下文与模型对话的值。"
+            },
+            {
+              "name": "options",
+              "type": "\"masked\" | \"hidden\" | SensitiveOptions",
+              "required": false,
+              "defaultValue": "\"masked\"",
+              "description": "Controls whether the model sees a placeholder or no value. The real value remains in the browser.",
+              "descriptionZh": "控制模型看到占位代号还是不看到值。真值仍留在浏览器内。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Mask a phone number",
+              "titleZh": "脱敏电话号码",
+              "code": "const phone = sensitive(customer.phone, \"masked\");",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "sensitive"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "sensitive"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "sensitive"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        }
+      ]
+    },
+    {
+      "id": "types",
+      "title": "Shared option types",
+      "summary": "The option shapes referenced by declarations. Adapter aliases are listed where the name differs.",
+      "entries": [
+        {
+          "id": "ToolOptions",
+          "anchor": "api-tooloptions",
+          "name": "ToolOptions",
+          "kind": "type",
+          "summary": "The action declaration shape shared by every adapter.",
+          "imports": [
+            "@plingjs/vue2",
+            "@plingjs/core"
+          ],
+          "signature": "type ToolOptions = AtomicToolOptions | ParamsToolOptions",
+          "parameters": [
+            {
+              "name": "desc",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Required model-facing description of what the control or operation does. This is the primary signal used to select the tool.",
+              "descriptionZh": "必填的面向模型说明，描述控件或操作做什么。这是模型选择工具时最主要的依据。"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "required": false,
+              "defaultValue": "generated once per binding",
+              "description": "Stable action id. Omit only for one-off controls; list rows and flows should use stable ids.",
+              "descriptionZh": "稳定动作 id。仅一次性控件可以省略；列表行与流程应显式提供。"
+            },
+            {
+              "name": "kind",
+              "type": "\"read\" | \"write\" | \"danger\"",
+              "required": false,
+              "defaultValue": "write",
+              "description": "Risk level used for approval and auditing. Omitted values are fail-closed and treated as write.",
+              "descriptionZh": "用于确认与审计的风险等级。省略时按 fail-closed 视为 `write`。"
+            },
+            {
+              "name": "confirm",
+              "type": "boolean | \"always\"",
+              "required": false,
+              "defaultValue": "derived from kind",
+              "description": "Overrides approval derivation. false skips confirmation, true requires it, and always never offers a persistent allow option.",
+              "descriptionZh": "覆盖确认推导。`false` 跳过确认，`true` 要求确认，`always` 每次询问且不提供长期允许。"
+            },
+            {
+              "name": "action",
+              "type": "\"click\" | \"fill\" | \"select\" | \"press\" | \"hover\"",
+              "required": false,
+              "defaultValue": "inferred from element",
+              "description": "Overrides primitive inference. By default form inputs use fill and other elements use click.",
+              "descriptionZh": "覆盖动作原语推断。默认表单输入使用填写，其余元素使用点击。"
+            },
+            {
+              "name": "key",
+              "type": "string",
+              "required": false,
+              "defaultValue": "Enter",
+              "description": "Key used by an action whose primitive is press.",
+              "descriptionZh": "原语为按键时使用的键名。"
+            },
+            {
+              "name": "scope",
+              "type": "string",
+              "required": false,
+              "defaultValue": "nearest scope",
+              "description": "Explicit region id. Omitted values inherit the nearest declared scope.",
+              "descriptionZh": "显式区域 id。省略时继承最近声明的区域。"
+            },
+            {
+              "name": "fidelity",
+              "type": "\"high\" | \"auto\" | \"low\"",
+              "required": false,
+              "defaultValue": "inferred",
+              "description": "Declares how trustworthy the execution target is. Setting it stops automatic target relocation.",
+              "descriptionZh": "声明执行目标的可靠程度。显式设置后不再自动定位目标。"
+            },
+            {
+              "name": "target",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "CSS selector, scoped to the declared element, used to choose the concrete target.",
+              "descriptionZh": "限定在声明元素内部查找具体目标的 CSS 选择器。"
+            },
+            {
+              "name": "autoTarget",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "true",
+              "description": "Automatically locates a unique native control inside the declared element.",
+              "descriptionZh": "自动定位声明元素内部唯一的原生控件。"
+            },
+            {
+              "name": "available",
+              "type": "() => boolean | string | undefined",
+              "required": false,
+              "defaultValue": "",
+              "description": "Business precondition checked before the action appears as available. A returned string is shown to the model as the reason.",
+              "descriptionZh": "动作出现前检查的业务前置条件。返回字符串时，该字符串会作为不可用原因交给模型。"
+            },
+            {
+              "name": "expect",
+              "type": "Expectation",
+              "required": false,
+              "defaultValue": "",
+              "description": "Success criterion checked after execution. Failure produces EXPECTATION_FAILED instead of a false success.",
+              "descriptionZh": "执行后检查的成功判据。不成立时返回 `EXPECTATION_FAILED`，不会把未完成当成功。"
+            },
+            {
+              "name": "handoff",
+              "type": "boolean | string | HandoffOptions",
+              "required": false,
+              "defaultValue": "",
+              "description": "Hands the step to the user instead of simulating it. The boolean or string form supplies the reason.",
+              "descriptionZh": "把这一步交给用户完成，而不是模拟操作。布尔值或字符串形式提供原因。"
+            },
+            {
+              "name": "params",
+              "type": "ParamDeclaration",
+              "required": "conditional",
+              "defaultValue": "",
+              "description": "Parameter schema for the parameterized form. When present, run receives the validated parameter object rather than a single primitive value.",
+              "descriptionZh": "带参数表单使用的参数声明。存在时，`run` 收到校验后的参数对象，而不是单个原语值。"
+            },
+            {
+              "name": "run",
+              "type": "(valueOrArgs) => void | Promise<void>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Injected implementation. Atomic actions receive the primitive value; parameterized actions receive the full argument object. Ignored when steps is present.",
+              "descriptionZh": "注入的执行实现。原子动作收到原语值；带参数动作收到完整参数对象。写了 `steps` 时不会运行。"
+            },
+            {
+              "name": "steps",
+              "type": "readonly FlowStep[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Turns the declaration into a single model-facing flow that executes registered action ids in order. Do not combine it with run.",
+              "descriptionZh": "把声明变成对模型可见的单个流程，按顺序执行已注册动作 id。不要与 `run` 同时使用。"
+            }
+          ],
+          "definition": "interface ToolOptionsBase {\n  desc: string;\n  id?: string;\n  kind?: \"read\" | \"write\" | \"danger\";\n  confirm?: boolean | \"always\";\n  action?: \"click\" | \"fill\" | \"select\" | \"press\" | \"hover\";\n  key?: string;\n  scope?: string;\n  fidelity?: Fidelity;\n  target?: string;\n  autoTarget?: boolean;\n  available?: () => boolean | string | undefined;\n  expect?: Expectation;\n  handoff?: boolean | string | { reason?; expect?; steps?; timeout? };\n}\n\ntype ToolOptions =\n  | { params?: undefined; run?: (value?: unknown) => void | Promise<void> }\n  | { params: ParamDeclaration; run?: (args: Record<string, unknown>) => void | Promise<void> };",
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Parameterized declaration",
+              "titleZh": "带参数的声明",
+              "code": "const move = {\n  id: \"move_task\",\n  desc: \"把待办移动到指定位置\",\n  params: [{ name: \"position\", label: \"新位置\", type: \"number\", min: 1 }],\n  run: ({ position }) => moveTask(Number(position)),\n};",
+              "lang": "js"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "alias",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "ToolOptions"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "PlingToolOptions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "ToolOptions"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "ToolOptions"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "ScopeOptions",
+          "anchor": "api-scopeoptions",
+          "name": "ScopeOptions",
+          "kind": "type",
+          "summary": "The region declaration shape. Vue 3 exposes the equivalent value as ScopeValue.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "interface ScopeOptions {\n  id: string;\n  label?: string;\n  description?: string;\n  role?: RegionRole;\n  parent?: string;\n}",
+          "parameters": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Stable region id. It is written to the DOM and inherited by descendant declarations.",
+              "descriptionZh": "稳定区域 id。会写入 DOM，并由后代声明继承。"
+            },
+            {
+              "name": "label",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Short model-facing name, for example 待办列表.",
+              "descriptionZh": "面向模型的短名称，例如“待办列表”。"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Explains what the region is for and when actions inside it apply.",
+              "descriptionZh": "说明区域的用途，以及其中动作适用的场景。"
+            },
+            {
+              "name": "role",
+              "type": "RegionRole",
+              "required": false,
+              "defaultValue": "",
+              "description": "Structural role such as main, dialog, toolbar, or list. It affects reading order and context, not permissions.",
+              "descriptionZh": "`main`、`dialog`、`toolbar`、`list` 等结构角色。只影响阅读顺序与上下文，不构成权限边界。"
+            },
+            {
+              "name": "parent",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Explicit parent region id for portals, overlays, or detach-to-body cases.",
+              "descriptionZh": "为传送门、浮层或挂到 body 的节点显式指定父区域 id。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Region metadata",
+              "titleZh": "区域元数据",
+              "code": "const scope = {\n  id: \"orders\",\n  label: \"订单列表\",\n  description: \"当前筛选结果，每行可以打开或删除\",\n  role: \"list\",\n  parent: \"main\",\n};",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "alias",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "ScopeValue"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "PlingScopeOptions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "ScopeOptions"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "ScopeOptions"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "RecordValue",
+          "anchor": "api-recordvalue",
+          "name": "RecordValue",
+          "kind": "type",
+          "summary": "A row value or a full record declaration with explicit id, label, and fields.",
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signature": "type RecordValue =\n  | object\n  | {\n      data: object;\n      id?: string | number;\n      label?: string;\n      fields?: Record<string, unknown>;\n    }",
+          "parameters": [
+            {
+              "name": "plain object.id | key",
+              "type": "string | number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Default primary key when the row itself is passed as a plain object.",
+              "descriptionZh": "直接把行对象作为记录时，默认从 `id` 或 `key` 读取主键。"
+            },
+            {
+              "name": "envelope.data",
+              "type": "object",
+              "required": "conditional",
+              "defaultValue": "",
+              "description": "Row data wrapped in the explicit record envelope.",
+              "descriptionZh": "使用显式记录包装时承载的行数据。"
+            },
+            {
+              "name": "envelope.id",
+              "type": "string | number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Overrides the primary key when the field is not named id or key.",
+              "descriptionZh": "主键字段不叫 `id` / `key` 时用它覆盖。"
+            },
+            {
+              "name": "envelope.label",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Human- and model-readable row label.",
+              "descriptionZh": "给人也给模型看的行说明。"
+            },
+            {
+              "name": "envelope.fields",
+              "type": "Record<string, unknown>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Allowlist of fields visible to the model. Without it, all row fields except the primary key are exposed.",
+              "descriptionZh": "模型可见字段白名单。不写时暴露除主键外的全部行字段。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Explicit field allowlist",
+              "titleZh": "显式字段白名单",
+              "code": "const value = {\n  data: order,\n  id: order.code,\n  label: `订单 ${order.code}`,\n  fields: { customer: order.customer, total: order.total },\n};",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "RecordValue"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "RecordValue"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "StateOptions",
+          "anchor": "api-stateoptions",
+          "name": "State options",
+          "kind": "type",
+          "summary": "Optional description for a read-only state view.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "interface AgentStateOptions { description?: string }",
+          "parameters": [
+            {
+              "name": "description",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Explains the state view and its units or bounds. Describe a view, not the entire store.",
+              "descriptionZh": "说明状态视图及其单位或范围。描述的是一个有界视图，不是整个 store。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Describe a bounded view",
+              "titleZh": "描述有界视图",
+              "code": "{ description: \"当前筛选项、总条数与未完成条数\" }",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "alias",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentStateOptions"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "PlingStateOptions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "StateOptions"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "AgentStateOptions"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "AgentSetup",
+          "anchor": "api-agentsetup",
+          "name": "AgentSetup",
+          "kind": "type",
+          "summary": "Application-level runtime options: model overrides, hooks, gates, event handling, trace, and continuity.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "type AgentSetup = Omit<AgentRuntimeOptions, \"config\" | \"registry\" | \"gate\"> & {\n  config?: AgentConfigOverrides;\n  gate?: () => boolean;\n}",
+          "parameters": [
+            {
+              "name": "config",
+              "type": "AgentConfigOverrides",
+              "required": false,
+              "defaultValue": "",
+              "description": "Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults.",
+              "descriptionZh": "模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。"
+            },
+            {
+              "name": "llm",
+              "type": "Llm",
+              "required": false,
+              "defaultValue": "",
+              "description": "Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport.",
+              "descriptionZh": "注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。"
+            },
+            {
+              "name": "responseLocale",
+              "type": "string | (() => string)",
+              "required": false,
+              "defaultValue": "",
+              "description": "Locale used when composing the response-language instruction. A function is re-read before each model request.",
+              "descriptionZh": "拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。"
+            },
+            {
+              "name": "telemetry",
+              "type": "Telemetry",
+              "required": false,
+              "defaultValue": "",
+              "description": "Collects token, duration, cost, and retry metrics for the current runtime.",
+              "descriptionZh": "收集当前运行时的 token、耗时、成本与重试指标。"
+            },
+            {
+              "name": "trace",
+              "type": "boolean | AgentTraceOptions",
+              "required": false,
+              "defaultValue": "false",
+              "description": "Keeps a bounded in-memory trace of model requests for the read-only inspector. Disabled by default.",
+              "descriptionZh": "在内存中保留有界的模型请求记录，供只读诊断面板查看。默认关闭。"
+            },
+            {
+              "name": "settle",
+              "type": "() => Promise<void>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Replaces the page-settle wait used between actions. Most useful in deterministic tests and non-browser hosts.",
+              "descriptionZh": "替换动作之间的页面落定等待。主要用于确定性测试和非浏览器宿主。"
+            },
+            {
+              "name": "hooks",
+              "type": "HookRegistry",
+              "required": false,
+              "defaultValue": "",
+              "description": "Tool lifecycle hooks shared by every surface created from this application runtime.",
+              "descriptionZh": "由该应用运行时创建的界面共用的工具生命周期钩子。"
+            },
+            {
+              "name": "onEvent",
+              "type": "(event: SessionEvent) => void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Receives the same session event stream that powers the chat and activity views.",
+              "descriptionZh": "接收与对话、运行视图相同的会话事件流。"
+            },
+            {
+              "name": "onApproval",
+              "type": "(pending: PendingApproval | null) => void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Called when an approval request appears or clears. Use it to connect a custom approval UI.",
+              "descriptionZh": "确认请求出现或清除时调用。可用来接自己的确认界面。"
+            },
+            {
+              "name": "onHandoff",
+              "type": "(pending: PendingHandoff | null) => void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Called when a human-handoff request appears or clears.",
+              "descriptionZh": "人工接力请求出现或清除时调用。"
+            },
+            {
+              "name": "policy",
+              "type": "ConfirmGate",
+              "required": false,
+              "defaultValue": "",
+              "description": "Replaces the default approval gate. When provided, the built-in gate and chat approval buttons are not used.",
+              "descriptionZh": "替换默认确认闸门。传入后不再使用内置闸门和对话中的确认按钮。"
+            },
+            {
+              "name": "approvalTimeoutMs",
+              "type": "number",
+              "required": false,
+              "defaultValue": "60000",
+              "description": "Time to wait for a human approval before treating it as denied.",
+              "descriptionZh": "等待人工确认的最长时间；超时按拒绝处理。"
+            },
+            {
+              "name": "handoffTimeoutMs",
+              "type": "number",
+              "required": false,
+              "defaultValue": "300000",
+              "description": "Default time to wait for a human handoff. A tool-level handoff.timeout overrides it.",
+              "descriptionZh": "人工接力的默认等待时间。单个工具的 `handoff.timeout` 可以覆盖。"
+            },
+            {
+              "name": "handoff",
+              "type": "HandoffGate",
+              "required": false,
+              "defaultValue": "",
+              "description": "Replaces the built-in handoff queue with a custom channel.",
+              "descriptionZh": "用自定义通道替换内置人工接力队列。"
+            },
+            {
+              "name": "id",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Stable session id for multi-session hosts.",
+              "descriptionZh": "多会话宿主使用的稳定会话 id。"
+            },
+            {
+              "name": "onLeaseLost",
+              "type": "() => void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Called when another tab or host takes over the shared session lease.",
+              "descriptionZh": "共享会话租约被另一个标签页或宿主接管时调用。"
+            },
+            {
+              "name": "continuity",
+              "type": "ContinuitySetting",
+              "required": false,
+              "defaultValue": "",
+              "description": "Enables bounded conversation continuity across full-page navigation. \"tab\" uses sessionStorage. Omit to disable it.",
+              "descriptionZh": "开启跨整页导航的有界对话连续性。`\"tab\"` 使用 sessionStorage；省略即关闭。"
+            },
+            {
+              "name": "gate",
+              "type": "() => boolean",
+              "required": false,
+              "defaultValue": "true",
+              "description": "Returns false to disable the built-in confirmation channel for this application. Defaults to enabled.",
+              "descriptionZh": "返回 `false` 时关闭该应用的内置确认通道。默认开启。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Application-level assistant setup",
+              "titleZh": "应用级助手接线",
+              "code": "const pling = createPling({\n  agent: { config: { limits: { maxTurns: 12 } }, trace: true },\n});",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentSetup"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "AgentSetup"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "AgentSetup"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "AgentSetup"
+            }
+          ],
+          "reference": "/reference/agent-runtime-sessions-context-limits"
+        },
+        {
+          "id": "Kind",
+          "anchor": "api-kind",
+          "name": "Kind",
+          "kind": "type",
+          "summary": "The action risk level used by approval policy.",
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signature": "type Kind = \"read\" | \"write\" | \"danger\"",
+          "parameters": [
+            {
+              "name": "read",
+              "type": "\"read\"",
+              "required": false,
+              "defaultValue": "",
+              "description": "No business state change. Visibility, navigation, and inspection belong here.",
+              "descriptionZh": "不改变业务状态。查看、导航和检查属于这一档。"
+            },
+            {
+              "name": "write",
+              "type": "\"write\"",
+              "required": false,
+              "defaultValue": "",
+              "description": "Changes business state but is not destructive or irreversible.",
+              "descriptionZh": "改变业务状态，但不是破坏性或不可逆操作。"
+            },
+            {
+              "name": "danger",
+              "type": "\"danger\"",
+              "required": false,
+              "defaultValue": "",
+              "description": "Destructive, irreversible, or high-impact. Approval defaults to stricter handling.",
+              "descriptionZh": "破坏性、不可逆或影响较大的操作。确认策略默认更严格。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Choose a risk level",
+              "titleZh": "选择风险等级",
+              "code": "pling.tool(deleteButton, { desc: \"删除此订单\", kind: \"danger\" });",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "Kind"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "ParamDeclaration",
+          "anchor": "api-paramdeclaration",
+          "name": "ParamDeclaration",
+          "kind": "type",
+          "summary": "Array shorthand or JSON Schema used to validate action arguments.",
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signature": "type ParamDeclaration = readonly ToolParam[] | JsonSchema",
+          "parameters": [
+            {
+              "name": "[].name",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Argument key received by run and visible to the model.",
+              "descriptionZh": "`run` 收到的参数键，也是模型看到的参数名。"
+            },
+            {
+              "name": "[].label",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Required explanation of the argument. It is the model's only semantic hint.",
+              "descriptionZh": "必填的参数说明，是模型唯一可依赖的语义提示。"
+            },
+            {
+              "name": "[].type",
+              "type": "\"string\" | \"number\" | \"boolean\"",
+              "required": false,
+              "defaultValue": "\"string\"",
+              "description": "Argument type. Includes coercion from obvious string forms and rejects invalid values.",
+              "descriptionZh": "参数类型。会把明显的字符串形式规整为对应类型，并拒绝无效值。"
+            },
+            {
+              "name": "[].optional",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "false",
+              "description": "Marks the argument optional. Arguments are required by default.",
+              "descriptionZh": "把参数标为可选。参数默认必填。"
+            },
+            {
+              "name": "[].values",
+              "type": "readonly (string | number)[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Closed static value set. Use it when the model must choose from known values.",
+              "descriptionZh": "静态封闭值集合。模型只能从已知值里选择时使用。"
+            },
+            {
+              "name": "[].options",
+              "type": "() => readonly ParamOption[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Dynamic value set, re-read for each snapshot and execution.",
+              "descriptionZh": "动态值集合，每次快照与执行前重新读取。"
+            },
+            {
+              "name": "[].min | [].max",
+              "type": "number | (() => number)",
+              "required": false,
+              "defaultValue": "",
+              "description": "Numeric bounds for number arguments, including dynamic bounds.",
+              "descriptionZh": "数字参数的上下界，也支持动态边界。"
+            },
+            {
+              "name": "[].minLength | [].maxLength",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "String length bounds.",
+              "descriptionZh": "字符串长度边界。"
+            },
+            {
+              "name": "[].pattern",
+              "type": "RegExp | string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Regular-expression constraint for a string argument.",
+              "descriptionZh": "字符串参数的正则约束。"
+            },
+            {
+              "name": "[].format",
+              "type": "\"date\"",
+              "required": false,
+              "defaultValue": "",
+              "description": "Semantic format validation. A date must be a real calendar date.",
+              "descriptionZh": "语义格式校验。`date` 还要求是真实存在的日期。"
+            },
+            {
+              "name": "JSON Schema.type",
+              "type": "\"object\"",
+              "required": "conditional",
+              "defaultValue": "\"object\"",
+              "description": "The direct JSON Schema form must describe an object.",
+              "descriptionZh": "直接传 JSON Schema 时，根类型必须是对象。"
+            },
+            {
+              "name": "JSON Schema.properties",
+              "type": "Record<string, unknown>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Property schemas for the direct JSON Schema form.",
+              "descriptionZh": "直接 JSON Schema 形式的属性定义。"
+            },
+            {
+              "name": "JSON Schema.required",
+              "type": "string[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Required property names for the direct JSON Schema form.",
+              "descriptionZh": "直接 JSON Schema 形式的必填属性名。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Compact parameter declaration",
+              "titleZh": "参数简写",
+              "code": "const params = [\n  { name: \"orderId\", label: \"订单号\", pattern: /^SO-\\d{4}$/ },\n  { name: \"note\", label: \"新备注\", maxLength: 200 },\n  { name: \"notify\", label: \"是否通知客户\", type: \"boolean\", optional: true },\n];",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "ParamDeclaration"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "Expectation",
+          "anchor": "api-expectation",
+          "name": "Expectation",
+          "kind": "type",
+          "summary": "A success condition checked after an action finishes.",
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signature": "interface Expectation {\n  desc?: string;\n  check(): boolean | Promise<boolean>;\n  timeout?: number;\n}",
+          "parameters": [
+            {
+              "name": "desc",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Human-readable statement of the expected outcome. It is included in success and failure receipts.",
+              "descriptionZh": "对预期结果的人话说明。会出现在成功与失败回执里。"
+            },
+            {
+              "name": "check",
+              "type": "() => boolean | Promise<boolean>",
+              "required": true,
+              "defaultValue": "",
+              "description": "Predicate evaluated after execution. Exceptions remain developer errors and are not swallowed.",
+              "descriptionZh": "执行后求值的判断函数。函数自身异常会原样抛出，不会被吞掉。"
+            },
+            {
+              "name": "timeout",
+              "type": "number",
+              "required": false,
+              "defaultValue": "2000",
+              "description": "Maximum wait in milliseconds before reporting EXPECTATION_FAILED.",
+              "descriptionZh": "成立前的最长等待时间；超过后报告 `EXPECTATION_FAILED`。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Verify a new row exists",
+              "titleZh": "确认新记录真的出现",
+              "code": "const expect = {\n  desc: \"新待办出现在列表中\",\n  check: () => todos.some((todo) => todo.text === \"准备发布\"),\n  timeout: 3000,\n};",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "Expectation"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "HandoffStep",
+          "anchor": "api-handoffstep",
+          "name": "HandoffStep",
+          "kind": "type",
+          "summary": "One instruction shown to a person during human handoff.",
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signature": "interface HandoffStep {\n  text: string;\n  highlight?: string;\n}",
+          "parameters": [
+            {
+              "name": "text",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Instruction shown to the person who takes over.",
+              "descriptionZh": "交给接手人看的操作说明。"
+            },
+            {
+              "name": "highlight",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Optional guide-target id or action id to highlight while the step is active.",
+              "descriptionZh": "可选的高亮目标：引导目标 id 或动作 id。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Guide a human step",
+              "titleZh": "引导人工步骤",
+              "code": "const steps = [\n  { text: \"填写短信验证码\", highlight: \"captcha\" },\n  { text: \"点击提交\", highlight: \"submit\" },\n];",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "HandoffStep"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "FlowStep",
+          "anchor": "api-flowstep",
+          "name": "FlowStep",
+          "kind": "type",
+          "summary": "One step in a compound action. Flow steps are not a second execution channel.",
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signature": "interface FlowStep {\n  action: string;\n  args?: Record<string, unknown> | ((params: Record<string, unknown>) => Record<string, unknown>);\n  expect?: Expectation;\n  desc?: string;\n  optional?: boolean;\n  idempotent?: boolean;\n}",
+          "parameters": [
+            {
+              "name": "action",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Registered action id to execute. It may contain {{parameter}} placeholders.",
+              "descriptionZh": "要执行的已注册动作 id，可包含 `{{参数}}` 占位符。"
+            },
+            {
+              "name": "args",
+              "type": "Record<string, unknown> | ((params) => Record<string, unknown>)",
+              "required": false,
+              "defaultValue": "",
+              "description": "Step arguments. Strings may reference flow parameters; a function receives the complete parameter object.",
+              "descriptionZh": "步骤参数。字符串可引用流程参数；函数形式收到完整参数对象。"
+            },
+            {
+              "name": "expect",
+              "type": "Expectation",
+              "required": false,
+              "defaultValue": "",
+              "description": "Overrides the step action's own success criterion.",
+              "descriptionZh": "覆盖该步骤动作自身声明的成功判据。"
+            },
+            {
+              "name": "desc",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Human-readable step description used in progress and receipts.",
+              "descriptionZh": "用于进度与回执的人话步骤说明。"
+            },
+            {
+              "name": "optional",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "false",
+              "description": "A failed optional step is skipped instead of aborting the flow.",
+              "descriptionZh": "可选步骤失败时跳过，不中断整个流程。"
+            },
+            {
+              "name": "idempotent",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "false",
+              "description": "Allows safe retry after an execution or expectation failure. Pre-execution failures are always retryable.",
+              "descriptionZh": "允许执行后或判据失败后重试。执行前失败本身就可以重试。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Reference a parameter in a step",
+              "titleZh": "在步骤中引用参数",
+              "code": "const steps = [\n  { action: \"edit@order:{{orderId}}\", desc: \"打开订单\" },\n  { action: \"dialog_note\", args: { text: \"{{note}}\" }, desc: \"填写备注\" },\n  { action: \"dialog_save\", desc: \"保存\" },\n];",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "FlowStep"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "FlowStep"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "RegionRole",
+          "anchor": "api-regionrole",
+          "name": "RegionRole",
+          "kind": "type",
+          "summary": "The structural role of a region.",
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signature": "type RegionRole =\n  | \"page\"\n  | \"header\"\n  | \"nav\"\n  | \"main\"\n  | \"aside\"\n  | \"section\"\n  | \"form\"\n  | \"dialog\"\n  | \"toolbar\"\n  | \"list\"\n  | \"footer\"",
+          "parameters": [
+            {
+              "name": "role",
+              "type": "\"page\" | \"header\" | \"nav\" | \"main\" | \"aside\" | \"section\" | \"form\" | \"dialog\" | \"toolbar\" | \"list\" | \"footer\"",
+              "required": true,
+              "defaultValue": "",
+              "description": "Adds structural context for disambiguating actions with similar names. It does not grant or restrict permissions.",
+              "descriptionZh": "为同名动作提供结构上下文。它不会授予或限制权限。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Disambiguate two confirm buttons",
+              "titleZh": "区分两个确认按钮",
+              "code": "pling.scope(dialog, { id: \"edit_dialog\", role: \"dialog\", label: \"编辑订单\" });\npling.scope(toolbar, { id: \"bulk_toolbar\", role: \"toolbar\", label: \"批量操作\" });",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "RegionRole"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "RegionRole"
+            }
+          ],
+          "reference": "/reference/core-declarations-actions-records-regions-state"
+        },
+        {
+          "id": "PlingUiOptions",
+          "anchor": "api-plinguioptions",
+          "name": "PlingUiOptions",
+          "kind": "type",
+          "summary": "Locale, theme, message overrides, and class names for the shared assistant UI.",
+          "imports": [
+            "@plingjs/ui"
+          ],
+          "signature": "interface PlingUiOptions {\n  locale?: PlingLocale;\n  theme?: PlingTheme;\n  messages?: PlingCatalogOverrides;\n  classNames?: PlingClassNames;\n}",
+          "parameters": [
+            {
+              "name": "locale",
+              "type": "\"en-US\" | \"zh-CN\" | \"auto\" | string",
+              "required": false,
+              "defaultValue": "en-US",
+              "description": "Language used by the built-in assistant UI. \"auto\" follows the browser language.",
+              "descriptionZh": "内置助手界面的语言。传 `auto` 时跟随浏览器语言。"
+            },
+            {
+              "name": "theme",
+              "type": "\"light\" | \"dark\" | \"auto\" | PlingThemeOverrides",
+              "required": false,
+              "defaultValue": "light",
+              "description": "Theme for the built-in surfaces. An object can override tokens or choose a mode.",
+              "descriptionZh": "内置界面的主题。传对象时可选择模式或覆盖设计令牌。"
+            },
+            {
+              "name": "theme.mode",
+              "type": "\"light\" | \"dark\" | \"auto\"",
+              "required": false,
+              "defaultValue": "light",
+              "description": "Explicit mode when the theme is an object. \"auto\" follows the operating-system preference.",
+              "descriptionZh": "主题传对象时指定的模式。`auto` 跟随操作系统外观。"
+            },
+            {
+              "name": "theme.tokens",
+              "type": "Partial<PlingThemeTokens>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Overrides individual design tokens such as colours, radii, shadows, and font families. Keys not supplied keep the selected light or dark defaults.",
+              "descriptionZh": "覆盖颜色、圆角、阴影、字体等单个设计令牌。未提供的键沿用所选明色或暗色主题的默认值。"
+            },
+            {
+              "name": "messages",
+              "type": "PlingCatalogOverrides",
+              "required": false,
+              "defaultValue": "",
+              "description": "Adds or replaces message catalog entries for one or more locales.",
+              "descriptionZh": "为一个或多个语言补充或替换界面文案。"
+            },
+            {
+              "name": "messages.<locale>",
+              "type": "Partial<Record<PlingMessageKey, string>>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Message overrides for one BCP 47 locale. Missing keys fall back to the built-in catalog.",
+              "descriptionZh": "某个 BCP 47 语言的文案覆盖。未提供的键回退到内置文案。"
+            },
+            {
+              "name": "classNames",
+              "type": "PlingClassNames",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class names applied to the built-in chat, dock, launcher, and panel.",
+              "descriptionZh": "为内置对话、浮窗、启动按钮和面板附加 class。"
+            },
+            {
+              "name": "classNames.dock",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class for the dock shell.",
+              "descriptionZh": "浮窗外壳的附加 class。"
+            },
+            {
+              "name": "classNames.panel",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class for the panel shell.",
+              "descriptionZh": "面板外壳的附加 class。"
+            },
+            {
+              "name": "classNames.launcher",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class for the launcher button.",
+              "descriptionZh": "启动按钮的附加 class。"
+            },
+            {
+              "name": "classNames.chat",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra class for the chat surface.",
+              "descriptionZh": "对话界面的附加 class。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Chinese UI with a token override",
+              "titleZh": "中文界面与令牌覆盖",
+              "code": "const ui = {\n  locale: \"zh-CN\",\n  theme: { mode: \"light\", tokens: { colorPrimary: \"#0b6bcb\" } },\n  classNames: { dock: \"product-assistant\" },\n};",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/ui",
+              "name": "PlingUiOptions"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "PlingUiOptions"
+            }
+          ],
+          "reference": "/reference/ui-messages-theme-locale"
+        }
+      ]
+    },
+    {
+      "id": "ui",
+      "title": "Assistant surfaces",
+      "summary": "Mounted conversation and inspection surfaces. They render the shared runtime; they do not create a second agent.",
+      "entries": [
+        {
+          "id": "VanillaDock",
+          "anchor": "api-vanilladock",
+          "name": "VanillaDock",
+          "kind": "interface",
+          "summary": "The DOM dock controller returned by pling.dock(): element, runtime, open, close, toggle, isOpen, destroy.",
+          "imports": [
+            "@plingjs/vue2"
+          ],
+          "signature": "pling.dock(options?: VanillaDockOptions): VanillaDock",
+          "parameters": [
+            {
+              "name": "title",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Assistant title.",
+              "descriptionZh": "助手标题。"
+            },
+            {
+              "name": "placeholder",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Composer placeholder.",
+              "descriptionZh": "输入框占位文案。"
+            },
+            {
+              "name": "emptyHint",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Empty-state copy.",
+              "descriptionZh": "空状态文案。"
+            },
+            {
+              "name": "quick",
+              "type": "readonly string[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Suggested prompts.",
+              "descriptionZh": "推荐指令。"
+            },
+            {
+              "name": "defaultOpen",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "false",
+              "description": "Whether the dock starts open.",
+              "descriptionZh": "浮窗是否默认展开。"
+            },
+            {
+              "name": "config",
+              "type": "AgentConfigOverrides",
+              "required": false,
+              "defaultValue": "",
+              "description": "Dock-level model overrides.",
+              "descriptionZh": "浮窗级模型覆盖。"
+            },
+            {
+              "name": "llm",
+              "type": "Llm",
+              "required": false,
+              "defaultValue": "",
+              "description": "Injected model function.",
+              "descriptionZh": "注入的模型函数。"
+            },
+            {
+              "name": "hooks",
+              "type": "HookRegistry",
+              "required": false,
+              "defaultValue": "",
+              "description": "Dock-level tool hooks.",
+              "descriptionZh": "浮窗级工具钩子。"
+            },
+            {
+              "name": "gate",
+              "type": "() => boolean",
+              "required": false,
+              "defaultValue": "",
+              "description": "Confirmation-channel switch.",
+              "descriptionZh": "确认通道开关。"
+            },
+            {
+              "name": "registry",
+              "type": "Registry",
+              "required": false,
+              "defaultValue": "",
+              "description": "Registry to operate. Defaults to this Pling instance.",
+              "descriptionZh": "要操作的注册表。默认使用当前 Pling 实例的注册表。"
+            },
+            {
+              "name": "onSessionEvent",
+              "type": "(event: SessionEvent) => void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Session event callback.",
+              "descriptionZh": "会话事件回调。"
+            },
+            {
+              "name": "onOpenChange",
+              "type": "(open: boolean) => void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Called when the dock opens or closes.",
+              "descriptionZh": "浮窗展开或收起时调用。"
+            },
+            {
+              "name": "navigate",
+              "type": "(href: string) => void",
+              "required": false,
+              "defaultValue": "window.location.replace",
+              "description": "Post-task navigation implementation.",
+              "descriptionZh": "任务完成后的导航实现。"
+            },
+            {
+              "name": "return.element",
+              "type": "HTMLElement",
+              "required": false,
+              "defaultValue": "",
+              "description": "Root element owned by the dock.",
+              "descriptionZh": "浮窗持有的根元素。"
+            },
+            {
+              "name": "return.runtime",
+              "type": "AgentRuntime",
+              "required": false,
+              "defaultValue": "",
+              "description": "Runtime driving the dock conversation.",
+              "descriptionZh": "驱动浮窗对话的运行时。"
+            },
+            {
+              "name": "return.open()",
+              "type": "void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Opens the dock.",
+              "descriptionZh": "展开浮窗。"
+            },
+            {
+              "name": "return.close()",
+              "type": "void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Closes the dock while preserving its conversation.",
+              "descriptionZh": "收起浮窗并保留对话。"
+            },
+            {
+              "name": "return.toggle()",
+              "type": "void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Toggles the open state.",
+              "descriptionZh": "切换展开状态。"
+            },
+            {
+              "name": "return.isOpen()",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "",
+              "description": "Returns the current open state.",
+              "descriptionZh": "返回当前展开状态。"
+            },
+            {
+              "name": "return.destroy()",
+              "type": "void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Removes the dock and releases its runtime resources.",
+              "descriptionZh": "移除浮窗并释放其运行时资源。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Mount and control the native dock",
+              "titleZh": "挂载并控制原生浮窗",
+              "code": "const dock = pling.dock({\n  title: \"待办助手\",\n  defaultOpen: false,\n  onOpenChange: (open) => console.log(open),\n});\n\n// Later:\ndock.open();\n// On teardown:\ndock.destroy();",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "VanillaDock"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "VanillaDock"
+            }
+          ],
+          "reference": "/reference/vue-2-adapter"
+        }
+      ]
+    }
+  ]
+}

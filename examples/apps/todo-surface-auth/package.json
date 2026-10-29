@@ -1,0 +1,32 @@
+{
+  "name": "@plingjs/example-todo-surface-auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Authenticated Todo application with page Agent and third-party Agent Surface, BFF-issued page sessions, pairing codes, and human approval",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite --config ./vite.config.ts --host 127.0.0.1 --port 5220 --strictPort",
+    "dev:server": "node server/index.mjs",
+    "build": "vue-tsc --noEmit && vite build --config ./vite.config.ts",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "node --test server/test/*.test.mjs && vitest run",
+    "surface:claim": "node scripts/claim.mjs"
+  },
+  "dependencies": {
+    "@plingjs/agent": "workspace:*",
+    "@plingjs/core": "workspace:*",
+    "@plingjs/surface": "workspace:*",
+    "@plingjs/vue": "workspace:*",
+    "vue": "^3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5",
+    "@vue/test-utils": "^2",
+    "jsdom": "^25",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^2",
+    "vue-tsc": "^3.3.13"
+  }
+}

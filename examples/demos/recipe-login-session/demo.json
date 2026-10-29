@@ -1,0 +1,26 @@
+{
+  "id": "recipe-login-session", "title": "Recipe 01: Login and protected pages", "titleZh": "方案01：登录与受保护页面",
+  "eyebrow": "Runnable recipe", "eyebrowZh": "可运行方案",
+  "summary": "An HttpOnly demo session protects invoice records. Expiring or signing out removes both the records and the declared actions.", "summaryZh": "HttpOnly 示例会话保护发票记录。会话过期或退出后，记录与已声明动作都会消失。",
+  "url": "/demos/recipe-login-session/", "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Session UI and protected declarations", "roleZh": "会话界面与受保护声明", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Local run and demo account", "roleZh": "本地运行与演示账号", "lang": "markdown" },
+    { "path": "recipe-backends/access-service/server.mjs", "scope": "workspace", "label": "server.mjs", "role": "HttpOnly session and protected API", "roleZh": "HttpOnly 会话与受保护 API", "lang": "js" },
+    { "path": "recipe-backends/access-service/README.md", "scope": "workspace", "label": "backend README", "role": "Backend purpose, routes, and limits", "roleZh": "后端用途、路由与边界", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": { "records": { "selector": "v-record", "match": "v-record=\"" }, "tool": { "selector": "useAgentTool", "match": "useAgentTool({" }, "dock": { "selector": "AgentDock", "match": "<AgentDock" } },
+  "guide": {
+    "title": "Keep identity outside the capability surface", "titleZh": "把身份留在能力面之外",
+    "intro": ["The page uses a real local HTTP session. No password, cookie, or token becomes an action parameter.", "Sign in, then inspect the assistant. Expire the session and ask again; the protected records and tools are no longer declared."],
+    "introZh": ["页面使用真实的本地 HTTP 会话。密码、Cookie 与 token 都不会成为动作参数。", "登录后观察助手。让会话过期再问一次；受保护记录与工具都不再被声明。"],
+    "steps": [
+      { "title": "Create the page runtime", "titleZh": "创建页面运行时", "body": "The demo sets an explicit 100-turn limit and installs one Pling plugin.", "bodyZh": "示例显式设置 100 轮上限，并安装一个 Pling 插件。", "file": "src/main.ts", "match": "createPling({", "lines": 9 },
+      { "title": "Declare protected records", "titleZh": "声明受保护记录", "body": "Records are rendered only inside the signed-in branch. The model cannot recover records the page did not project.", "bodyZh": "记录只在登录分支中渲染。页面没有投影的记录，模型也无法凭空取得。", "file": "src/App.vue", "match": "v-record=", "lines": 10 },
+      { "title": "Gate the write tool", "titleZh": "给写工具加前置条件", "body": "The note tool is unavailable when signed out, and the API still rechecks the session on every request.", "bodyZh": "未登录时备注工具不可用；API 每次请求仍会重新检查会话。", "file": "src/App.vue", "match": "id: \"add_invoice_note\"", "lines": 12 }
+    ],
+    "note": "Local service: demo@example.com / pling-demo. Start it with pnpm dev:examples. The token and cookie are never model inputs.", "noteZh": "本地账号：demo@example.com / pling-demo。用 pnpm dev:examples 启动。token 与 Cookie 都不会成为模型输入。"
+  }
+}

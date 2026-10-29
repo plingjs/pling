@@ -1,0 +1,26 @@
+{
+  "name": "@plingjs/recipe-react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable React recipe lab: form validation, dangerous actions, search, state, continuity, and host-owned connection settings",
+  "scripts": {
+    "dev": "vite --config ./vite.config.ts --port 5231 --strictPort",
+    "build": "vite build --config ./vite.config.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plingjs/agent": "workspace:*",
+    "@plingjs/core": "workspace:*",
+    "@plingjs/react": "workspace:*",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^4",
+    "typescript": "^5",
+    "vite": "^6"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "id": "recipe-external-surface",
+  "title": "Recipe 09: Expose three safe capabilities",
+  "titleZh": "方案09：向外部 Agent 开放三个安全能力",
+  "eyebrow": "Runnable recipe",
+  "eyebrowZh": "可运行方案",
+  "summary": "An editorial queue exposes list, approve, and comment to an external client. A delete action remains available to the page assistant but is rejected by the external allowlist.",
+  "summaryZh": "编辑队列只向外部客户端暴露列表、通过与备注三项能力。删除仍可由页面内助手使用，但不在外部白名单中，因此会被协议拒绝。",
+  "url": "/demos/recipe-external-surface/",
+  "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Records, page tools, and Surface allowlist", "roleZh": "记录、页面工具与能力面白名单", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Run and inspect the allowlist", "roleZh": "运行与检查白名单", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": {
+    "surface": { "selector": "createSurface", "match": "createSurface({" },
+    "records": { "selector": "v-record", "match": "v-record=\"" },
+    "tool": { "selector": "article_approve", "match": "id: \"article_approve\"" }
+  },
+  "guide": {
+    "title": "Exposure is a whitelist, not a filter on an API dump",
+    "titleZh": "开放能力是白名单，不是把 API 过滤一遍",
+    "intro": [
+      "The page and the external client share one registry and one executor, but they do not see the same capabilities.",
+      "Call describe, invoke the three exposed capabilities, then try article_delete. The last request fails before the business handler runs."
+    ],
+    "introZh": [
+      "页面与外部客户端共用一份注册表和执行器，但看到的能力并不相同。",
+      "先调用 describe，再调用三项白名单能力，最后尝试 article_delete。最后一次请求会在业务函数执行前失败。"
+    ],
+    "steps": [
+      { "title": "Reuse the page executor", "titleZh": "复用页面执行器", "body": "The surface receives the existing registry and executor. It does not implement a second route into page state.", "bodyZh": "能力面接收现有注册表与执行器，不另建一条进入页面状态的执行路径。", "file": "src/App.vue", "match": "const executor = createExecutor(", "lines": 8 },
+      { "title": "Name the external allowlist", "titleZh": "声明外部白名单", "body": "Only list, approve, and comment are exposed. The exact list is visible in the response and in page state.", "bodyZh": "只暴露列表、通过与备注。实际白名单同时出现在协议响应与页面状态中。", "file": "src/App.vue", "match": "expose: [\"article_list\"", "lines": 8 },
+      { "title": "Keep delete inside the page boundary", "titleZh": "把删除留在页面边界内", "body": "The delete tool exists for the in-page assistant, but its id is absent from the external allowlist.", "bodyZh": "删除工具仍供页面内助手使用，但它的 id 不在外部白名单里。", "file": "src/App.vue", "match": "id: \"article_delete\"", "lines": 2 }
+    ],
+    "note": "Open the External client panel. A successful describe shows three capabilities; article_delete returns CAPABILITY_NOT_EXPOSED.",
+    "noteZh": "查看“外部客户端”面板。describe 只返回三项能力；article_delete 返回 CAPABILITY_NOT_EXPOSED。"
+  }
+}

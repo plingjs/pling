@@ -1,0 +1,24 @@
+{
+  "id": "recipe-continuity", "title": "Recipe 08: Multi-page task continuity", "titleZh": "方案08：多页任务连续性",
+  "eyebrow": "Runnable recipe", "eyebrowZh": "可运行方案",
+  "summary": "A full document navigation replaces the page. The pending task resumes on the detail document and returns to the list when done.", "summaryZh": "整页导航替换 document。待完成任务在详情文档恢复，完成后返回列表。",
+  "url": "/demos/recipe-continuity/", "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "List and detail documents", "roleZh": "列表与详情文档", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Continuity and runtime setup", "roleZh": "连续性与运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Local run and full-flow prompt", "roleZh": "本地运行与完整任务提示", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": { "continuity": { "selector": "continuity", "match": "continuity: {" }, "records": { "selector": "v-record", "match": "v-record=\"" }, "dock": { "selector": "AgentDock", "match": "<AgentDock" } },
+  "guide": {
+    "title": "Resume on a new document, not in a hidden iframe", "titleZh": "在新的 document 恢复，而不是藏在 iframe 里",
+    "intro": ["Opening a customer changes the URL and reloads the application. No client route keeps the old DOM alive.", "The continuity checkpoint is bounded; the detail page declares its own note field and save action."],
+    "introZh": ["打开客户会改变 URL 并重新加载应用，没有客户端路由让旧 DOM 存活。", "连续性检查点有明确边界；详情页重新声明自己的备注字段与保存动作。"],
+    "steps": [
+      { "title": "Name the continuity scope", "titleZh": "命名连续性范围", "body": "The runtime uses a stable key, automatic resume, and return-on-done.", "bodyZh": "运行时使用稳定 key、自动恢复与完成后返回。", "file": "src/main.ts", "match": "continuity: {", "lines": 6 },
+      { "title": "Navigate as a person does", "titleZh": "使用真人相同的导航", "body": "The record link performs a normal full navigation.", "bodyZh": "记录链接执行普通整页导航。", "file": "src/App.vue", "match": "detailHref", "lines": 8 },
+      { "title": "Finish on the second page", "titleZh": "在第二页完成", "body": "The detail document declares the save tool and verifies the saved note.", "bodyZh": "详情文档声明保存工具，并验证备注已保存。", "file": "src/App.vue", "match": "id: \"save_customer_note\"", "lines": 12 }
+    ],
+    "note": "Ask: “Open Globex, set the note to Dinner on Friday, and save it.” The assistant should end on the detail document, save once, and return to the list.", "noteZh": "输入：“打开 Globex，把备注写成周五约吃饭，然后保存。”助手应在详情文档保存一次并返回列表。"
+  }
+}

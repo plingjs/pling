@@ -1,0 +1,11 @@
+{
+  "tenants": [
+    {
+      "id": "demo",
+      "displayName": "Pling Todo Demo",
+      "origins": ["https://todo.plingjs.dev"],
+      "maxPageSessionTtlMs": 28800000,
+      "maxAgentSessionTtlMs": 7200000
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "name": "@plingjs/vue2",
+  "version": "0.1.0-alpha.2",
+  "private": false,
+  "type": "module",
+  "description": "Pling 的 Vue 2.7 适配器：插件、指令、只读状态桥接与原生问答入口",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/plingjs/pling.git",
+    "directory": "packages/vue2"
+  },
+  "homepage": "https://plingjs.dev",
+  "bugs": "https://github.com/plingjs/pling/issues",
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup && node ../../scripts/write-package-manifest.mjs",
+    "prepack": "pnpm build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plingjs/core": "workspace:*",
+    "@plingjs/dom": "workspace:*",
+    "@plingjs/vanilla": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "^2.7.0"
+  },
+  "devDependencies": {
+    "jsdom": "^25",
+    "tsup": "^9.0.0",
+    "typescript": "^5",
+    "vitest": "^2",
+    "vue": "2.7.16"
+  }
+}

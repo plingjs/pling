@@ -1,0 +1,51 @@
+{
+  "name": "@plingjs/react",
+  "version": "0.1.0-alpha.2",
+  "private": false,
+  "type": "module",
+  "description": "Pling 的 React 适配器：动作 / 记录 / 区域 / 只读状态 / 悬浮问答入口",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/plingjs/pling.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://plingjs.dev",
+  "bugs": "https://github.com/plingjs/pling/issues",
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsup && node ../../scripts/write-package-manifest.mjs",
+    "prepack": "pnpm build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@plingjs/agent": "workspace:*",
+    "@plingjs/core": "workspace:*",
+    "@plingjs/dom": "workspace:*",
+    "@plingjs/ui": "workspace:*",
+    "markdown-it": "^15.0.3"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "jsdom": "^25",
+    "react": "^19",
+    "react-dom": "^19",
+    "tsup": "^9.0.0",
+    "typescript": "^5",
+    "vitest": "^2"
+  }
+}

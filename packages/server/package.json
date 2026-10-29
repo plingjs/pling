@@ -1,0 +1,36 @@
+{
+  "name": "@plingjs/server",
+  "version": "0.1.0-alpha.2",
+  "private": false,
+  "type": "module",
+  "description": "Pling 的薄 Node 层：OpenAI 兼容代理 / 服务端密钥 / 鉴权钩子 / 审计（不搬 agent 循环）",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/plingjs/pling.git",
+    "directory": "packages/server"
+  },
+  "homepage": "https://plingjs.dev",
+  "bugs": "https://github.com/plingjs/pling/issues",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  },
+  "scripts": {
+    "build": "tsup && node ../../scripts/write-package-manifest.mjs",
+    "prepack": "pnpm build",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsup": "^9.0.0",
+    "typescript": "^5",
+    "vitest": "^2"
+  }
+}

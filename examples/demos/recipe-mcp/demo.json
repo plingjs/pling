@@ -1,0 +1,44 @@
+{
+  "id": "recipe-mcp",
+  "title": "Recipe 10: Connect an external agent through MCP",
+  "titleZh": "方案10：通过 MCP 接入外部 Agent",
+  "eyebrow": "Runnable recipe",
+  "eyebrowZh": "可运行方案",
+  "summary": "A real stdio MCP process connects to an open ticket page over loopback. The client receives describe and invoke, not the DOM or model credentials.",
+  "summaryZh": "真实 stdio MCP 进程通过回环地址连接打开中的工单页面。客户端拿到 describe 与 invoke，而不是 DOM 或模型凭据。",
+  "url": "/demos/recipe-mcp/",
+  "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Ticket records and Surface exposure", "roleZh": "工单记录与能力面暴露", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "MCP process and client registration", "roleZh": "MCP 进程与客户端注册", "lang": "markdown" },
+    { "path": "demos/external-agent-surface/src/mcp-bridge.ts", "scope": "workspace", "label": "mcp-bridge.ts", "role": "Loopback page bridge", "roleZh": "页面侧回环桥", "lang": "ts" },
+    { "path": "demos/external-agent-surface/mcp-server.mjs", "scope": "workspace", "label": "mcp-server.mjs", "role": "Stdio MCP facade", "roleZh": "Stdio MCP facade", "lang": "js" },
+    { "path": "demos/external-agent-surface/README.md", "scope": "workspace", "label": "bridge README", "role": "Bridge purpose, commands, and limits", "roleZh": "桥的用途、命令与边界", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": {
+    "bridge": { "selector": "installMcpBridge", "match": "installMcpBridge({" },
+    "surface": { "selector": "createSurface", "match": "expose: [\"ticket_list\"" },
+    "tool": { "selector": "ticket_reply", "match": "id: \"ticket_reply\"" }
+  },
+  "guide": {
+    "title": "Keep the page open and the MCP client outside",
+    "titleZh": "页面保持打开，MCP 客户端留在页面之外",
+    "intro": [
+      "The stdio process is a transport facade. It does not inspect the DOM, hold a model key, or implement ticket business rules.",
+      "Start the page first, then start the MCP server. Ask the client to list tickets and reply to one record."
+    ],
+    "introZh": [
+      "stdio 进程只是传输 facade。它不读取 DOM、不持有模型密钥，也不复制工单业务规则。",
+      "先启动页面，再启动 MCP server。让客户端列出工单并回复其中一条记录。"
+    ],
+    "steps": [
+      { "title": "Expose three named ticket capabilities", "titleZh": "暴露三项具名工单能力", "body": "The Surface allowlist contains list, reply, and statistics. No generic click or script tool is added.", "bodyZh": "能力面白名单只包含列表、回复与统计，没有通用点击或脚本工具。", "file": "src/App.vue", "match": "expose: [\"ticket_list\"", "lines": 7 },
+      { "title": "Bridge only the protocol", "titleZh": "只桥接协议", "body": "The page opens a loopback WebSocket and forwards describe or invoke requests to the existing Surface.", "bodyZh": "页面打开回环 WebSocket，把 describe 或 invoke 请求交给现有能力面。", "file": "src/App.vue", "match": "installMcpBridge({", "lines": 6 },
+      { "title": "Register the stdio server", "titleZh": "注册 stdio server", "body": "The MCP client starts one command; the bridge port is loopback-only and the page must remain open.", "bodyZh": "MCP 客户端启动一条命令；桥只监听回环地址，页面必须保持打开。", "file": "README.md", "match": "pnpm --filter @plingjs/examples surface:mcp", "lines": 4 }
+    ],
+    "note": "Run the page and the MCP server in separate terminals. A hosted HTTPS endpoint needs an authenticated gateway; this loopback bridge is for local development.",
+    "noteZh": "页面与 MCP server 分别运行在两个终端。公网 HTTPS 端点需要经过鉴权的网关；这里的回环桥只用于本地开发。"
+  }
+}

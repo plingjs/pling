@@ -1,0 +1,153 @@
+export type DemoLocale = "en" | "zh";
+export type Risk = "high" | "medium" | "low";
+export type AccountStatus = "open" | "reviewing" | "reviewed";
+export type RiskFilter = "all" | Risk;
+
+export function resolveDemoLocale(): DemoLocale {
+  return new URLSearchParams(location.search).get("lang") === "zh" ? "zh" : "en";
+}
+
+  const COPY = {
+  en: {
+    brand: "Account review",
+    navList: "Accounts",
+    navActivity: "Activity",
+    eyebrow: "Success operations",
+    title: "Account review workspace",
+    lead: "Filter the queue, open an account, and record the next step. The URL identifies the current view.",
+    open: (open: number, total: number) => `${open} open · ${total} accounts`,
+    searchLabel: "Search",
+    searchPlaceholder: "Account, owner, segment or note",
+    filters: "Risk filters",
+    all: "All",
+    high: "High risk",
+    medium: "Medium risk",
+    low: "Low risk",
+    reset: "Reset filters",
+    shown: (shown: number, total: number) => `${shown} of ${total} shown`,
+    empty: "No accounts match this view.",
+    owner: "Owner",
+    revenue: "ARR",
+    risk: "Risk",
+    status: "Status",
+    lastContact: "Last contact",
+    note: "Next-step note",
+    openAccount: "Open account",
+    openAccountDesc: (name: string) => `Open the account ${name}.`,
+    accountDetail: "Account detail",
+    back: "Back to accounts",
+    backDesc: "Return to the account list.",
+    statusOpen: "Open",
+    statusReviewing: "Reviewing",
+    statusReviewed: "Reviewed",
+    markOpen: "Open",
+    markReviewing: "Reviewing",
+    markReviewed: "Reviewed",
+    saveNote: "Save note",
+    notePlaceholder: "Write the next step for this account",
+    noteSaved: "Note saved",
+    updateStatusDesc: "Change the review status of the current account.",
+    saveNoteDesc: "Save the next-step note for the current account.",
+    accountParam: "Account",
+    statusParam: "New status",
+    noteParam: "Note",
+    missing: "Account not found",
+    missingBody: (id: string) => `No account has the id “${id}”.`,
+    activityEyebrow: "Workspace history",
+    activityTitle: "Activity",
+    activityLead: "Changes made through the page and the assistant share one history.",
+    activityEmpty: "No activity yet.",
+    activityBack: "Back to the list",
+    activityBackDesc: "Return to the account list.",
+    when: "When",
+    event: "Event",
+    dockTitle: "Account assistant",
+    dockPlaceholder: "Filter accounts or open one to record the next step…",
+    quick: [
+      "Filter to high-risk accounts",
+      "Open Northwind, mark it reviewed, and set the note to “Follow up before Friday”",
+      "Open Activity and summarize what changed",
+      "Return to Accounts and reset the filters",
+    ],
+    stateDescription: "Read-only view of the active search, risk filter, matching account count, and totals.",
+    detailStateDescription: "Read-only view of the current account id, status, risk, and whether it exists.",
+  },
+  zh: {
+    brand: "账户复核",
+    navList: "账户",
+    navActivity: "活动记录",
+    eyebrow: "客户成功运营",
+    title: "账户复核工作台",
+    lead: "筛选队列、打开账户并记录下一步。地址栏标识当前视图，列表、详情与活动记录都在同一个单页应用内。",
+    open: (open: number, total: number) => `${open} 个待处理 · 共 ${total} 个账户`,
+    searchLabel: "搜索",
+    searchPlaceholder: "账户、负责人、客户分层或备注",
+    filters: "风险筛选",
+    all: "全部",
+    high: "高风险",
+    medium: "中风险",
+    low: "低风险",
+    reset: "重置筛选",
+    shown: (shown: number, total: number) => `显示 ${shown} / ${total} 个账户`,
+    empty: "当前视图没有符合条件的账户。",
+    owner: "负责人",
+    revenue: "年度合同额",
+    risk: "风险",
+    status: "状态",
+    lastContact: "最近联系",
+    note: "下一步备注",
+    openAccount: "打开账户",
+    openAccountDesc: (name: string) => `打开账户“${name}”。`,
+    accountDetail: "账户详情",
+    back: "返回账户列表",
+    backDesc: "返回账户列表。",
+    statusOpen: "待处理",
+    statusReviewing: "复核中",
+    statusReviewed: "已复核",
+    markOpen: "待处理",
+    markReviewing: "复核中",
+    markReviewed: "已复核",
+    saveNote: "保存备注",
+    notePlaceholder: "记录这个账户的下一步",
+    noteSaved: "备注已保存",
+    updateStatusDesc: "修改当前账户的复核状态。",
+    saveNoteDesc: "保存当前账户的下一步备注。",
+    accountParam: "账户",
+    statusParam: "新状态",
+    noteParam: "备注",
+    missing: "没有找到账户",
+    missingBody: (id: string) => `没有 id 为“${id}”的账户。`,
+    activityEyebrow: "工作区历史",
+    activityTitle: "活动记录",
+    activityLead: "页面操作与助手操作写入同一份历史。",
+    activityEmpty: "还没有活动记录。",
+    activityBack: "返回列表",
+    activityBackDesc: "返回账户列表。",
+    when: "时间",
+    event: "事件",
+    dockTitle: "账户助手",
+    dockPlaceholder: "筛选账户，或打开一个账户记录下一步……",
+    quick: [
+      "筛选高风险账户",
+      "打开 Northwind，标记为已复核，备注写成“周五前回访”",
+      "打开活动记录，概括刚刚发生了什么",
+      "回到账户列表并重置筛选",
+    ],
+    stateDescription: "只读展示当前搜索、风险筛选、匹配账户数以及总数。",
+    detailStateDescription: "只读展示当前账户 id、状态、风险，以及账户是否存在。",
+  },
+} as const;
+
+export function copyFor(locale: DemoLocale) {
+  return COPY[locale];
+}
+
+export function statusLabel(locale: DemoLocale, status: AccountStatus): string {
+  const copy = copyFor(locale);
+  return status === "open" ? copy.statusOpen : status === "reviewing" ? copy.statusReviewing : copy.statusReviewed;
+}
+
+export function riskLabel(locale: DemoLocale, risk: Risk): string {
+  const copy = copyFor(locale);
+  return risk === "high" ? copy.high : risk === "medium" ? copy.medium : copy.low;
+}

@@ -1,0 +1,144 @@
+{
+  "id": "multi-page-continuity",
+  "title": "Example 04: Multi-page workspace",
+  "titleZh": "案例04：多页工作台",
+  "eyebrow": "Across documents",
+  "eyebrowZh": "跨 document",
+  "summary": "A server-rendered list and detail page. One task survives the full document navigation, finishes on the detail page, and returns to the list.",
+  "summaryZh": "普通的服务端多页列表与详情页。一条任务跨过整页跳转，在详情页继续完成，然后回到列表。",
+  "url": "/demos/multi-page-continuity/",
+  "source": "examples/tutorials/j-11-mpa-continuity/",
+  "run": "pnpm tutorial:build --only=j-11 && pnpm dev:examples",
+  "open": "src/ListPage.ts",
+  "files": [
+    {
+      "path": "src/ListPage.ts",
+      "label": "ListPage.ts",
+      "role": "List document, records, and navigation action",
+      "roleZh": "列表 document、记录与导航动作",
+      "lang": "ts"
+    },
+    {
+      "path": "src/DetailPage.ts",
+      "label": "DetailPage.ts",
+      "role": "Second document and resumed work",
+      "roleZh": "第二个 document 与恢复后的任务",
+      "lang": "ts"
+    },
+    {
+      "path": "src/data.ts",
+      "label": "data.ts",
+      "role": "Business state shared across documents",
+      "roleZh": "跨 document 共享的业务状态",
+      "lang": "ts"
+    },
+    {
+      "path": "demo/setup.ts",
+      "label": "setup.ts",
+      "role": "Continuity configuration",
+      "roleZh": "任务连续性配置",
+      "lang": "ts"
+    },
+    {
+      "path": "demo/a.ts",
+      "label": "a.ts",
+      "role": "List document entry",
+      "roleZh": "列表 document 入口",
+      "lang": "ts"
+    },
+    {
+      "path": "demo/b.ts",
+      "label": "b.ts",
+      "role": "Detail document entry",
+      "roleZh": "详情 document 入口",
+      "lang": "ts"
+    },
+    {
+      "path": "demo/index.html",
+      "label": "index.html",
+      "role": "List page HTML",
+      "roleZh": "列表页 HTML",
+      "lang": "html"
+    },
+    {
+      "path": "demo/detail.html",
+      "label": "detail.html",
+      "role": "Detail page HTML",
+      "roleZh": "详情页 HTML",
+      "lang": "html"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Purpose, both run paths, and source map",
+      "roleZh": "用途、两种运行方式与源码导览",
+      "lang": "markdown"
+    },
+    {
+      "path": "GATEWAY.md",
+      "scope": "workspace",
+      "label": "GATEWAY.md",
+      "role": "Shared local model gateway",
+      "roleZh": "共享本地模型网关",
+      "lang": "markdown"
+    }
+  ],
+  "focus": {
+    "runtime": { "selector": "createPling", "match": "const pling = createPling({" },
+    "record": { "selector": "[data-customer]", "match": "pling.record(row" },
+    "navigation": { "selector": "[data-open]", "match": "navigate(detailHref(customer.id))" },
+    "continuity": { "selector": "setup.ts", "match": "continuity: {" }
+  },
+  "guide": {
+    "title": "Keep one task alive across two real documents",
+    "titleZh": "让一条任务跨过两个真实 document",
+    "intro": [
+      "The list and detail page are ordinary HTML documents. Opening a record performs a full navigation, so the page, action registry, and DOM are rebuilt.",
+      "Only the pending task survives. The detail document reconnects its own controls and continues the work; when it finishes, the task returns to the list."
+    ],
+    "introZh": [
+      "列表页与详情页都是普通 HTML document。打开一条记录会执行整页导航，页面、动作注册表和 DOM 都会重建。",
+      "只有待完成任务会保留。详情 document 重新声明自己的控件并继续执行；完成后任务回到列表。"
+    ],
+    "steps": [
+      {
+        "title": "Create a runtime in each document",
+        "titleZh": "每个 document 各自创建运行时",
+        "body": "There is no long-lived application shell. Each document creates the runtime it needs, registers the page identity, and binds the controls that are present now.",
+        "bodyZh": "这里没有长期存活的应用壳层。每个 document 创建自己的运行时，登记当前页面身份，并绑定此刻真实存在的控件。",
+        "file": "src/ListPage.ts",
+        "match": "const pling = createPling({",
+        "lines": 12
+      },
+      {
+        "title": "Declare a stable record before navigation",
+        "titleZh": "在导航前声明稳定记录",
+        "body": "The task starts from a record with a stable customer id. The following document can use that identity instead of repeating the user's sentence.",
+        "bodyZh": "任务从带有稳定客户 id 的记录开始。下一个 document 可以使用这个身份继续，而不必让用户重复一遍任务。",
+        "file": "src/ListPage.ts",
+        "match": "pling.record(row",
+        "lines": 8
+      },
+      {
+        "title": "Use ordinary navigation",
+        "titleZh": "执行普通整页导航",
+        "body": "The open action calls the same navigation path as a person. Pling records the pending work before the document is replaced.",
+        "bodyZh": "打开动作调用与真人相同的导航路径。Pling 在 document 被替换前记录待完成任务。",
+        "file": "src/ListPage.ts",
+        "match": "navigate(detailHref(customer.id))",
+        "lines": 8
+      },
+      {
+        "title": "Resume, then finish explicitly",
+        "titleZh": "恢复任务，再明确结束",
+        "body": "The second document declares its own note field and save action. Once the result is verified, the continuity layer closes the task and follows the configured return path.",
+        "bodyZh": "第二个 document 声明自己的备注输入与保存动作。结果验证完成后，连续性层结束任务，并沿配置的返回路径回到列表。",
+        "file": "demo/setup.ts",
+        "match": "continuity: {",
+        "lines": 8
+      }
+    ],
+    "note": "Ask for “Globex的备注为：周五约吃饭”. The assistant opens the detail document, fills the note, saves it, and returns to the list once.",
+    "noteZh": "输入「Globex的备注为：周五约吃饭」。助手会打开详情 document、填写备注、保存，并在完成后只返回列表一次。"
+  }
+}

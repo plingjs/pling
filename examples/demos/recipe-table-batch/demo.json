@@ -1,0 +1,24 @@
+{
+  "id": "recipe-table-batch", "title": "Recipe 02: Table rows and batch actions", "titleZh": "方案02：表格行与批量操作",
+  "eyebrow": "Runnable recipe", "eyebrowZh": "可运行方案",
+  "summary": "Stable row ids, a selected set, stale-id handling, and two bounded batch tools over a changing order list.", "summaryZh": "稳定行 id、选中集合、旧 id 处理，以及两个有边界的批量工具。",
+  "url": "/demos/recipe-table-batch/", "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Selection, rows, and batch tools", "roleZh": "选择、行与批量工具", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Local run and observation", "roleZh": "本地运行与观察步骤", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": { "records": { "selector": "v-record", "match": "v-record=\"" }, "batch": { "selector": "approve_selected_orders", "match": "id: \"approve_selected_orders\"" }, "dock": { "selector": "AgentDock", "match": "<AgentDock" } },
+  "guide": {
+    "title": "Represent a collection, not a pile of buttons", "titleZh": "表达集合，而不是一堆按钮",
+    "intro": ["Every row has a stable id. The selected set is explicit, and the batch result clears it.", "Try an old selection after the filter changes; stale ids are ignored rather than applied to a different row."],
+    "introZh": ["每行都有稳定 id。选中集合是显式状态，批量完成后会清空。", "筛选变化后再使用旧选择；失效 id 会被忽略，不会误作用到另一行。"],
+    "steps": [
+      { "title": "Declare stable row identity", "titleZh": "声明稳定的行身份", "body": "The record carries the order id and only the fields that help a person and an agent decide.", "bodyZh": "记录携带订单 id，以及真人与 Agent 决策所需的字段。", "file": "src/App.vue", "match": "v-record=", "lines": 9 },
+      { "title": "Expose the selected set", "titleZh": "暴露选中集合", "body": "The state view reports ids and counts, not the entire store.", "bodyZh": "状态视图只报告 id 与计数，不倾倒整个 store。", "file": "src/App.vue", "match": "useAgentState(\"order_selection\"", "lines": 9 },
+      { "title": "Bound the batch operation", "titleZh": "给批量操作定边界", "body": "One tool receives ids, rejects unavailable rows, clears the selection, and verifies that the open queue changed.", "bodyZh": "一个工具接收 id、跳过不可操作行、清空选择，并验证待处理队列发生变化。", "file": "src/App.vue", "match": "id: \"approve_selected_orders\"", "lines": 14 }
+    ],
+    "note": "Use the checkboxes or ask the assistant to select SO-1042 and SO-1043, then approve them. Change the filter and try the old ids again.", "noteZh": "可以手动勾选，也可以让助手选中 SO-1042 与 SO-1043 后通过。切换筛选后再使用旧 id 观察结果。"
+  }
+}

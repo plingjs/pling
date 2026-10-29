@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.11.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm release:check
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+      - run: pnpm pack:check
+      - run: pnpm tutorial:check v3-03
+      - run: pnpm tutorial:check v3-04
+      - run: pnpm tutorial:check v3-05
+      - run: pnpm tutorial:check v3-06
+      - run: pnpm tutorial:check v3-07
+      - run: pnpm --filter @plingjs/website build

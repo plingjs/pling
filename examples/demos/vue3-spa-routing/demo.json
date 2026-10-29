@@ -1,0 +1,174 @@
+{
+  "id": "vue3-spa-routing",
+  "title": "Example 03: Single-page route workspace",
+  "titleZh": "案例03：单页多路由工作台",
+  "eyebrow": "Across routes",
+  "eyebrowZh": "跨路由",
+  "summary": "A Vue 3 single-page workspace with list, detail, and activity routes. The assistant filters accounts, opens one, changes its review state, and reports the result without losing task context.",
+  "summaryZh": "一个包含列表、详情与活动记录三条路由的 Vue 3 单页工作台。助手可以筛选账户、打开详情、修改复核状态，并在同一会话中汇报结果。",
+  "url": "/demos/vue3-spa-routing/",
+  "open": "src/main.ts",
+  "files": [
+    {
+      "path": "src/pages/AccountList.vue",
+      "label": "AccountList.vue",
+      "role": "Filtered list, records, and record action",
+      "roleZh": "筛选列表、记录与行内动作",
+      "lang": "vue"
+    },
+    {
+      "path": "src/pages/AccountDetail.vue",
+      "label": "AccountDetail.vue",
+      "role": "Route detail and business actions",
+      "roleZh": "路由详情与业务动作",
+      "lang": "vue"
+    },
+    {
+      "path": "src/pages/ActivityPage.vue",
+      "label": "ActivityPage.vue",
+      "role": "Third route sharing the same store",
+      "roleZh": "共享同一 store 的第三条路由",
+      "lang": "vue"
+    },
+    {
+      "path": "src/router.ts",
+      "label": "router.ts",
+      "role": "Route names, paths, and params",
+      "roleZh": "路由名称、路径与参数",
+      "lang": "ts"
+    },
+    {
+      "path": "src/App.vue",
+      "label": "App.vue",
+      "role": "Persistent shell and assistant entry",
+      "roleZh": "持续存在的壳层与助手入口",
+      "lang": "vue"
+    },
+    {
+      "path": "src/store.ts",
+      "label": "store.ts",
+      "role": "Shared business data and activity log",
+      "roleZh": "共享业务数据与活动记录",
+      "lang": "ts"
+    },
+    {
+      "path": "src/copy.ts",
+      "label": "copy.ts",
+      "role": "Bilingual copy and status labels",
+      "roleZh": "双语文案与状态标签",
+      "lang": "ts"
+    },
+    {
+      "path": "src/main.ts",
+      "label": "main.ts",
+      "role": "Pling setup, router, and page identity",
+      "roleZh": "Pling 初始化、路由与页面身份",
+      "lang": "ts"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Purpose, run command, and source map",
+      "roleZh": "用途、运行命令与源码导览",
+      "lang": "markdown"
+    },
+    {
+      "path": "GATEWAY.md",
+      "scope": "workspace",
+      "label": "GATEWAY.md",
+      "role": "Shared local model gateway",
+      "roleZh": "共享本地模型网关",
+      "lang": "markdown"
+    },
+    {
+      "path": "src/styles.css",
+      "label": "styles.css",
+      "role": "Page styles",
+      "roleZh": "页面样式",
+      "lang": "css"
+    },
+    {
+      "path": "index.html",
+      "label": "index.html",
+      "role": "Vite entry",
+      "roleZh": "Vite 入口",
+      "lang": "html"
+    }
+  ],
+  "focus": {
+    "router": { "selector": "src/router.ts", "match": "path: \"/accounts\"" },
+    "list-record": { "selector": "[data-account]", "match": "v-record=\"" },
+    "detail-action": { "selector": "textarea", "match": "account.save_note" },
+    "assistant": { "selector": ".app-sidebar", "match": "<AgentDock" }
+  },
+  "guide": {
+    "title": "Keep page identity and task context across routes",
+    "titleZh": "让页面身份与任务上下文跨路由保持一致",
+    "intro": [
+      "This is one Vue application, not three documents. The list, detail, and activity views share a store and one Pling runtime; only the route changes.",
+      "The route table supplies names and path params. Pling reads the active route as the page identity, so the assistant can tell whether it is on the list, on one account, or in the activity view."
+    ],
+    "introZh": [
+      "这是一个 Vue 应用，不是三个 document。列表、详情与活动记录共享同一份 store 和同一个 Pling 运行时；变化的只有路由。",
+      "路由表提供名称与路径参数。Pling 把当前路由读作页面身份，因此助手能判断自己是在列表、某个账户详情，还是在活动记录里。"
+    ],
+    "steps": [
+      {
+        "title": "Create one runtime and one router",
+        "titleZh": "创建一个运行时和一个路由器",
+        "body": "The runtime survives route changes. The router supplies the page identity that changes with navigation.",
+        "bodyZh": "运行时在路由切换时保持不变；路由器提供随导航变化的页面身份。",
+        "file": "src/main.ts",
+        "match": "const pling = createPling({",
+        "lines": 12
+      },
+      {
+        "title": "Give every route a stable name and shape",
+        "titleZh": "为每条路由定义稳定名称与形状",
+        "body": "Names make navigation and page identity readable. The id param is the stable account reference used by detail actions.",
+        "bodyZh": "名称让导航与页面身份可读；id 参数就是详情动作使用的稳定账户引用。",
+        "file": "src/router.ts",
+        "match": "export const routes:",
+        "lines": 18
+      },
+      {
+        "title": "Read the route parameter, not a copied field",
+        "titleZh": "读取路由参数，而不是复制一份字段",
+        "body": "The detail page derives the account from the route. A stale component variable cannot disagree with the address bar.",
+        "bodyZh": "详情页从路由推导账户。组件里的旧变量不会与地址栏产生分歧。",
+        "file": "src/pages/AccountDetail.vue",
+        "match": "const accountId = computed",
+        "lines": 6
+      },
+      {
+        "title": "Declare business actions on the detail route",
+        "titleZh": "在详情路由声明业务动作",
+        "body": "The assistant can change the review status and save the note through named functions. Both actions use the current account id and become unavailable when the account disappears.",
+        "bodyZh": "助手通过具名函数修改复核状态并保存备注。两个动作都使用当前账户 id；账户不存在时会明确变为不可用。",
+        "file": "src/pages/AccountDetail.vue",
+        "match": "id: \"account.update_status\"",
+        "lines": 14
+      },
+      {
+        "title": "Expose row data before adding row actions",
+        "titleZh": "先暴露行数据，再声明行内动作",
+        "body": "The list record gives the model account fields and a stable id. The open action then navigates to that id instead of guessing a selector.",
+        "bodyZh": "列表记录给模型账户字段和稳定 id；打开动作随后导航到该 id，而不是猜选择器。",
+        "file": "src/pages/AccountList.vue",
+        "match": "v-record=\"",
+        "lines": 12
+      },
+      {
+        "title": "Keep one assistant shell above RouterView",
+        "titleZh": "在 RouterView 之上保留一个助手壳层",
+        "body": "AgentDock is mounted once in App.vue. The chat, activity log, and task session therefore survive route changes inside this single page.",
+        "bodyZh": "AgentDock 只在 App.vue 挂载一次。对话、操作记录与任务会话因此能在同一个页面内跨路由保持。",
+        "file": "src/App.vue",
+        "match": "<AgentDock",
+        "lines": 10
+      }
+    ],
+    "note": "Try this: filter to high-risk accounts, open Northwind, mark it reviewed, set a note, then open Activity. The assistant should confirm each route change instead of assuming the previous view is still active.",
+    "noteZh": "可以这样试：筛选高风险账户，打开 Northwind，标记为已复核并写入备注，再打开活动记录。助手应在每次路由变化后确认新页面，而不是假定前一个视图仍然有效。"
+  }
+}

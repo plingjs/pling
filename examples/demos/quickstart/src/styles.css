@@ -1,0 +1,26 @@
+:root {
+  color: #0f172a;
+  background: #f3f7fc;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: #f3f7fc;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+#app {
+  padding: 22px;
+}
+
+@media (max-width: 720px) {
+  #app {
+    padding: 14px;
+  }
+}

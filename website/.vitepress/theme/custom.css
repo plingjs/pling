@@ -1,0 +1,885 @@
+/**
+ * Pling docs theme.
+ *
+ * Visual source of truth: `cases/072-vue-inline-smart-actions`.
+ * The palette is deliberately the same as the product examples: a cool
+ * A quiet white canvas, restrained rules and #2e9df7 accents.
+ * Keep demo pages isolated: they own their own layout and dark code panels.
+ */
+
+:root {
+  --pling-canvas: #ffffff;
+  --pling-surface: #ffffff;
+  --pling-surface-soft: #f8fbff;
+  --pling-wash: #f1f8ff;
+  --pling-line: #dce8f4;
+  --pling-line-strong: #c7d8e8;
+  --pling-ink: #0d1728;
+  --pling-body: #334155;
+  --pling-muted: #526174;
+  --pling-faint: #718096;
+  --pling-accent: #2e9df7;
+  --pling-accent-ink: #086aa8;
+  --pling-shadow: 0 18px 44px rgb(15 23 42 / 7%);
+  --pling-shadow-hover: 0 22px 54px rgb(15 23 42 / 11%);
+
+  --vp-font-family-base: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --vp-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  --vp-code-font-size: 11.5px;
+  --vp-code-line-height: 1.75;
+
+  --vp-c-bg: var(--pling-canvas);
+  --vp-c-bg-alt: var(--pling-surface-soft);
+  --vp-c-bg-elv: var(--pling-surface);
+  --vp-c-bg-soft: var(--pling-wash);
+
+  --vp-c-text-1: var(--pling-ink);
+  --vp-c-text-2: var(--pling-muted);
+  --vp-c-text-3: #94a3b8;
+
+  --vp-c-border: var(--pling-line-strong);
+  --vp-c-divider: var(--pling-line);
+  --vp-c-gutter: rgb(219 230 242 / 82%);
+
+  --vp-c-default-1: #e2e8f0;
+  --vp-c-default-2: #eef3f8;
+  --vp-c-default-3: #f5f8fc;
+  --vp-c-default-soft: rgb(46 157 247 / 8%);
+
+  --vp-c-brand-1: var(--pling-accent-ink);
+  --vp-c-brand-2: #1273cf;
+  --vp-c-brand-3: #0b6db7;
+  --vp-c-brand-soft: rgb(46 157 247 / 14%);
+
+  --vp-c-tip-1: var(--pling-accent-ink);
+  --vp-c-tip-2: #1273cf;
+  --vp-c-tip-3: var(--pling-accent);
+  --vp-c-tip-soft: rgb(46 157 247 / 12%);
+
+  --vp-nav-height: 64px;
+  --vp-sidebar-width: 252px;
+  --vp-nav-bg-color: rgb(255 255 255 / 90%);
+  --vp-nav-screen-bg-color: var(--pling-canvas);
+  --vp-local-nav-bg-color: var(--pling-canvas);
+  --vp-sidebar-bg-color: var(--pling-canvas);
+  --vp-backdrop-bg-color: rgb(15 23 42 / 32%);
+
+  --vp-button-brand-border: #a7d6fb;
+  --vp-button-brand-text: var(--pling-accent-ink);
+  --vp-button-brand-bg: var(--pling-wash);
+  --vp-button-brand-hover-border: var(--pling-accent);
+  --vp-button-brand-hover-text: var(--pling-accent-ink);
+  --vp-button-brand-hover-bg: #e2f2ff;
+  --vp-button-brand-active-border: #7fc4f7;
+  --vp-button-brand-active-text: #084f88;
+  --vp-button-brand-active-bg: #d8edff;
+
+  --vp-button-alt-border: var(--pling-line);
+  --vp-button-alt-text: var(--pling-muted);
+  --vp-button-alt-bg: var(--pling-surface);
+  --vp-button-alt-hover-border: #a7d6fb;
+  --vp-button-alt-hover-text: var(--pling-accent-ink);
+  --vp-button-alt-hover-bg: var(--pling-wash);
+
+  --vp-code-block-bg: #0d1728;
+  --vp-code-block-color: #c7d6e8;
+  --vp-code-block-divider-color: #223149;
+  --vp-code-line-number-color: #4f6480;
+  --vp-code-line-highlight-color: rgb(46 157 247 / 15%);
+  --vp-code-copy-code-bg: #111e32;
+  --vp-code-copy-code-border-color: #223149;
+  --vp-code-copy-code-hover-bg: #16243a;
+  --vp-code-copy-code-hover-border-color: #314764;
+  --vp-input-border-color: var(--pling-line-strong);
+  --vp-input-bg-color: var(--pling-surface);
+
+  --vp-home-hero-name-color: var(--pling-accent-ink);
+  --vp-home-hero-name-background: transparent;
+  --vp-home-hero-image-background-image: none;
+  --vp-home-hero-image-filter: none;
+}
+
+.dark {
+  --pling-canvas: #0b1220;
+  --pling-surface: #0f1a2c;
+  --pling-surface-soft: #111d30;
+  --pling-wash: #12273e;
+  --pling-line: #1d3552;
+  --pling-line-strong: #2a4b70;
+  --pling-ink: #e7eef8;
+  --pling-body: #c8d5e5;
+  --pling-muted: #a7b8cb;
+  --pling-faint: #7890a9;
+  --pling-accent: #2e9df7;
+  --pling-accent-ink: #7cc4ff;
+  --pling-shadow: 0 18px 44px rgb(0 0 0 / 28%);
+  --pling-shadow-hover: 0 22px 54px rgb(0 0 0 / 36%);
+
+  --vp-c-bg: var(--pling-canvas);
+  --vp-c-bg-alt: var(--pling-surface-soft);
+  --vp-c-bg-elv: var(--pling-surface);
+  --vp-c-bg-soft: var(--pling-wash);
+
+  --vp-c-text-1: var(--pling-ink);
+  --vp-c-text-2: var(--pling-muted);
+  --vp-c-text-3: var(--pling-faint);
+
+  --vp-c-border: var(--pling-line-strong);
+  --vp-c-divider: var(--pling-line);
+  --vp-c-gutter: rgb(29 53 82 / 82%);
+
+  --vp-c-default-1: #263b55;
+  --vp-c-default-2: #1a2d46;
+  --vp-c-default-3: #13243a;
+  --vp-c-default-soft: rgb(46 157 247 / 10%);
+
+  --vp-c-brand-1: var(--pling-accent-ink);
+  --vp-c-brand-2: #a9dbff;
+  --vp-c-brand-3: var(--pling-accent);
+  --vp-c-brand-soft: rgb(46 157 247 / 16%);
+
+  --vp-c-tip-1: #9ed5ff;
+  --vp-c-tip-2: #6ab9f7;
+  --vp-c-tip-3: var(--pling-accent);
+  --vp-c-tip-soft: rgb(46 157 247 / 14%);
+
+  --vp-nav-bg-color: rgb(11 18 32 / 88%);
+  --vp-nav-screen-bg-color: var(--pling-canvas);
+  --vp-local-nav-bg-color: var(--pling-canvas);
+  --vp-sidebar-bg-color: var(--pling-canvas);
+  --vp-backdrop-bg-color: rgb(0 0 0 / 62%);
+
+  --vp-button-brand-border: #2b6ea6;
+  --vp-button-brand-text: #dff3ff;
+  --vp-button-brand-bg: #0f2b45;
+  --vp-button-brand-hover-border: var(--pling-accent);
+  --vp-button-brand-hover-text: #ffffff;
+  --vp-button-brand-hover-bg: #124a75;
+  --vp-button-brand-active-border: #57b0f9;
+  --vp-button-brand-active-text: #ffffff;
+  --vp-button-brand-active-bg: #155b8e;
+
+  --vp-button-alt-border: var(--pling-line);
+  --vp-button-alt-text: var(--pling-muted);
+  --vp-button-alt-bg: var(--pling-surface);
+  --vp-button-alt-hover-border: #2b6ea6;
+  --vp-button-alt-hover-text: var(--pling-ink);
+  --vp-button-alt-hover-bg: var(--pling-wash);
+
+  --vp-code-block-bg: #080f1b;
+  --vp-code-block-color: #c7d6e8;
+  --vp-code-copy-code-bg: #0d1829;
+  --vp-code-copy-code-border-color: var(--pling-line);
+  --vp-input-bg-color: var(--pling-surface);
+
+  --vp-home-hero-name-color: var(--pling-accent-ink);
+}
+
+html,
+body {
+  background: var(--vp-c-bg);
+}
+
+body {
+  color: var(--vp-c-text-1);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: rgb(46 157 247 / 22%);
+  color: var(--vp-c-text-1);
+}
+
+/* Navigation: a quiet translucent strip over the canvas. */
+.VPNavBar {
+  background: rgb(255 255 255 / 88%);
+  -webkit-backdrop-filter: saturate(145%) blur(16px);
+  backdrop-filter: saturate(145%) blur(16px);
+}
+
+.dark .VPNavBar {
+  background: rgb(11 18 32 / 82%);
+}
+
+.VPNavBar:not(.home) .divider-line,
+.VPNavBar.screen-open .divider-line {
+  background: var(--vp-c-divider);
+}
+
+#app .VPNavBarTitle .title,
+#app .VPNavBarMenuLink,
+#app .VPNavBarMenuGroup .text {
+  color: var(--vp-c-text-2);
+  font-size: 13.5px;
+}
+
+#app .VPNavBarMenuLink,
+#app .VPNavBarMenuGroup .text {
+  font-weight: 570;
+}
+
+.VPNavBarTitle .title:hover,
+.VPNavBarMenuLink:hover,
+.VPNavBarMenuLink.active,
+.VPNavBarMenuGroup:hover .text,
+.VPNavBarMenuGroup.active .text {
+  color: var(--pling-accent-ink);
+}
+
+.DocSearch-Button {
+  border: 1px solid var(--vp-c-divider) !important;
+  border-radius: 9px !important;
+  background: var(--pling-surface) !important;
+  box-shadow: 0 4px 14px rgb(46 157 247 / 7%);
+}
+
+.DocSearch-Button:hover {
+  border-color: #a7d6fb !important;
+  background: var(--pling-wash) !important;
+}
+
+/* Sidebar: navigation stays flat; active pages read like a soft pill. */
+.VPSidebar {
+  background: var(--vp-sidebar-bg-color);
+}
+
+@media (min-width: 960px) {
+  .VPSidebar {
+    border-right: 1px solid var(--vp-c-divider);
+  }
+}
+
+.VPSidebarItem .item {
+  padding: 0 10px 0 16px;
+  border-radius: 8px;
+  transition: background-color 140ms ease;
+}
+
+.VPSidebarItem.is-link > .item:hover {
+  background: rgb(46 157 247 / 7%);
+}
+
+.VPSidebarItem.is-active > .item {
+  background: #f4faff;
+  box-shadow: inset 3px 0 var(--pling-accent);
+}
+
+.VPSidebarItem .indicator {
+  display: none;
+}
+
+#app .VPSidebarItem.level-0 > .item > .text {
+  color: var(--pling-faint);
+  font-size: 10px;
+  font-weight: 720;
+  line-height: 1.7;
+  letter-spacing: .1em;
+}
+
+#app .VPSidebarItem.level-1 > .item > .link > .text,
+#app .VPSidebarItem.level-2 > .item > .link > .text {
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.45;
+  letter-spacing: normal;
+}
+
+#app .VPSidebarItem.level-1 > .item > .link,
+#app .VPSidebarItem.level-2 > .item > .link {
+  min-height: 34px;
+}
+
+#app .VPSidebarItem.level-1 > .item > .link > .text,
+#app .VPSidebarItem.level-2 > .item > .link > .text {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.VPSidebarItem .link:hover .text,
+.VPSidebarItem.is-active .link .text {
+  color: var(--pling-accent-ink);
+}
+
+/* Article: an open reading page rather than a floating card. */
+@media (min-width: 960px) {
+  .VPDoc {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  .VPDoc > .container > .content {
+    padding: 0 24px 112px;
+  }
+
+  .VPDoc .aside {
+    max-width: 208px;
+    padding-left: 20px;
+  }
+
+  .VPDoc .aside-container,
+  .VPDoc .aside-curtain {
+    width: 188px;
+  }
+
+  #app .VPDoc .content-container,
+  #app .VPDoc.has-aside .content-container {
+    max-width: 830px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+.VPDocFooter {
+  margin-top: 38px;
+  padding-top: 22px;
+  border-top: 1px solid var(--vp-c-divider);
+}
+
+#app .VPDocAsideOutline .content {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.VPDocAsideOutline .outline-marker {
+  display: none;
+}
+
+#app .VPDocAsideOutline .outline-title {
+  margin: 0 0 14px;
+  color: var(--pling-faint);
+  font-size: 9.5px;
+  font-weight: 720;
+  line-height: 1.7;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+#app .VPDocAsideOutline .VPDocOutlineItem {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+#app .VPDocAsideOutline .VPDocOutlineItem.root {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 12px;
+  border-left: 1px solid var(--vp-c-divider);
+}
+
+#app .VPDocAsideOutline .VPDocOutlineItem.nested {
+  padding-top: 1px;
+  padding-left: 12px;
+}
+
+#app .VPDocAsideOutline .outline-link {
+  display: block;
+  padding: 5px 0 5px 9px;
+  color: var(--pling-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+#app .VPDocAsideOutline .outline-link:hover,
+#app .VPDocAsideOutline .outline-link.active {
+  color: var(--pling-accent-ink);
+  font-weight: 400;
+}
+
+/* Typography and content details. */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4 {
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc h1 {
+  margin-bottom: 22px;
+  font-size: clamp(38px, 4.2vw, 52px);
+  font-weight: 730;
+  line-height: 1.13;
+  letter-spacing: -0.052em;
+}
+
+.vp-doc h1 + p {
+  max-width: 790px;
+  color: #42536a;
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.vp-doc h2 {
+  margin-top: 62px;
+  padding-top: 0;
+  padding-bottom: 14px;
+  border-top: 0;
+  border-bottom: 1px solid var(--vp-c-divider);
+  font-size: 27px;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.03em;
+}
+
+.vp-doc h3 {
+  margin-top: 38px;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.018em;
+}
+
+.vp-doc h4 {
+  margin-top: 30px;
+  font-size: 17px;
+  font-weight: 650;
+  letter-spacing: -0.012em;
+}
+
+.vp-doc p,
+.vp-doc li {
+  color: var(--pling-body);
+}
+
+.vp-doc p {
+  margin: 17px 0;
+  font-size: 15px;
+  line-height: 1.9;
+}
+
+.vp-doc li {
+  font-size: 15px;
+  line-height: 1.85;
+}
+
+.vp-doc a {
+  color: var(--pling-accent-ink);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+  text-decoration-color: rgb(46 157 247 / 35%);
+}
+
+.vp-doc a:hover {
+  color: #1273cf;
+  text-decoration-color: currentColor;
+}
+
+.vp-doc strong {
+  color: var(--vp-c-text-1);
+  font-weight: 660;
+}
+
+.vp-doc :not(pre) > code {
+  border-radius: 6px;
+  padding: 2px 6px;
+  background: var(--pling-wash);
+  color: var(--pling-accent-ink);
+  font-size: .88em;
+}
+
+.vp-doc div[class*='language-'] {
+  margin: 26px 0;
+  border: 1px solid #223149;
+  border-radius: 12px;
+  background: #0d1728;
+  box-shadow: 0 16px 36px rgb(13 23 40 / 10%);
+}
+
+.vp-doc div[class*='language-'] pre,
+.vp-doc div[class*='language-'] code {
+  background: #0d1728 !important;
+  color: #c7d6e8;
+}
+
+.vp-doc .shiki span {
+  color: var(--shiki-dark, var(--shiki-light, inherit)) !important;
+}
+
+.vp-doc .line-numbers-wrapper {
+  border-right: 1px solid #223149;
+  background: #0d1728;
+  color: #4f6480;
+  font-size: 10px;
+  line-height: 20.125px;
+}
+
+.vp-doc div[class*='language-'] .lang {
+  color: #7e93aa;
+}
+
+.vp-doc div[class*='language-'] > button.copy {
+  border-color: #223149;
+  background-color: #111e32;
+}
+
+.vp-doc div[class*='language-'] > button.copy:hover {
+  border-color: #314764;
+  background-color: #16243a;
+}
+
+.vp-doc th {
+  padding: 12px 15px;
+  border: 1px solid var(--vp-c-divider);
+  background: #f7fbff;
+  color: var(--pling-ink);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  word-break: keep-all;
+}
+
+.vp-doc tr {
+  background: var(--pling-surface);
+}
+
+.vp-doc tr:nth-child(2n) {
+  background: var(--pling-surface);
+}
+
+.vp-doc td {
+  padding: 12px 15px;
+  border: 1px solid var(--vp-c-divider);
+  color: var(--pling-body);
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.vp-doc table {
+  display: table;
+  width: 100%;
+  margin: 24px 0;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  line-height: 1.65;
+}
+
+.vp-doc blockquote {
+  margin: 24px 0;
+  padding: 2px 0 2px 18px;
+  border-left: 3px solid var(--pling-accent);
+  color: var(--pling-muted);
+}
+
+.vp-doc blockquote > p {
+  color: var(--pling-muted);
+  font-size: 15px;
+}
+
+.vp-doc .custom-block {
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+}
+
+.vp-doc .custom-block p {
+  font-size: 12.5px;
+  line-height: 1.78;
+}
+
+.vp-doc .custom-block.tip {
+  border-color: #a7d6fb;
+  background: var(--pling-wash);
+}
+
+.vp-doc .custom-block.info,
+.vp-doc .custom-block.note {
+  background: var(--pling-surface-soft);
+}
+
+@media (max-width: 767px) {
+  .vp-doc h1 {
+    font-size: clamp(33px, 10vw, 43px);
+    letter-spacing: -0.045em;
+  }
+
+  .vp-doc h1 + p {
+    font-size: 15.5px;
+  }
+
+  .vp-doc h2 {
+    margin-top: 48px;
+    font-size: 23px;
+  }
+
+  .vp-doc h3 {
+    margin-top: 32px;
+    font-size: 19px;
+  }
+
+  .vp-doc p,
+  .vp-doc li {
+    font-size: 15px;
+  }
+
+  .vp-doc div[class*='language-'] code {
+    font-size: 10.5px;
+  }
+
+  .vp-doc .line-numbers-wrapper {
+    line-height: 18.375px;
+  }
+
+  .vp-doc table {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+/* Home: keep the spacious hero, but use the same surface language below it. */
+.VPHero .name,
+.VPHero .text {
+  letter-spacing: -0.04em;
+}
+
+.VPHero .name {
+  color: var(--pling-accent-ink);
+}
+
+.VPHero .text {
+  color: var(--vp-c-text-1);
+}
+
+.VPHero .tagline {
+  color: var(--vp-c-text-2);
+}
+
+.VPHero .VPButton.medium {
+  border-radius: 9px;
+  padding: 0 18px;
+  line-height: 38px;
+  box-shadow: 0 4px 14px rgb(46 157 247 / 10%);
+}
+
+.VPHero .VPButton.brand {
+  border: 1px solid var(--vp-button-brand-border);
+  background: linear-gradient(180deg, #f7fbff, var(--vp-button-brand-bg));
+  color: var(--vp-button-brand-text);
+}
+
+.VPHero .VPButton.brand:hover {
+  border-color: var(--vp-button-brand-hover-border);
+  background: var(--vp-button-brand-hover-bg);
+  color: var(--vp-button-brand-hover-text);
+}
+
+.VPHero .VPButton.alt {
+  border: 1px solid var(--vp-button-alt-border);
+  background: var(--vp-button-alt-bg);
+  color: var(--vp-button-alt-text);
+}
+
+.VPHero .VPButton.alt:hover {
+  border-color: var(--vp-button-alt-hover-border);
+  background: var(--vp-button-alt-hover-bg);
+  color: var(--vp-button-alt-hover-text);
+}
+
+.dark .VPHero .VPButton.brand {
+  background: linear-gradient(180deg, #12385a, var(--vp-button-brand-bg));
+}
+
+.VPHome .VPFeatures .VPFeature {
+  border: 1px solid var(--pling-line);
+  border-radius: 18px;
+  background: var(--pling-surface);
+  box-shadow: var(--pling-shadow);
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.VPHome .VPFeatures .VPFeature:hover {
+  border-color: #a7d6fb;
+  box-shadow: var(--pling-shadow-hover);
+  transform: translateY(-2px);
+}
+
+.VPHome .VPFeatures .VPFeature .box {
+  padding: 26px;
+}
+
+.VPHome .VPFeatures .VPFeature .title {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.VPHome .VPFeatures .VPFeature .details {
+  color: var(--vp-c-text-2);
+  line-height: 1.65;
+}
+
+/* Keep the playground full-bleed and free of the article card treatment. */
+.demo-page .VPDoc .content-container {
+  max-width: none;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Home hero mark: keep the transparent artwork from dominating the page, and
+   switch to the light-cut mark when the surrounding theme is dark. */
+.VPHero .VPImage {
+  max-width: 170px;
+  max-height: 170px;
+  content: url("/pling-mark-dark.png");
+}
+
+.dark .VPHero .VPImage {
+  content: url("/pling-mark-light.png");
+}
+
+:root {
+  --vp-nav-logo-height: 28px;
+}
+
+.VPHome .vp-doc h2 {
+  border-top: none;
+  padding-top: 0;
+}
+
+/* The landing page owns its full canvas. Keep VitePress' navigation, but
+   remove the document layout padding and reading-column constraints. */
+.pling-home .VPContent,
+.pling-home .VPPage {
+  padding: 0;
+}
+
+.pling-home .VPPage {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.pling-home .VPPage > div[style*="position:relative"] {
+  padding: 0;
+}
+
+.pling-home .VPNavBar .divider-line {
+  background: transparent;
+}
+
+/* The playground uses the full canvas; the VitePress nav remains above it. */
+.demo-page .VPPage {
+  width: 100%;
+}
+
+.demo-page .VPContent {
+  margin: 0;
+}
+
+.demo-page .vp-doc {
+  max-width: none;
+  padding: 0;
+}
+
+/* Chapter runner: one compact entry for the hosted page and its local source. */
+.tutorial-runner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 24px;
+  align-items: center;
+  margin: 22px 0 38px;
+  padding: 17px 19px 17px 21px;
+  border: 1px solid var(--pling-line);
+  border-left: 3px solid var(--pling-accent);
+  border-radius: 13px;
+  background: linear-gradient(120deg, #f8fcff 0%, #ffffff 58%);
+}
+
+.tutorial-runner__main {
+  min-width: 0;
+}
+
+.tutorial-runner__eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--pling-accent-ink);
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.vp-doc .tutorial-runner__launch {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--pling-ink);
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.vp-doc .tutorial-runner__launch:hover {
+  color: var(--pling-accent-ink);
+}
+
+.tutorial-runner__launch span {
+  color: var(--pling-accent);
+  font-size: 13px;
+}
+
+.tutorial-runner__main p {
+  margin: 4px 0 0;
+  color: var(--pling-muted);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.tutorial-runner__local {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding-left: 21px;
+  border-left: 1px solid var(--pling-line);
+}
+
+.tutorial-runner__local > span {
+  color: var(--pling-faint);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tutorial-runner__local code {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  background: transparent;
+  color: var(--pling-body);
+  font-size: 11px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.dark .tutorial-runner {
+  background: linear-gradient(120deg, #0f2338 0%, var(--pling-surface) 58%);
+}
+
+@media (max-width: 720px) {
+  .tutorial-runner {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 16px 17px;
+  }
+
+  .tutorial-runner__local {
+    padding: 13px 0 0;
+    border-top: 1px solid var(--pling-line);
+    border-left: 0;
+  }
+}

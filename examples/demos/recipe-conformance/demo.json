@@ -1,0 +1,41 @@
+{
+  "id": "recipe-conformance",
+  "title": "Recipe 14: Surface conformance vectors",
+  "titleZh": "方案14：Surface 一致性请求向量",
+  "eyebrow": "Runnable recipe",
+  "eyebrowZh": "可运行方案",
+  "summary": "A fresh fixture runs nine protocol vectors covering version, method, record identity, schema, exposure, and replay. It is a repository check, not a certification.",
+  "summaryZh": "全新夹具运行九组协议向量，覆盖版本、方法、记录身份、schema、暴露范围与重放。这是仓库检查，不是认证。",
+  "url": "/demos/recipe-conformance/",
+  "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Fixture, vectors, and pass/fail view", "roleZh": "夹具、向量与结果视图", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Run and scope of the evidence", "roleZh": "运行与证据范围", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": {
+    "surface": { "selector": "createSurface", "match": "createSurface({ registry" },
+    "vectors": { "selector": "vectors", "match": "const vectors:" },
+    "tool": { "selector": "run_conformance_suite", "match": "id: 'run_conformance_suite'" }
+  },
+  "guide": {
+    "title": "Test the rejection boundary, not the screenshot",
+    "titleZh": "测试拒绝边界，而不是截图",
+    "intro": [
+      "Each vector compares an expected code with the protocol response and assumes a fresh fixture.",
+      "Run the suite, then read the result list from top to bottom. A pass says this fixture satisfied these repository vectors, nothing broader."
+    ],
+    "introZh": [
+      "每组向量都在全新夹具上比较预期错误码与协议响应。",
+      "运行向量后从上到下阅读结果。通过只表示当前夹具满足这些仓库向量，不表示更广泛的认证。"
+    ],
+    "steps": [
+      { "title": "Build a deterministic fixture", "titleZh": "建立确定性夹具", "body": "The fixture declares read, write, folded-record, unavailable, and replay-sensitive capabilities.", "bodyZh": "夹具声明读取、写入、折叠记录、不可用与防重放能力。", "file": "src/App.vue", "match": "function createFixture()", "lines": 18 },
+      { "title": "Keep expected codes explicit", "titleZh": "显式列出预期错误码", "body": "Every vector names its expected response code; success is compared the same way as failure.", "bodyZh": "每组向量都写明预期响应码；成功与失败使用同一套比较方式。", "file": "src/App.vue", "match": "const vectors:", "lines": 12 },
+      { "title": "State the boundary of the claim", "titleZh": "说明结论边界", "body": "The panel does not certify transport, SSO, multi-tenant identity, browser support, or another implementation.", "bodyZh": "面板不认证传输、SSO、多租户身份、浏览器支持或另一套独立实现。", "file": "src/App.vue", "match": "This panel does not certify transport", "lines": 2 }
+    ],
+    "note": "Run pnpm --filter @plingjs/surface test for the package suite. Report the result with fixture, protocol version, environment, and uncommitted state.",
+    "noteZh": "包级测试用 pnpm --filter @plingjs/surface test。记录结果时同时写明夹具、协议版本、环境与工作区是否有未提交改动。"
+  }
+}

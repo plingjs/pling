@@ -1,0 +1,24 @@
+{
+  "id": "recipe-form-validation", "title": "Recipe 03: Form validation and submit", "titleZh": "方案03：表单校验与提交",
+  "eyebrow": "Runnable recipe", "eyebrowZh": "可运行方案",
+  "summary": "Parameter checks, field validation, a submitting state, and a business-policy rejection all happen before the form clears.", "summaryZh": "参数检查、字段校验、提交中状态与业务策略拒绝，都在表单清空之前发生。",
+  "url": "/demos/recipe-form-validation/", "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Form state, validation, and tools", "roleZh": "表单状态、校验与工具", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Local run and failure paths", "roleZh": "本地运行与失败路径", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": { "tool": { "selector": "submit_invoice", "match": "id: \"submit_invoice\"" }, "expect": { "selector": "expect", "match": "expect: {" }, "dock": { "selector": "AgentDock", "match": "<AgentDock" } },
+  "guide": {
+    "title": "Let the application finish the validation", "titleZh": "让应用完成最后一道校验",
+    "intro": ["Filling fields is not the same as committing them. The page keeps validation and the receipt in its own code.", "Submit an empty form, then use the blocked customer to see a policy error that is not a parameter error."],
+    "introZh": ["填写字段不等于提交成功。页面把校验与回执留在自己的代码里。", "先提交空表单，再使用被阻止的客户观察不同于参数错误的业务错误。"],
+    "steps": [
+      { "title": "Reject malformed input", "titleZh": "拒绝畸形输入", "body": "The tool declares field constraints before the business function is called.", "bodyZh": "工具在业务函数被调用前声明字段约束。", "file": "src/App.vue", "match": "id: \"fill_invoice_form\"", "lines": 12 },
+      { "title": "Keep the submitting state", "titleZh": "保留提交中状态", "body": "The action is unavailable during submission, so a double request cannot create two invoices.", "bodyZh": "提交期间动作不可用，因此重复请求不会创建两张发票。", "file": "src/App.vue", "match": "available: () => !submitting.value", "lines": 5 },
+      { "title": "Verify the receipt", "titleZh": "验证回执", "body": "Success is measured by a rendered invoice id, not by the model saying that it succeeded.", "bodyZh": "成功以页面出现发票编号为准，而不是模型口头声称成功。", "file": "src/App.vue", "match": "expect: {", "lines": 5 }
+    ],
+    "note": "Ask the assistant to create an invoice for Northwind, then repeat with Blocked Co. Only the first path produces a receipt.", "noteZh": "让助手为 Northwind 创建发票，再用 Blocked Co 重复一次。只有第一条路径会生成回执。"
+  }
+}

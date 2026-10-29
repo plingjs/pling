@@ -1,0 +1,15 @@
+{
+  "tenants": [
+    {
+      "id": "demo",
+      "displayName": "Pling Todo Demo",
+      "origins": [
+        "http://127.0.0.1:5220",
+        "http://localhost:5220",
+        "https://todo.plingjs.dev"
+      ],
+      "maxPageSessionTtlMs": 28800000,
+      "maxAgentSessionTtlMs": 7200000
+    }
+  ]
+}

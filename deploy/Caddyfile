@@ -1,0 +1,49 @@
+{
+	email {$ACME_EMAIL:admin@plingjs.dev}
+}
+
+www.plingjs.dev {
+	redir https://plingjs.dev{uri} permanent
+}
+
+plingjs.dev {
+	handle_path /api/agent/* {
+		reverse_proxy api:5192
+	}
+
+	root * /srv/pling/website
+	encode zstd gzip
+	try_files {path} {path}.html {path}/index.html
+	file_server
+}
+
+demo.plingjs.dev {
+	@root path /
+	redir @root /demos/quickstart/ 302
+
+	handle_path /api/agent/* {
+		reverse_proxy api:5192
+	}
+
+	root * /srv/pling/demo
+	encode zstd gzip
+	try_files {path} {path}.html {path}/index.html
+	file_server
+}
+
+api.plingjs.dev {
+	@api path /v1/* /health
+	handle @api {
+		reverse_proxy api:5192
+	}
+	respond 404
+}
+
+surface.plingjs.dev {
+	reverse_proxy surface:5219
+}
+
+todo.plingjs.dev {
+	encode zstd gzip
+	reverse_proxy todo:5221
+}

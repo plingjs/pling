@@ -1,0 +1,215 @@
+import Vue, { type CreateElement } from "vue";
+import { createPling, type AgentSetup, type Vue2Pling } from "@plingjs/vue2";
+import { copyFor, resolveDemoLocale, type DemoLocale, type DemoTask } from "./copy";
+
+interface Task extends DemoTask {
+  id: string;
+}
+
+export interface RecordsAppOptions {
+  locale?: DemoLocale;
+  agent?: AgentSetup;
+  presence?: boolean;
+  onWarn?: (message: string) => void;
+}
+
+export interface RecordsApp {
+  pling: Vue2Pling;
+  vm: Vue;
+  tasks: readonly Task[];
+  destroy(): void;
+}
+
+export function mountRecordsApp(root: HTMLElement, options: RecordsAppOptions = {}): RecordsApp {
+  const locale = options.locale ?? resolveDemoLocale();
+  const copy = copyFor(locale);
+  document.title = copy.documentTitle;
+
+  const pling = createPling({
+    ui: { locale: locale === "zh" ? "zh-CN" : "en-US" },
+    presence: options.presence ?? true,
+    onWarn: options.onWarn ?? ((message) => console.warn(message)),
+    agent: options.agent ?? {
+      config: {
+        systemPrompt: copy.systemPrompt,
+        limits: { maxTurns: 100 },
+      },
+    },
+  });
+  Vue.use(pling.plugin);
+
+  const mountNode = document.createElement("div");
+  root.replaceChildren(mountNode);
+
+  const vm = new Vue({
+    data() {
+      return {
+        tasks: copy.seedTasks.map((task, index) => ({ id: `t${index + 1}`, ...task })) as Task[],
+        draft: "",
+        sequence: copy.seedTasks.length,
+        editingId: null as string | null,
+        editText: "",
+      };
+    },
+    computed: {
+      editing(this: { tasks: Task[]; editingId: string | null }): Task | null {
+        return this.tasks.find((task) => task.id === this.editingId) ?? null;
+      },
+    },
+    methods: {
+      addTask(this: { tasks: Task[]; draft: string; sequence: number }): void {
+        const text = this.draft.trim();
+        if (!text) return;
+        this.tasks.unshift({ id: `t${++this.sequence}`, text, done: false });
+        this.draft = "";
+      },
+      toggle(this: { tasks: Task[] }, id: string): void {
+        const task = this.tasks.find((item) => item.id === id);
+        if (task) task.done = !task.done;
+      },
+      beginEdit(this: { editingId: string | null; editText: string }, task: Task): void {
+        this.editingId = task.id;
+        this.editText = task.text;
+      },
+      saveEdit(this: { tasks: Task[]; editingId: string | null; editText: string }): void {
+        const task = this.tasks.find((item) => item.id === this.editingId);
+        const text = this.editText.trim();
+        if (!task || !text) return;
+        task.text = text;
+        this.editingId = null;
+        this.editText = "";
+      },
+      cancelEdit(this: { editingId: string | null; editText: string }): void {
+        this.editingId = null;
+        this.editText = "";
+      },
+    },
+    render(this: Record<string, any>, h: CreateElement) {
+      const tool = (value: Record<string, unknown>) => ({ name: "tool", value });
+      const dialog = this.editing
+        ? h("div", {
+            class: "backdrop",
+            attrs: { role: "dialog", "aria-modal": "true", "aria-label": copy.dialogLabel },
+            directives: [{ name: "scope", value: {
+              id: "edit_dialog",
+              label: copy.dialogLabel,
+              description: copy.dialogDescription,
+              role: "dialog",
+            } }],
+          }, [
+            h("form", { class: "dialog", on: { submit: (event: Event) => { event.preventDefault(); this.saveEdit(); } } }, [
+              h("h2", copy.editTitle),
+              h("input", {
+                domProps: { value: this.editText },
+                attrs: { autocomplete: "off", maxlength: "80", "aria-label": copy.newTaskLabel },
+                directives: [tool({
+                  id: "edit_text",
+                  desc: copy.composerTextDesc,
+                  action: "fill",
+                  params: [{ name: "text", label: copy.textParamLabel }],
+                })],
+                on: { input: (event: Event) => { this.editText = (event.target as HTMLInputElement).value; } },
+              }),
+              h("div", { class: "dialog__actions" }, [
+                h("button", {
+                  attrs: { type: "button", disabled: !this.editText.trim() },
+                  directives: [tool({ id: "edit_cancel", desc: copy.cancelDesc })],
+                  on: { click: () => this.cancelEdit() },
+                }, copy.cancelEdit),
+                h("button", {
+                  attrs: { type: "submit", disabled: !this.editText.trim() },
+                  directives: [tool({
+                    id: "edit_save",
+                    desc: copy.saveDesc,
+                    available: () => this.editText.trim() ? true : copy.submitReason,
+                  })],
+                }, copy.saveEdit),
+              ]),
+            ]),
+          ])
+        : null;
+
+      return h("main", { class: "page" }, [
+        h("section", {
+          class: "todo",
+          directives: [{
+            name: "scope",
+            value: { id: "todo", label: copy.regionLabel, description: copy.regionDescription, role: "main" },
+          }],
+        }, [
+          h("header", { class: "todo__header" }, [
+            h("div", [
+              h("p", { class: "todo__eyebrow" }, copy.eyebrow),
+              h("h1", copy.heading),
+            ]),
+            h("p", { class: "todo__count" }, copy.stats(this.tasks.filter((task: Task) => !task.done).length)),
+          ]),
+          h("form", {
+            class: "composer",
+            on: { submit: (event: Event) => { event.preventDefault(); this.addTask(); } },
+          }, [
+            h("label", { class: "composer__label", attrs: { for: "new-task" } }, copy.newTaskLabel),
+            h("div", { class: "composer__row" }, [
+              h("input", {
+                attrs: { id: "new-task", autocomplete: "off", maxlength: "80", placeholder: copy.placeholder },
+                domProps: { value: this.draft },
+                directives: [tool({
+                  id: "composer_text",
+                  desc: copy.composerTextDesc,
+                  action: "fill",
+                  params: [{ name: "text", label: copy.textParamLabel }],
+                })],
+                on: { input: (event: Event) => { this.draft = (event.target as HTMLInputElement).value; } },
+              }),
+              h("button", {
+                attrs: { type: "submit", disabled: !this.draft.trim() },
+                directives: [tool({
+                  id: "composer_submit",
+                  desc: copy.composerSubmitDesc,
+                  available: () => this.draft.trim() ? true : copy.submitReason,
+                })],
+              }, copy.addTask),
+            ]),
+          ]),
+          h("ul", {
+            class: "tasks",
+            directives: [{ name: "scope", value: {
+              id: "todo_list", label: copy.listLabel, description: copy.listDescription, role: "list", parent: "todo",
+            } }],
+          }, this.tasks.map((task: Task) => h("li", {
+            key: task.id,
+            class: ["task", { "is-done": task.done }],
+            directives: [{ name: "record", value: { data: task, label: copy.recordLabel(task.text) } }],
+          }, [
+            h("button", {
+              class: "task__check",
+              attrs: { type: "button", "aria-label": copy.toggleDesc(task.text, task.done) },
+              directives: [tool({ id: `toggle@${task.id}`, desc: copy.toggleDesc(task.text, task.done) })],
+              on: { click: () => this.toggle(task.id) },
+            }, task.done ? "✓" : ""),
+            h("span", { class: "task__text" }, task.text),
+            h("button", {
+              class: "task__edit",
+              attrs: { type: "button", "aria-label": copy.editDesc(task.text) },
+              directives: [tool({ id: `edit@${task.id}`, desc: copy.editDesc(task.text) })],
+              on: { click: () => this.beginEdit(task) },
+            }, "✎"),
+          ]))),
+          this.tasks.length === 0 ? h("p", { class: "tasks__empty" }, copy.empty) : null,
+          dialog,
+        ]),
+      ]);
+    },
+  }).$mount(mountNode) as Vue;
+
+  return {
+    pling,
+    vm,
+    get tasks() { return (vm as unknown as { tasks: Task[] }).tasks; },
+    destroy() {
+      vm.$destroy();
+      pling.destroy();
+      root.replaceChildren();
+    },
+  };
+}

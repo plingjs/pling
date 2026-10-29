@@ -1,0 +1,222 @@
+{
+  "id": "external-agent-surface",
+  "title": "Example 05: Expose capabilities",
+  "titleZh": "案例05：暴露能力给外部",
+  "eyebrow": "Beyond the page",
+  "eyebrowZh": "页面之外",
+  "summary": "A complete Todo page keeps its own assistant. The same six named operations have two consumers: an in-page console, and Codex or Claude outside the page through a local MCP bridge. Records, approvals, and business handlers stay on the page.",
+  "summaryZh": "一个完整的 Todo 页面保留自己的助手，把同一组六项具名能力交给两个消费者：页面内的控制台，以及页面外经本地 MCP 桥接入的 Codex 或 Claude。记录、审批与业务处理仍留在页面内。",
+  "url": "/demos/external-agent-surface/",
+  "open": "src/App.vue",
+  "files": [
+    {
+      "path": "src/App.vue",
+      "label": "App.vue",
+      "role": "Business UI, declared tools, records, and approval",
+      "roleZh": "业务界面、工具声明、记录与审批",
+      "lang": "vue"
+    },
+    {
+      "path": "src/ExternalConsole.vue",
+      "label": "ExternalConsole.vue",
+      "role": "Second client using protocol requests",
+      "roleZh": "使用协议请求的第二个客户端",
+      "lang": "vue"
+    },
+    {
+      "path": "src/surface.ts",
+      "label": "surface.ts",
+      "role": "Allowlist, executor injection, and session",
+      "roleZh": "允许清单、执行器注入与会话",
+      "lang": "ts"
+    },
+    {
+      "path": "src/mcp-bridge.ts",
+      "label": "mcp-bridge.ts",
+      "role": "Page side of the loopback MCP bridge",
+      "roleZh": "本地 MCP 桥的页面侧",
+      "lang": "ts"
+    },
+    {
+      "path": "src/McpGuide.vue",
+      "label": "McpGuide.vue",
+      "role": "Connection and client setup guide",
+      "roleZh": "连接方式与客户端配置说明",
+      "lang": "vue"
+    },
+    {
+      "path": "mcp-server.mjs",
+      "label": "mcp-server.mjs",
+      "role": "stdio MCP server for Codex, Claude, and other clients",
+      "roleZh": "供 Codex、Claude 等客户端使用的 stdio MCP server",
+      "lang": "js"
+    },
+    {
+      "path": "lib/surface-bridge.mjs",
+      "label": "surface-bridge.mjs",
+      "role": "Loopback transport; no DOM or approval bypass",
+      "roleZh": "本地回环传输；不接触 DOM，也不绕过审批",
+      "lang": "js"
+    },
+    {
+      "path": "lib/mcp.mjs",
+      "label": "mcp.mjs",
+      "role": "Three MCP tools mapped to describe and invoke",
+      "roleZh": "映射到 describe 与 invoke 的三个 MCP 工具",
+      "lang": "js"
+    },
+    {
+      "path": "src/todo.ts",
+      "label": "todo.ts",
+      "role": "Complete todo business operations",
+      "roleZh": "完整 Todo 业务操作",
+      "lang": "ts"
+    },
+    {
+      "path": "src/approval.ts",
+      "label": "approval.ts",
+      "role": "Human approval bridge",
+      "roleZh": "人工审批桥接",
+      "lang": "ts"
+    },
+    {
+      "path": "src/copy.ts",
+      "label": "copy.ts",
+      "role": "Bilingual copy and capability descriptions",
+      "roleZh": "双语文案与能力说明",
+      "lang": "ts"
+    },
+    {
+      "path": "src/main.ts",
+      "label": "main.ts",
+      "role": "Runtime setup",
+      "roleZh": "运行时初始化",
+      "lang": "ts"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Bridge purpose, commands, tools, and limits",
+      "roleZh": "桥的用途、命令、工具与边界",
+      "lang": "markdown"
+    },
+    {
+      "path": "src/styles.css",
+      "label": "styles.css",
+      "role": "Page styles",
+      "roleZh": "页面样式",
+      "lang": "css"
+    },
+    {
+      "path": "index.html",
+      "label": "index.html",
+      "role": "Vite entry",
+      "roleZh": "Vite 入口",
+      "lang": "html"
+    }
+  ],
+  "focus": {
+    "allowlist": { "selector": "surface.ts", "match": "EXTERNAL_SCOPE" },
+    "records": { "selector": "v-record", "match": "v-record=\"" },
+    "approval": { "selector": ".approval", "match": "approval.current.value" }
+  },
+  "guide": {
+    "title": "Connect a real external agent to the page",
+    "titleZh": "把一个真实的外部 Agent 接到页面上",
+    "intro": [
+      "The page already has a useful assistant. This example answers a different question: how can a user's own Codex or Claude operate the same page without receiving its DOM or internal store?",
+      "The agent starts from describe, chooses a named operation, then calls invoke. A local MCP server only transports those two protocol methods. The page still validates input, runs the existing business function, and asks its operator to confirm destructive work.",
+      "To try it: run pnpm dev:examples, open /external-agent-surface/?mcp=1, register mcp-server.mjs with your MCP client, then ask the agent to describe the page and add a task. The page shows a pending approval for deletion."
+    ],
+    "introZh": [
+      "页面本身已经有一个可用的助手。这个案例回答的是另一个问题：用户自己的 Codex 或 Claude，如何在不拿 DOM、内部 store 的情况下操作同一个页面？",
+      "外部 Agent 先调用 describe，选择具名操作，再调用 invoke。本地 MCP server 只负责传输这两个协议方法；参数校验、业务处理与破坏性操作的真人确认仍由页面完成。",
+      "实际操作时：运行 pnpm dev:examples，打开 /external-agent-surface/?mcp=1，在 MCP 客户端里注册 mcp-server.mjs，再让 Agent 描述页面并新增一条待办。删除会在页面上等待真人审批。"
+    ],
+    "steps": [
+      {
+        "title": "Reuse the executor instead of writing a second one",
+        "titleZh": "复用执行器，而不是另写一套执行逻辑",
+        "body": "The Surface receives the existing executor. Parameter checks, confirmations, expectations, and audit events therefore stay on one path.",
+        "bodyZh": "Surface 接收现有执行器。参数校验、确认、成功判据与审计事件因此仍走同一条路径。",
+        "file": "src/surface.ts",
+        "match": "const executor = createExecutor",
+        "lines": 8
+      },
+      {
+        "title": "Write down the external allowlist",
+        "titleZh": "明确写出对外允许清单",
+        "body": "Only these six capability ids are visible and callable. Everything else remains a page-internal action.",
+        "bodyZh": "只有这六项能力可见、可调用；其余动作仍只属于页面内部。",
+        "file": "src/surface.ts",
+        "match": "export const EXTERNAL_SCOPE",
+        "lines": 10
+      },
+      {
+        "title": "Describe business effects and parameters",
+        "titleZh": "写清业务效果与参数",
+        "body": "Each capability has a stable id, a description, typed parameters, and an effect. Deletion is marked danger and always requires confirmation.",
+        "bodyZh": "每项能力都有稳定 id、说明、类型化参数与效果。删除标记为 danger，并且每次都要求确认。",
+        "file": "src/App.vue",
+        "match": "id: \"todo.delete\"",
+        "lines": 12
+      },
+      {
+        "title": "Publish records, not component internals",
+        "titleZh": "发布记录，而不是组件内部结构",
+        "body": "v-record supplies stable ids and readable fields. The external client can choose a record without receiving the component's reactive state.",
+        "bodyZh": "v-record 提供稳定 id 与可读字段。外部客户端可以选择记录，但不会收到组件的响应式状态。",
+        "file": "src/App.vue",
+        "match": "v-record=\"",
+        "lines": 12
+      },
+      {
+        "title": "Connect the page to a loopback bridge",
+        "titleZh": "把页面接到本地回环桥",
+        "body": "With ?mcp=1, the page opens one WebSocket to 127.0.0.1. Incoming requests still go through surface.handle; the bridge has no DOM access and no generic click operation.",
+        "bodyZh": "带 ?mcp=1 打开时，页面只连接 127.0.0.1 的一条 WebSocket。收到的请求仍经过 surface.handle；桥没有 DOM 权限，也没有通用点击能力。",
+        "file": "src/mcp-bridge.ts",
+        "match": "export function installMcpBridge",
+        "lines": 14
+      },
+      {
+        "title": "Expose those methods as MCP tools",
+        "titleZh": "把这两个方法映射成 MCP 工具",
+        "body": "The stdio server exposes describe, invoke, and a read-only approval-status query. There is deliberately no tool that approves on the user's behalf.",
+        "bodyZh": "stdio server 暴露 describe、invoke 与只读的审批状态查询。它刻意没有“代用户批准”的工具。",
+        "file": "lib/mcp.mjs",
+        "match": "const TOOLS = [",
+        "lines": 18
+      },
+      {
+        "title": "Register the server with the agent you already use",
+        "titleZh": "在现有的 Agent 中注册这个 server",
+        "body": "Codex and Claude Code provide CLI commands. Hermes, Claude Desktop, WorkBuddy, and other clients take the same command and arguments in their own MCP settings; there is no shared CLI syntax to copy. The client does not need a browser extension or a vendor-specific API.",
+        "bodyZh": "Codex 与 Claude Code 提供命令行命令；Hermes、Claude Desktop、WorkBuddy 等客户端则在各自的 MCP 设置里填写同一组 command 与 args，并不存在一条通用的 CLI 写法。客户端不需要浏览器扩展，也不需要厂商专用 API。",
+        "file": "src/McpGuide.vue",
+        "match": "codex mcp add pling-todo",
+        "lines": 14
+      },
+      {
+        "title": "Keep destructive approval on the page",
+        "titleZh": "把破坏性审批留在页面",
+        "body": "An external request cannot approve itself. The page operator sees the pending action, and only their decision releases the promise.",
+        "bodyZh": "外部请求不能自我批准。页面操作者看到待处理动作，只有其决定才会释放执行。",
+        "file": "src/App.vue",
+        "match": "approval.current.value",
+        "lines": 12
+      },
+      {
+        "title": "Mount the page assistant separately",
+        "titleZh": "单独挂载页面助手",
+        "body": "The page keeps its own chat entry. The external console is a second consumer of the same capabilities, not a replacement for the page assistant.",
+        "bodyZh": "页面保留自己的对话入口。外部控制台是同一组能力的第二个消费者，不替代页面助手。",
+        "file": "src/App.vue",
+        "match": "<AgentDock",
+        "lines": 10
+      }
+    ],
+    "note": "Open this page with ?mcp=1, register mcp-server.mjs in Codex, Claude Code, Hermes, or another stdio MCP client, then ask it to describe the Todo page and add a task. Codex and Claude Code use their CLI; other clients take the same command and args in their own settings. The node command is a local stdio MCP process, not a page data file; it reaches the open page over 127.0.0.1. A hosted deployment pairs the page with a Surface Gateway and gives the agent an HTTPS MCP endpoint. A delete must wait for approval on this page.",
+    "noteZh": "用 ?mcp=1 打开页面，在 Codex、Claude Code、Hermes 或其他 stdio MCP 客户端中注册 mcp-server.mjs，再让它描述 Todo 页面并新增一条待办。Codex 与 Claude Code 可用命令行，其他客户端在各自设置里填写同一组 command 与 args。node 命令是本地 stdio MCP 进程，不是页面数据文件；它通过 127.0.0.1 连接当前页面。线上部署时页面与 Surface Gateway 配对，Agent 使用 HTTPS MCP 端点。删除必须在本页等待审批。"
+  }
+}

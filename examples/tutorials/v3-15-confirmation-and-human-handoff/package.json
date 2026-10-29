@@ -1,0 +1,28 @@
+{
+  "name": "pling-tutorial-v3-15",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5228 --strictPort",
+    "build": "vue-tsc --noEmit && vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@plingjs/agent": "0.1.0-alpha.2",
+    "@plingjs/core": "0.1.0-alpha.2",
+    "@plingjs/vue": "0.1.0-alpha.2",
+    "vue": "^3",
+    "vue-router": "^4"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5",
+    "@vue/test-utils": "^2",
+    "jsdom": "^25",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^2",
+    "vue-tsc": "^3.3.13"
+  }
+}

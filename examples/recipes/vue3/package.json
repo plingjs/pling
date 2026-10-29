@@ -1,0 +1,24 @@
+{
+  "name": "@plingjs/recipe-vue3",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Runnable Vue 3 recipe lab: form validation, dangerous actions, search, state, continuity, and model settings",
+  "scripts": {
+    "dev": "vite --config ./vite.config.ts --port 5230 --strictPort",
+    "build": "vite build --config ./vite.config.ts",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@plingjs/agent": "workspace:*",
+    "@plingjs/core": "workspace:*",
+    "@plingjs/vue": "workspace:*",
+    "vue": "^3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5",
+    "typescript": "^5",
+    "vite": "^6",
+    "vue-tsc": "^3.3.13"
+  }
+}

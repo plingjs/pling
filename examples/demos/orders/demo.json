@@ -1,0 +1,161 @@
+{
+  "id": "orders",
+  "title": "Example 02: Order workspace",
+  "titleZh": "案例02：订单工作台",
+  "eyebrow": "Operations",
+  "eyebrowZh": "业务操作",
+  "summary": "A real model operating a business queue with record-aware actions, a confirmation gate, and one shared assistant sidebar.",
+  "summaryZh": "让真实模型操作业务队列，包含记录级动作、确认闸门，以及一个共享助手侧栏。",
+  "url": "/demos/orders/",
+  "open": "src/main.ts",
+  "files": [
+    {
+      "path": "src/OrderWorkspace.vue",
+      "label": "OrderWorkspace.vue",
+      "role": "Business page + declarations",
+      "roleZh": "业务页面与能力声明",
+      "lang": "vue"
+    },
+    {
+      "path": "src/main.ts",
+      "label": "main.ts",
+      "role": "Pling setup",
+      "roleZh": "Pling 初始化",
+      "lang": "ts"
+    },
+    {
+      "path": "src/copy.ts",
+      "label": "copy.ts",
+      "role": "Demo copy and locale",
+      "roleZh": "示例文案与语言",
+      "lang": "ts"
+    },
+    {
+      "path": "src/quick.ts",
+      "label": "quick.ts",
+      "role": "Suggested tasks",
+      "roleZh": "推荐任务",
+      "lang": "ts"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Purpose, run command, and source map",
+      "roleZh": "用途、运行命令与源码导览",
+      "lang": "markdown"
+    },
+    {
+      "path": "GATEWAY.md",
+      "scope": "workspace",
+      "label": "GATEWAY.md",
+      "role": "Shared local model gateway",
+      "roleZh": "共享本地模型网关",
+      "lang": "markdown"
+    },
+    {
+      "path": ".env.example",
+      "scope": "workspace",
+      "label": ".env.example",
+      "role": "Browser + gateway config",
+      "roleZh": "浏览器与网关配置",
+      "lang": "ini"
+    },
+    {
+      "path": "src/styles.css",
+      "label": "styles.css",
+      "role": "Page styles",
+      "roleZh": "页面样式",
+      "lang": "css"
+    },
+    {
+      "path": "index.html",
+      "label": "index.html",
+      "role": "Vite entry",
+      "roleZh": "Vite 入口",
+      "lang": "html"
+    }
+  ],
+  "focus": {
+    "order-search": { "selector": "#order-search", "match": "id=\"order-search\"" },
+    "order-list": { "selector": "#order-list", "match": "id=\"order-list\"" },
+    "agent-dock": { "selector": ".order-sidebar", "match": "<AgentDock" },
+    "summary-task": { "selector": "#summary-task", "match": "id=\"summary-task\"" },
+    "approve-risk": { "selector": "#approve-risk-task", "match": "id=\"approve-risk-task\"" }
+  },
+  "guide": {
+    "title": "Teach an agent to run a real business queue",
+    "titleZh": "让 Agent 操作一条真实业务队列",
+    "intro": [
+      "The order workspace keeps its own cards, buttons, filters, and approval rules. Pling adds a semantic surface beside that UI; it does not replace the Vue implementation.",
+      "The model sees actions and the fields you expose, not your whole component state. Risky actions stay behind a confirmation gate declared beside the business control."
+    ],
+    "introZh": [
+      "订单工作台保留自己的卡片、按钮、筛选与审批规则。Pling 在现有界面旁增加一层语义描述，不替换 Vue 实现。",
+      "模型看到的是动作和你主动暴露的字段，而不是整个组件状态。高风险动作位于业务控件旁的确认闸门之后。"
+    ],
+    "steps": [
+      {
+        "title": "Keep the provider key on the server",
+        "titleZh": "把模型密钥留在服务端",
+        "body": [
+          "The browser uses a relative /api/agent/v1 path. The gateway reads PLING_UPSTREAM_BASE_URL and PLING_UPSTREAM_API_KEY, forces one model, and applies a request quota.",
+          "The same file works locally and on a hosted deployment behind /api/agent."
+        ],
+        "bodyZh": [
+          "浏览器只使用相对路径 /api/agent/v1。网关读取 PLING_UPSTREAM_BASE_URL 与 PLING_UPSTREAM_API_KEY，固定模型并执行请求配额。",
+          "同一个文件既可用于本地，也可用于部署在 /api/agent 后面的线上环境。"
+        ],
+        "file": ".env.example",
+        "match": "VITE_AGENT_BASE_URL",
+        "lines": 7
+      },
+      {
+        "title": "Create the shared runtime",
+        "titleZh": "创建共享运行时",
+        "body": "The page creates one Pling runtime. It owns action discovery, page identity, the agent loop, and the model configuration supplied by the environment.",
+        "bodyZh": "页面只创建一个 Pling 运行时，由它负责动作发现、页面身份、Agent 循环，以及从环境读取的模型配置。",
+        "file": "src/main.ts",
+        "match": "const pling = createPling",
+        "lines": 8
+      },
+      {
+        "title": "Declare actions beside the existing buttons",
+        "titleZh": "在原有按钮旁声明动作",
+        "body": "A tool declaration lives next to the Vue control it operates. There is no parallel automation script to maintain: the same button click and the same Vue handler run for a person and for the agent.",
+        "bodyZh": "动作声明紧挨着它操作的 Vue 控件。这里没有另一套需要维护的自动化脚本：人和 Agent 触发的是同一个按钮点击和同一个 Vue 处理函数。",
+        "file": "src/OrderWorkspace.vue",
+        "match": "v-tool=\"{ id: 'order_search'",
+        "lines": 8
+      },
+      {
+        "title": "Expose records, not the whole store",
+        "titleZh": "暴露记录，而不是整个 store",
+        "body": "v-record gives every card a stable id and a small set of fields the agent can reason about. The action list stays O(verbs), while the data remains O(fields) per visible row.",
+        "bodyZh": "v-record 为每张卡片提供稳定 id 和一组可供 Agent 推理的字段。动作清单保持为 O(动词)，数据量则按可见行数乘以字段数增长。",
+        "file": "src/OrderWorkspace.vue",
+        "match": "v-record=\"{ data: order",
+        "lines": 15
+      },
+      {
+        "title": "Make risk explicit",
+        "titleZh": "把风险写进声明",
+        "body": "Approval is a property of the action, not a prompt instruction. This approve action is marked danger and confirm, so the runtime pauses for a human before the business handler runs.",
+        "bodyZh": "审批是动作的属性，不是提示词里的一句要求。这个批准动作标为 danger 且需要 confirm，因此运行时会在业务处理函数执行前停下来等待真人确认。",
+        "file": "src/OrderWorkspace.vue",
+        "match": "kind: 'danger', confirm: true",
+        "lines": 9
+      },
+      {
+        "title": "Mount one assistant entry",
+        "titleZh": "挂载一个助手入口",
+        "body": "AgentDock provides the chat, activity log, and approval UI. The page supplies a title and optional suggested tasks; it does not import a model client.",
+        "bodyZh": "AgentDock 提供对话、最近操作和审批界面。页面只提供标题与可选推荐任务，不导入模型客户端。",
+        "file": "src/OrderWorkspace.vue",
+        "match": "<AgentDock",
+        "lines": 10
+      }
+    ],
+    "note": "Ask for a high-risk order to be approved. The model requests the action, the page shows a confirmation, and only then does the existing Vue handler update the order.",
+    "noteZh": "让助手批准一笔高风险订单。模型发起动作后，页面显示确认；只有真人批准后，原有 Vue 处理函数才会更新订单。"
+  }
+}

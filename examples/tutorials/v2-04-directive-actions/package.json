@@ -1,0 +1,24 @@
+{
+  "name": "pling-tutorial-v2-04",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5265 --strictPort",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@plingjs/agent": "0.1.0-alpha.2",
+    "@plingjs/core": "0.1.0-alpha.2",
+    "@plingjs/vue2": "0.1.0-alpha.2",
+    "vue": "2.7.16"
+  },
+  "devDependencies": {
+    "jsdom": "^25",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^2"
+  }
+}

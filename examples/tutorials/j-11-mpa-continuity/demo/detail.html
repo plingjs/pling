@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>客户详情 · Pling MPA continuity</title>
+  </head>
+  <body>
+    <header class="pling-demo-chrome">
+      <a href="/examples/multi-page-continuity" data-source="/examples/multi-page-continuity" target="_blank" rel="noopener noreferrer">
+        <span class="pling-demo-chrome__mark" aria-hidden="true">&lt;/&gt;</span>
+        <span data-en="Source &amp; integration" data-zh="源码与接入">Source &amp; integration</span>
+        <span aria-hidden="true">↗</span>
+      </a>
+      <span class="pling-demo-chrome__mode"><i aria-hidden="true"></i><span data-en="Live model example" data-zh="在线案例">Live model example</span></span>
+    </header>
+    <div id="root"></div>
+    <script type="module" src="./b.ts"></script>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const zh = params.get("lang") === "zh";
+      const docsBase = ["5191", "5276"].includes(location.port)
+        ? `${location.protocol}//${location.hostname}:5190`
+        : "";
+      const source = document.querySelector("[data-source]");
+      source.href = `${docsBase}${zh ? "/zh" : ""}${source.dataset.source}`;
+      if (zh) {
+        document.documentElement.lang = "zh-CN";
+        document.querySelectorAll("[data-en][data-zh]").forEach((node) => {
+          node.textContent = node.dataset.zh;
+        });
+      }
+    </script>
+  </body>
+</html>

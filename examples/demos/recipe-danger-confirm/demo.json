@@ -1,0 +1,24 @@
+{
+  "id": "recipe-danger-confirm", "title": "Recipe 05: Dangerous actions and confirmation", "titleZh": "方案05：危险操作与确认",
+  "eyebrow": "Runnable recipe", "eyebrowZh": "可运行方案",
+  "summary": "Archive actions require a human decision. Rejection leaves the record untouched; approval runs the business function once and records it.", "summaryZh": "归档动作需要真人决定。拒绝时记录不变；允许时才执行一次业务函数并留下结果。",
+  "url": "/demos/recipe-danger-confirm/", "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Records, danger declarations, and result log", "roleZh": "记录、危险声明与结果日志", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Local run and rejection path", "roleZh": "本地运行与拒绝路径", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": { "confirm": { "selector": "confirm", "match": "confirm: 'always'" }, "records": { "selector": "v-record", "match": "v-record=\"" }, "dock": { "selector": "AgentDock", "match": "<AgentDock" } },
+  "guide": {
+    "title": "Put the final decision in front of a person", "titleZh": "把最终决定放到真人面前",
+    "intro": ["The model can request an archive, but it cannot approve itself.", "Reject once, then allow once. The result log changes only on the allowed call."],
+    "introZh": ["模型可以请求归档，但不能自我批准。", "先拒绝一次，再允许一次。只有允许的调用会改变结果日志。"],
+    "steps": [
+      { "title": "Mark the risk", "titleZh": "标记风险", "body": "The row action declares danger, so the execution policy requires a confirmation channel.", "bodyZh": "行内动作声明为 danger，执行策略因此要求确认通道。", "file": "src/App.vue", "match": "confirm: 'always'", "lines": 6 },
+      { "title": "Use one write path", "titleZh": "共用一条写入路径", "body": "The button and the assistant both call the same archive function; confirmation surrounds execution.", "bodyZh": "按钮与助手调用同一个归档函数；确认包裹在执行外层。", "file": "src/App.vue", "match": "function archive(id", "lines": 8 },
+      { "title": "Expose the result", "titleZh": "暴露结果", "body": "The page keeps a visible result log so a person can compare a rejected request with an executed one.", "bodyZh": "页面保留可见结果日志，便于对比拒绝请求与真正执行的请求。", "file": "src/App.vue", "match": "const log = ref", "lines": 3 }
+    ],
+    "note": "Ask the assistant to archive RPT-31. Reject the confirmation first; the row must stay ready. Repeat and allow it, then inspect the result log.", "noteZh": "让助手归档 RPT-31。先拒绝确认，记录必须仍为就绪；重复并允许后检查结果日志。"
+  }
+}

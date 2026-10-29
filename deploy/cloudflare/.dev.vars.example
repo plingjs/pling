@@ -1,0 +1,8 @@
+# Copy this file to .dev.vars for `wrangler dev`.
+# The real file is ignored by Git and must never be committed.
+PLING_UPSTREAM_BASE_URL=https://your-openai-compatible-provider.example/v1
+PLING_UPSTREAM_API_KEY=replace-with-provider-key
+PLING_MODEL=replace-with-model-name
+# Local preview only. The deployed Worker keeps PLING_PUBLIC_ACCESS=false in
+# wrangler.jsonc until the public launch is explicitly approved.
+PLING_PUBLIC_ACCESS=true

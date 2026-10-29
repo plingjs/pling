@@ -1,0 +1,151 @@
+{
+  "id": "quickstart",
+  "title": "Example 01: Todo",
+  "titleZh": "案例01：待办事项",
+  "eyebrow": "Start here",
+  "eyebrowZh": "从这里开始",
+  "summary": "A normal Vue todo page, a real model, and five small integration points. Ask the assistant to do the work instead of reading a scripted demo.",
+  "summaryZh": "一个普通的 Vue Todo 页面、真实模型，以及五处很小的接入点。直接让助手完成任务，而不是观看预先录制的演示。",
+  "url": "/demos/quickstart/",
+  "open": "src/main.ts",
+  "files": [
+    {
+      "path": "src/TodoQuickstart.vue",
+      "label": "TodoQuickstart.vue",
+      "role": "Business page + declarations",
+      "roleZh": "业务页面与能力声明",
+      "lang": "vue"
+    },
+    {
+      "path": "src/main.ts",
+      "label": "main.ts",
+      "role": "Pling setup",
+      "roleZh": "Pling 初始化",
+      "lang": "ts"
+    },
+    {
+      "path": "src/copy.ts",
+      "label": "copy.ts",
+      "role": "Demo copy and locale",
+      "roleZh": "示例文案与语言",
+      "lang": "ts"
+    },
+    {
+      "path": "src/quick.ts",
+      "label": "quick.ts",
+      "role": "Suggested tasks",
+      "roleZh": "推荐任务",
+      "lang": "ts"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Purpose, run command, and source map",
+      "roleZh": "用途、运行命令与源码导览",
+      "lang": "markdown"
+    },
+    {
+      "path": "GATEWAY.md",
+      "scope": "workspace",
+      "label": "GATEWAY.md",
+      "role": "Shared local model gateway",
+      "roleZh": "共享本地模型网关",
+      "lang": "markdown"
+    },
+    {
+      "path": ".env.example",
+      "scope": "workspace",
+      "label": ".env.example",
+      "role": "Browser + gateway config",
+      "roleZh": "浏览器与网关配置",
+      "lang": "ini"
+    },
+    {
+      "path": "src/styles.css",
+      "label": "styles.css",
+      "role": "Page styles",
+      "roleZh": "页面样式",
+      "lang": "css"
+    },
+    {
+      "path": "index.html",
+      "label": "index.html",
+      "role": "Vite entry",
+      "roleZh": "Vite 入口",
+      "lang": "html"
+    }
+  ],
+  "focus": {
+    "todo-input": { "selector": "#todo-input", "match": "id=\"todo-input\"" },
+    "add-todo": { "selector": "#add-todo", "match": "id=\"add-todo\"" },
+    "todo-list": { "selector": "#todo-list", "match": "id=\"todo-list\"" },
+    "agent-dock": { "selector": ".todo-sidebar", "match": "<AgentDock" }
+  },
+  "guide": {
+    "title": "Add an AI operator in five small steps",
+    "titleZh": "五步接入一个 AI 操作员",
+    "intro": [
+      "This page is still a completely normal Vue app. Pling does not take over rendering, routing, or state; it adds a machine-readable layer that an agent is allowed to use.",
+      "The public demo talks to a small same-origin gateway. The model key lives in the Node process, while the browser only receives a path and a model name."
+    ],
+    "introZh": [
+      "这个页面仍然是一个普通的 Vue 应用。Pling 不接管渲染、路由或状态；它增加一层机器可读、且 Agent 被允许使用的能力。",
+      "公开 Demo 通过同源网关访问模型。密钥只存在 Node 进程里，浏览器拿到的只是一个路径和模型名。"
+    ],
+    "steps": [
+      {
+        "title": "Point the browser at your gateway",
+        "titleZh": "让浏览器指向你的网关",
+        "body": [
+          "Copy this file to examples/.env.local. VITE_AGENT_BASE_URL is a same-origin path, not a provider URL, so no API key can leak into the bundle.",
+          "The PLING_UPSTREAM_* values are read only by examples/gateway.mjs. In production, put the same proxy behind /api/agent."
+        ],
+        "bodyZh": [
+          "把这个文件复制为 examples/.env.local。VITE_AGENT_BASE_URL 是同源路径，不是模型服务地址，因此 API Key 不会进入浏览器产物。",
+          "PLING_UPSTREAM_* 只由 examples/gateway.mjs 读取。生产环境把同一个代理放在 /api/agent 后面。"
+        ],
+        "file": ".env.example",
+        "match": "VITE_AGENT_BASE_URL",
+        "lines": 6
+      },
+      {
+        "title": "Create one Pling runtime",
+        "titleZh": "创建一个 Pling 运行时",
+        "body": "One createPling call installs the Vue plugin, owns the action registry and page context, and reads the model configuration from the environment. Your business component never creates an agent loop or an HTTP client.",
+        "bodyZh": "一次 createPling 调用安装 Vue 插件，持有动作注册表和页面上下文，并从环境变量读取模型配置。业务组件不需要创建 Agent 循环或 HTTP 客户端。",
+        "file": "src/main.ts",
+        "match": "const pling = createPling",
+        "lines": 8
+      },
+      {
+        "title": "Declare the controls that already exist",
+        "titleZh": "声明页面已有的控件",
+        "body": "The input and Add button are unchanged Vue controls. v-tool gives each one a stable id, a description, and an explicit primitive. The model can only use these declared controls; it cannot guess selectors or click arbitrary DOM.",
+        "bodyZh": "输入框与“添加”按钮仍是原来的 Vue 控件。v-tool 为它们提供稳定 id、说明和明确的执行原语。模型只能使用声明过的控件，不能猜选择器或随意点击 DOM。",
+        "file": "src/TodoQuickstart.vue",
+        "match": "v-tool=\"{ id: 'todo_text'",
+        "lines": 14
+      },
+      {
+        "title": "Expose only the row data the model needs",
+        "titleZh": "只暴露模型需要的行数据",
+        "body": "v-record attaches business fields to each row. The agent can reason about the current page without reading the whole component state or store, and row actions stay tied to a stable record id.",
+        "bodyZh": "v-record 把业务字段附着到每一行。Agent 可以基于当前页面推理，但不需要读取整个组件状态或 store；行内动作也始终绑定稳定记录 id。",
+        "file": "src/TodoQuickstart.vue",
+        "match": "v-record=\"{ data: todo",
+        "lines": 14
+      },
+      {
+        "title": "Mount one assistant entry",
+        "titleZh": "挂载一个助手入口",
+        "body": "AgentDock owns the conversation and activity log. It uses the same registry as the page, so the assistant sees exactly the actions and records that are present right now. Optional quick prompts are just strings.",
+        "bodyZh": "AgentDock 负责对话与最近操作记录。它和页面使用同一个注册表，因此助手看到的恰好是此刻存在的动作与记录。可选推荐指令只是字符串。",
+        "file": "src/TodoQuickstart.vue",
+        "match": "<AgentDock",
+        "lines": 10
+      }
+    ],
+    "note": "Try a task in the chat. The model plans, calls declared actions, and the page changes through its normal Vue handlers. Nothing on the right is a recording.",
+    "noteZh": "在对话里给助手一个任务。模型自行规划、调用声明过的动作，页面通过原有 Vue 处理函数发生变化；右侧展示的不是录制视频。"
+  }
+}

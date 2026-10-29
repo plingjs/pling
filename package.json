@@ -1,0 +1,46 @@
+{
+  "name": "plingjs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pling — a machine-readable UI capability layer for web applications (pnpm workspace root)",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/plingjs/pling.git"
+  },
+  "homepage": "https://plingjs.dev",
+  "bugs": "https://github.com/plingjs/pling/issues",
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@12.11.2",
+  "scripts": {
+    "build": "pnpm --filter @plingjs/core build && pnpm --filter @plingjs/ui build && pnpm --filter @plingjs/dom build && pnpm --filter @plingjs/surface build && pnpm --filter @plingjs/delegation build && pnpm --filter @plingjs/agent build && pnpm --filter @plingjs/continuity-http build && pnpm --filter @plingjs/server build && pnpm --filter @plingjs/vanilla build && pnpm --filter @plingjs/react build && pnpm --filter @plingjs/vue build && pnpm --filter @plingjs/vue2 build",
+    "pack:check": "node scripts/pack-smoke.mjs",
+    "release:check": "node scripts/check-release.mjs",
+    "test": "pnpm -r --workspace-concurrency=2 --if-present run test --testTimeout=30000",
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "check": "node scripts/check-boundaries.mjs && node scripts/check-examples.mjs && node scripts/check-docs.mjs",
+    "docs:check": "node scripts/check-docs.mjs",
+    "check:examples": "node scripts/check-examples.mjs",
+    "tutorial:dev": "node scripts/tutorial-example.mjs dev",
+    "tutorial:check": "node scripts/tutorial-example.mjs check",
+    "tutorial:build": "node scripts/build-tutorial-previews.mjs",
+    "dev": "pnpm dev:docs",
+    "dev:examples": "pnpm --filter @plingjs/examples dev",
+    "dev:recipes": "pnpm --parallel --filter './examples/recipes/*' dev",
+    "dev:docs": "pnpm --parallel --filter @plingjs/examples --filter @plingjs/website run dev",
+    "surface:dev": "pnpm --filter @plingjs/surface-gateway dev",
+    "surface:start": "pnpm --filter @plingjs/surface-gateway start",
+    "surface:test": "pnpm --filter @plingjs/surface-gateway test",
+    "surface:mcp": "pnpm --filter @plingjs/examples surface:mcp",
+    "surface:smoke": "pnpm --filter @plingjs/examples surface:smoke",
+    "cloudflare:dev": "pnpm --filter @plingjs/website build && wrangler dev --config deploy/cloudflare/wrangler.jsonc",
+    "cloudflare:deploy": "pnpm --filter @plingjs/website build && wrangler deploy --config deploy/cloudflare/wrangler.jsonc",
+    "cloudflare:check": "pnpm --filter @plingjs/website build && wrangler deploy --dry-run --config deploy/cloudflare/wrangler.jsonc"
+  },
+  "devDependencies": {
+    "wrangler": "^4.152.0"
+  }
+}

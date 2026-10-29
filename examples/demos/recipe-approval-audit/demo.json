@@ -1,0 +1,43 @@
+{
+  "id": "recipe-approval-audit",
+  "title": "Recipe 12: Approval, audit, and revocation",
+  "titleZh": "方案12：审批、审计与撤销",
+  "eyebrow": "Runnable recipe",
+  "eyebrowZh": "可运行方案",
+  "summary": "An agent requests deletion of an invoice, a person approves or rejects it, and the audit trail records the request and decision. Revoked external calls fail closed.",
+  "summaryZh": "Agent 请求删除发票，真人允许或拒绝，审计记录请求与决定。撤销后的外部调用会失败关闭。",
+  "url": "/demos/recipe-approval-audit/",
+  "open": "src/App.vue",
+  "files": [
+    { "path": "src/App.vue", "label": "App.vue", "role": "Approval UI, records, and audit view", "roleZh": "审批界面、记录与审计视图", "lang": "vue" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Runtime setup", "roleZh": "运行时初始化", "lang": "ts" },
+    { "path": "README.md", "label": "README.md", "role": "Approve, reject, and revocation steps", "roleZh": "允许、拒绝与撤销步骤", "lang": "markdown" },
+    { "path": "recipe-backends/access-service/server.mjs", "scope": "workspace", "label": "server.mjs", "role": "Approval decisions, audit, and revocation", "roleZh": "审批决定、审计与撤销", "lang": "js" },
+    { "path": "recipe-backends/access-service/README.md", "scope": "workspace", "label": "backend README", "role": "Fixture limits and route contract", "roleZh": "夹具边界与路由契约", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": {
+    "records": { "selector": "v-record", "match": "v-record=\"" },
+    "tool": { "selector": "request_invoice_deletion", "match": "id: \"request_invoice_deletion\"" },
+    "state": { "selector": "approval_view", "match": "useAgentState(\"approval_view\"" }
+  },
+  "guide": {
+    "title": "The agent may request; the person decides",
+    "titleZh": "Agent 可以请求，真人作出决定",
+    "intro": [
+      "Approval is absent from the agent tool list. The page renders a pending decision and sends the person's decision to the backend.",
+      "Request one deletion, reject it, then request again and approve it. Compare the invoice list with the audit events after each step."
+    ],
+    "introZh": [
+      "审批不在 Agent 的工具清单里。页面显示待决事项，并把真人的决定提交给后端。",
+      "先请求一次删除并拒绝，再请求一次并允许。每一步之后对照发票列表与审计事件。"
+    ],
+    "steps": [
+      { "title": "Expose request, not approval", "titleZh": "暴露请求，不暴露批准", "body": "The tool creates a pending request. There is no approve tool for the model.", "bodyZh": "该工具只创建待决请求，模型没有批准工具。", "file": "src/App.vue", "match": "id: \"request_invoice_deletion\"", "lines": 2 },
+      { "title": "Show the decision to the person", "titleZh": "把决定交给真人", "body": "The page lists pending requests and sends approve or reject through its own handler.", "bodyZh": "页面列出待决请求，并通过自己的处理函数提交允许或拒绝。", "file": "src/App.vue", "match": "decide(item.id, 'approve')", "lines": 2 },
+      { "title": "Keep audit public but bounded", "titleZh": "审计公开但有界", "body": "The state view exposes counts and the latest event type, not full parameters or approval secrets.", "bodyZh": "状态视图只暴露计数与最新事件类型，不暴露完整参数或审批秘密。", "file": "src/App.vue", "match": "useAgentState(\"approval_view\"", "lines": 8 }
+    ],
+    "note": "Use the local account demo@example.com / pling-demo. Approval protects a teaching fixture; a production system still needs durable audit storage and its own authorization rules.",
+    "noteZh": "使用本地账号 demo@example.com / pling-demo。示例审批保护的是教学夹具；生产系统仍需要持久审计与自身的授权规则。"
+  }
+}
