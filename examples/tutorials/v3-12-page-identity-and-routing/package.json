@@ -10,9 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@plingjs/agent": "0.1.0-alpha.2",
-    "@plingjs/core": "0.1.0-alpha.2",
-    "@plingjs/vue": "0.1.0-alpha.2",
+    "@plingjs/agent": "0.1.0-alpha.3",
+    "@plingjs/core": "0.1.0-alpha.3",
+    "@plingjs/vue": "0.1.0-alpha.3",
     "vue": "^3",
     "vue-router": "^4"
   },

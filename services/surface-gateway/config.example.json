@@ -6,10 +6,28 @@
       "origins": [
         "http://127.0.0.1:5220",
         "http://localhost:5220",
-        "https://todo.plingjs.dev"
+        "http://127.0.0.1:5191",
+        "http://localhost:5191",
+        "https://todo.plingjs.dev",
+        "https://plingjs.dev"
       ],
-      "maxPageSessionTtlMs": 28800000,
-      "maxAgentSessionTtlMs": 7200000
+      "maxPageSessionTtlMs": 86400000,
+      "maxAgentSessionTtlMs": 86400000,
+      "publicDemo": {
+        "origins": ["http://127.0.0.1:5191", "http://localhost:5191", "https://plingjs.dev"],
+        "scope": [
+          "todo.overview",
+          "todo.add",
+          "todo.update",
+          "todo.toggle",
+          "todo.delete",
+          "todo.clear_completed"
+        ],
+        "pageSessionTtlMs": 86400000,
+        "maxSessionsPerWindow": 30,
+        "windowMs": 600000,
+        "maxActiveSessions": 40
+      }
     }
   ]
 }

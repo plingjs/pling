@@ -131,7 +131,7 @@ defineExpose({ response });
   <aside class="external" aria-labelledby="external-title">
     <header class="external__head">
       <div>
-        <p class="eyebrow">{{ copy.panelEyebrow }}</p>
+        <p class="eyebrow">02 · {{ copy.panelEyebrow }}</p>
         <h2 id="external-title">{{ copy.panelTitle }}</h2>
       </div>
       <code>0.1</code>
@@ -179,11 +179,11 @@ defineExpose({ response });
 
 <style scoped>
 .external {
-  padding: 18px;
+  padding: 22px;
   border: 1px solid #dbe6f2;
-  border-radius: 16px;
+  border-radius: 18px;
   background: #fff;
-  box-shadow: 0 14px 36px rgb(15 23 42 / 6%);
+  box-shadow: 0 18px 44px rgb(15 23 42 / 7%);
 }
 .external__head,
 .external__actions {
@@ -197,14 +197,16 @@ defineExpose({ response });
 .eyebrow {
   margin: 0 0 3px;
   color: #2e9df7;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 20px;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
 }
 code {
   padding: 3px 6px;
@@ -216,8 +218,8 @@ code {
 .external__lead {
   margin: 9px 0 14px;
   color: #64748b;
-  font-size: 12px;
-  line-height: 1.55;
+  font-size: 13px;
+  line-height: 1.65;
 }
 .external__form {
   display: grid;
@@ -229,7 +231,7 @@ code {
   display: grid;
   gap: 4px;
   color: #475569;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
 }
 .external__form input,
@@ -282,7 +284,7 @@ pre {
   border-radius: 9px;
   background: #0f172a;
   color: #dbeafe;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 1.5;
 }
 @media (max-width: 700px) {

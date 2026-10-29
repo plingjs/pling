@@ -239,7 +239,7 @@ Traces are opt-in and bounded. They are diagnostic data, not an audit log, and t
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/agent` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/agent` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
 | Peer dependencies | None |

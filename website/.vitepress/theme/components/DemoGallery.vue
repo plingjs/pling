@@ -63,7 +63,13 @@ function hrefFor(example: (typeof DEMO_EXAMPLES)[number]): string {
 }
 
 function liveHrefFor(example: (typeof DEMO_EXAMPLES)[number]): string {
-  return `${example.url}${isZh.value ? "?lang=zh" : ""}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "https://plingjs.dev";
+  const url = new URL(example.url, origin);
+  if (example.liveQuery) {
+    for (const [key, value] of new URLSearchParams(example.liveQuery)) url.searchParams.set(key, value);
+  }
+  if (isZh.value) url.searchParams.set("lang", "zh");
+  return url.pathname + url.search;
 }
 
 const cards = computed<FlagshipCard[]>(() => {

@@ -45,6 +45,7 @@ declare module "virtual:pling-demo-data" {
     summary: string;
     summaryZh?: string;
     url: string;
+    liveQuery?: string;
     source: string;
     run: string;
     open: string;

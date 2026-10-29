@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/core",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 框架无关内核：动作注册表 / UI 原语 / 权限 / 执行流水线 / tool-calling 循环",
+  "description": "Framework-neutral capability registry and execution runtime for Pling.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

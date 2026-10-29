@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/vue",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 的 Vue 适配器：v-tool / v-scope 指令、交互覆盖率诊断、动作目标解析、可见性裁剪、通用调试面板",
+  "description": "Vue 3 adapter, directives, and assistant UI for Pling.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -32,6 +32,8 @@
     "@plingjs/agent": "workspace:*",
     "@plingjs/core": "workspace:*",
     "@plingjs/dom": "workspace:*",
+    "@plingjs/surface": "workspace:*",
+    "@plingjs/surface-browser": "workspace:*",
     "@plingjs/ui": "workspace:*",
     "markdown-it": "^15.0.3"
   },

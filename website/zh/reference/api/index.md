@@ -12,13 +12,13 @@ locale: zh
 
 参数表是这里的重点。遇到某个选项时，先查它在当前框架页中的类型、必填性、默认值与适用场景；需要字段级语义或错误码时，再进入对应参考页。
 
-共 **5** 个 API 页面，覆盖 **8** 类能力；当前版本 `0.1.0-alpha.2`，稳定性为 **preview**。
+共 **5** 个 API 页面，覆盖 **9** 类能力；当前版本 `0.1.0-alpha.3`，稳定性为 **preview**。
 
 ## 按框架查阅
 
 | 框架 | 包 | 条目 | 页面 |
 | --- | --- | --- | --- |
-| **Vue 3 API** | `@plingjs/vue` | 41 | [打开](/zh/reference/api/vue-3) |
+| **Vue 3 API** | `@plingjs/vue` | 43 | [打开](/zh/reference/api/vue-3) |
 | **React API** | `@plingjs/react` | 39 | [打开](/zh/reference/api/react) |
 | **Vue 2.7 API** | `@plingjs/vue2` | 25 | [打开](/zh/reference/api/vue-2) |
 | **原生 JS API** | `@plingjs/vanilla` | 27 | [打开](/zh/reference/api/vanilla) |
@@ -33,10 +33,10 @@ locale: zh
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | 项目 | 值 |
 | --- | --- |

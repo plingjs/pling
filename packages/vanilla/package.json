@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/vanilla",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 的原生 JS 适配器：用普通 DOM 元素声明动作、记录、区域与只读状态，并接入浮动问答入口",
+  "description": "Framework-free DOM adapter for Pling actions, records, regions, and state.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

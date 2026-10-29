@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/agent",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 的 agent 层：会话循环 / 上下文组装 / 确认闸门 / 钩子 / 观测 / 评测（浏览器与 Node 同构）",
+  "description": "Framework-neutral agent loop, context, confirmation, continuity, and telemetry for Pling.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

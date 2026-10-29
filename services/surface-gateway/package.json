@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/surface-gateway",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": true,
   "type": "module",
   "description": "Reference Surface gateway: tenant routing, page sessions, pairings, remote MCP, revocation, and audit",

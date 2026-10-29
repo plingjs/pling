@@ -98,6 +98,40 @@ Content-Type: application/json
 
 这些凭证都不应进入模型提示词、公开日志或审计记录。
 
+## 让适配器托管浏览器侧生命周期
+
+页面仍然负责声明能力、渲染审批界面；它不该再手写会话、Socket、桥接、配对、
+申领、重连与卸载清理。Vue 3 里可以直接用 `useSurfaceGateway()` 托管这段生命周期：
+
+```ts
+import { computed } from "vue";
+import { useSurfaceGateway } from "@plingjs/vue";
+
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("无法创建 Surface 页面会话");
+    return response.json();
+  },
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+`bff` 模式必须提供 `getPageSession`。应用服务端验证用户后，用自己的 admin token
+调用网关；浏览器只拿到短时页面会话。`public-demo` 只用于需要展示可复制 Agent token
+的公开演示，不要为了省掉 BFF 接口就把产品切到 `public-demo`。
+
+同一个控制器还覆盖重连、配对、撤销与卸载清理。`<SurfaceAccessPanel :gateway="gateway" />`
+是连接与 token 控件的可选起点，产品可以换成自己的界面。
+
+封装不会放宽安全边界：`expose` 仍然显式，页面仍然是唯一能批准破坏性动作的地方。
+React、原生 JavaScript 或非浏览器宿主可以直接使用框架无关的 `@plingjs/surface-browser` 原语。
+
 ## 执行仍留在应用里
 
 Agent 调用三个 MCP 操作：

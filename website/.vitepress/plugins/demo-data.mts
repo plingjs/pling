@@ -48,6 +48,8 @@ export interface DemoManifest {
   summary: string;
   summaryZh?: string;
   url: string;
+  /** Extra query string for the live example, without the leading `?`. */
+  liveQuery?: string;
   /** Repository-relative source root. Defaults to examples/demos/<id>/. */
   source?: string;
   /** Command that starts this demo from the repository root. */

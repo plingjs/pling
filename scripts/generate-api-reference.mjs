@@ -107,7 +107,7 @@ const SHARED_PAGE = {
 };
 
 const PAGES = [...ADAPTER_PAGES, SHARED_PAGE];
-const FRAMEWORK_CATEGORIES = new Set(["entry", "declarations", "types", "ui", "page"]);
+const FRAMEWORK_CATEGORIES = new Set(["entry", "declarations", "types", "ui", "external", "page"]);
 const NO_PARAMETER_ENTRIES = new Set(["usePling", "usePlingUi", "plugin", "destroy", "defaultSettle"]);
 
 const SUPPORT = {

@@ -16,9 +16,9 @@ This page lists only `@plingjs/vanilla` entry points, plus the shared-package ty
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.2` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.3` |
 
-The current package version is `0.1.0-alpha.2`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.3`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -1338,10 +1338,10 @@ createPling({ shared: page });
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |

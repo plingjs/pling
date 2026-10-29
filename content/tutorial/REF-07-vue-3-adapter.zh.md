@@ -115,6 +115,49 @@ createApp(App).use(pling.plugin).mount("#app");
 - `readonly`：只展示应用托管的连接，不显示密钥；
 - `byok`：允许用户填写 `baseUrl`、`model` 与 `apiKey`；默认只在内存中保留，显式 `persist: "session"` 才写入 sessionStorage。不支持 localStorage。
 
+## 外部 Agent Surface
+
+`useSurfaceGateway()` 托管外部 Agent 接入里重复的页面侧管线：页面会话、
+WebSocket、`describe` / `invoke` 桥接、配对、token 申领、重连与卸载清理。
+它不声明业务动作。能力来源仍是已有的 `v-tool` / `useAgentTool` 声明，
+`expose` 仍是一份显式 allowlist。
+
+```ts
+import { computed } from "vue";
+import { useSurfaceGateway } from "@plingjs/vue";
+
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("无法创建 Surface 页面会话");
+    return response.json();
+  },
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+按“谁创建页面会话”选择模式：
+
+| 模式 | 页面会话来源 | token 展示 | 用途 |
+| --- | --- | --- | --- |
+| `public-demo` | 浏览器直接调用网关演示端点 | 可展示短时 Agent token | 只用于公开演示 |
+| `bff` | 由已认证服务端支撑的 `getPageSession()` | 应用自行决定；不能把 admin token 交给页面 | 生产环境 |
+
+控制器提供 `state`、`surface`、`page`、`pairing`、`access`、`agent`、`busy`、
+`error`、`connect()`、`disconnect()`、`pair()`、`claim()` 与 `revoke()`。
+`<SurfaceAccessPanel :gateway="gateway" />` 是可选的连接、配对、token、scope 与撤销面板，
+不会创建第二份运行时。
+
+有两件事不会搬进封装：
+
+- `expose` 从不自动推断。页面内部能执行、但不在 allowlist 里的能力，对外仍然不存在。
+- 破坏性动作仍在页面确认界面停下。网关只收到 `pending_approval` 状态，不会得到审批工具。
+
 ## 会影响行为的默认值
 
 - 没有声明就没有动作。`derive` 默认关闭。
@@ -134,6 +177,9 @@ createApp(App).use(pling.plugin).mount("#app");
 | 路由变了，模型却以为还在旧页面 | `page` 关闭，或没有传 router | 传 `page: { router }` 并配置 query 白名单 |
 | 看不到模型设置 | 模式是 `off`，或没有传给实际挂载的入口 | 在 `<AgentDock>` 或 `createPling({ agent })` 上设置 `modelSettings` |
 | 调试面板没有请求 | `debug` 关闭，或调用被清空 | 开启 `debug`，复现一次请求 |
+| Surface 已连接，但没有任何能力 | `expose` 与已注册动作 id 不一致 | 在 `<AgentPanel>` 查看动作 id，并保持 `expose` 显式 |
+| 没有出现 Agent token | `public-demo` 未开启，或 `autoClaim` 为 `false` | 调用 `gateway.claim()`；只在 `public-demo` 下开启 `autoClaim` |
+| 破坏性调用似乎立即执行 | 宿主没有传入审批来源或确认函数 | 传入 `approval` 或 `confirm`，不要自动批准外部写操作 |
 
 ## 证据
 
@@ -148,7 +194,7 @@ createApp(App).use(pling.plugin).mount("#app");
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vue` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/vue` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器中的 Vue 3；SSR 与构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | `vue ^3` |

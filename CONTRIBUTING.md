@@ -7,6 +7,7 @@ Pling 是一个 pnpm workspace。运行实现只在 `packages/`，公开示例�
 
 ```bash
 pnpm install
+pnpm build               # 工作区依赖通过 dist/ 解析，首次检出必须先构建
 pnpm dev                 # 启动文档站与示例
 pnpm check               # 框架 / 业务边界守卫
 pnpm release:check       # 发布元数据与 CI 契约
@@ -17,7 +18,6 @@ pnpm test
 需要验证真实 tarball 时：
 
 ```bash
-pnpm build
 pnpm pack:check
 ```
 

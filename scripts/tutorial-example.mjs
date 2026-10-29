@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { access, cp, readFile, rm, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { join, resolve } from "node:path";
-import { ALL_PACKAGES, buildAndPackPackages, run } from "./lib/pack-packages.mjs";
+import { buildAndPackPackages, expandWorkspacePackages, run } from "./lib/pack-packages.mjs";
 
 const root = resolve(import.meta.dirname, "..");
 const [mode, tutorialArg, ...options] = process.argv.slice(2);
@@ -50,9 +50,7 @@ if (!entry) {
 if (!Array.isArray(entry.packages) || entry.packages.length === 0) {
   throw new Error(`${tutorialId} 没有配置 packages`);
 }
-for (const name of entry.packages) {
-  if (!ALL_PACKAGES.includes(name)) throw new Error(`${tutorialId} 引用了未知包 ${name}`);
-}
+const packageNames = await expandWorkspacePackages(root, entry.packages);
 
 const source = join(root, "examples", "tutorials", entry.dir);
 const work = join(root, ".tmp", "tutorials", tutorialId);
@@ -86,11 +84,11 @@ for (const file of entry.docs ?? []) {
 
 console.log(`[tutorial] ${entry.title}`);
 if (locale) console.log(`[tutorial] locale: ${locale}`);
-console.log(`[tutorial] packing ${entry.packages.join(" / ")}`);
+console.log(`[tutorial] packing ${packageNames.join(" / ")}`);
 const tarballs = await buildAndPackPackages({
   root,
   temp: packs,
-  packages: entry.packages,
+  packages: packageNames,
 });
 
 await rm(app, { recursive: true, force: true });
@@ -98,14 +96,14 @@ await cp(source, app, { recursive: true });
 
 const manifestPath = join(app, "package.json");
 const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-for (const name of entry.packages) {
+for (const name of packageNames) {
   if (manifest.dependencies?.[name]) manifest.dependencies[name] = `file:${tarballs[name]}`;
 }
 await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
 
 // A local workspace file prevents pnpm from walking up into the Pling monorepo.
 // Overrides resolve the tarballs' exact internal versions without contacting the registry.
-const overrides = entry.packages.map((name) => `  "${name}": "file:${tarballs[name]}"`).join("\n");
+const overrides = packageNames.map((name) => `  "${name}": "file:${tarballs[name]}"`).join("\n");
 await writeFile(join(app, "pnpm-workspace.yaml"), `packages:\n  - "."\noverrides:\n${overrides}\n`);
 
 console.log(`[tutorial] installing release-equivalent dependencies in ${app}`);

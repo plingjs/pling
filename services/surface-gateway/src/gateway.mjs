@@ -22,9 +22,9 @@ export function createSurfaceGateway(options) {
   const now = options.now ?? Date.now;
   const requestTimeoutMs = positive(options.requestTimeoutMs, 20_000);
   const approvalTimeoutMs = positive(options.approvalTimeoutMs, 15 * 60_000);
-  const pageSessionTtlMs = positive(options.pageSessionTtlMs, 8 * 60 * 60_000);
+  const pageSessionTtlMs = positive(options.pageSessionTtlMs, 24 * 60 * 60_000);
   const pairingTtlMs = positive(options.pairingTtlMs, 2 * 60_000);
-  const agentSessionTtlMs = positive(options.agentSessionTtlMs, 2 * 60 * 60_000);
+  const agentSessionTtlMs = positive(options.agentSessionTtlMs, 24 * 60 * 60_000);
   const resultTtlMs = positive(options.resultTtlMs, 10 * 60_000);
   const publicBaseUrl = options.publicBaseUrl.replace(/\/$/, "");
   const onAudit = options.onAudit ?? (() => {});
@@ -36,6 +36,7 @@ export function createSurfaceGateway(options) {
   const agentByToken = new Map();
   const pairings = new Map();
   const requests = new Map();
+  const demoWindows = new Map();
 
   function audit(type, data = {}) {
     try {
@@ -96,7 +97,53 @@ export function createSurfaceGateway(options) {
       pairingUrl: `${publicBaseUrl}/v1/pairings`,
       agentSessionsUrl: `${publicBaseUrl}/v1/agent-sessions`,
       mcpUrl: `${publicBaseUrl}/mcp`,
+      scope: [...scope],
     };
+  }
+
+  /**
+   * Create a short-lived page session for a configured public demo.
+   *
+   * The browser never receives the admin token. The tenant config owns the
+   * scope, Origin allowlist, TTL, and rate limit, so a caller cannot widen its
+   * own access or create a session for another tenant.
+   */
+  function createPublicDemoPageSession(input = {}) {
+    expire();
+    const tenant = tenantOf(requiredString(input.tenantId, "tenantId"));
+    const demo = tenant.publicDemo;
+    if (!demo) throw new GatewayError("PUBLIC_DEMO_DISABLED", "该租户未开启公开案例会话", 404);
+    const origin = requiredString(input.origin, "origin");
+    if (!demo.origins.includes(origin)) {
+      throw new GatewayError("ORIGIN_NOT_ALLOWED", "公开案例不接受该页面 Origin", 403);
+    }
+    const clientKey = typeof input.clientKey === "string" && input.clientKey.trim() ? input.clientKey.trim() : "unknown";
+    const current = now();
+    const recent = (demoWindows.get(clientKey) ?? []).filter((at) => at + demo.windowMs > current);
+    if (recent.length >= demo.maxSessionsPerWindow) {
+      throw new GatewayError("RATE_LIMITED", "公开案例会话创建过于频繁，请稍后再试", 429);
+    }
+    const active = [...pageSessions.values()].filter(
+      (page) => page.tenantId === tenant.id && page.expiresAt > current && page.userId.startsWith(`${demo.userIdPrefix}:`),
+    );
+    if (active.length >= demo.maxActiveSessions) {
+      throw new GatewayError("DEMO_CAPACITY", "公开案例当前会话数已满，请稍后再试", 429);
+    }
+    const session = createPageSession({
+      tenantId: tenant.id,
+      userId: `${demo.userIdPrefix}:${randomUUID()}`,
+      scope: demo.scope,
+      ttlMs: demo.pageSessionTtlMs,
+    });
+    demoWindows.set(clientKey, [...recent, current]);
+    audit("page_session.public_demo_created", {
+      tenantId: tenant.id,
+      pageSessionId: session.pageSessionId,
+      origin,
+      scope: demo.scope,
+      expiresAt: session.expiresAt,
+    });
+    return session;
   }
 
   function authenticatePage(token, origin) {
@@ -574,6 +621,7 @@ export function createSurfaceGateway(options) {
   return {
     config,
     createPageSession,
+    createPublicDemoPageSession,
     authenticatePage,
     attachPage,
     disconnectPage,

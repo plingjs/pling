@@ -2870,6 +2870,47 @@ The page token and the Agent token have different holders:
 None of these should be placed in a model prompt, a public log, or an audit
 record.
 
+## Let the adapter own the browser lifecycle
+
+The page still declares its capabilities and renders the approval UI. It should
+not also hand-write the session, socket, bridge, pairing, claim, reconnect, and
+teardown sequence. In Vue 3, `useSurfaceGateway()` owns that lifecycle:
+
+```ts
+import { computed } from "vue";
+import { useSurfaceGateway } from "@plingjs/vue";
+
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("Surface session unavailable");
+    return response.json();
+  },
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+`bff` mode requires `getPageSession`. The application server verifies the user
+and calls the gateway with its admin token; the browser receives only the
+short-lived page session. `public-demo` exists for hosted examples that need to
+show a copyable Agent token. Do not switch a product to `public-demo` just to
+avoid writing the BFF endpoint.
+
+The same controller covers reconnection, pairing, revocation, and unmount
+cleanup. `<SurfaceAccessPanel :gateway="gateway" />` is an optional starting
+point for connection and token controls; product teams can replace it with
+their own UI.
+
+The wrapper does not widen the security boundary. `expose` remains explicit, and
+the page remains the only place that can approve a destructive action. The
+framework-independent primitives are available from `@plingjs/surface-browser`
+when the host is React, vanilla JavaScript, or a non-browser runtime.
+
 ## Keep execution in the application
 
 The Agent calls one of three MCP operations:
@@ -17525,7 +17566,7 @@ This is the difference between “the model can click a button” and “the mod
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/core` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/core` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
 | Peer dependencies | None |
@@ -17784,7 +17825,7 @@ Traces are opt-in and bounded. They are diagnostic data, not an audit log, and t
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/agent` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/agent` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
 | Peer dependencies | None |
@@ -17970,7 +18011,7 @@ Do not send the whole application translation catalog into the model context. Th
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/ui` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/ui` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
 | Peer dependencies | None |
@@ -18153,7 +18194,7 @@ The adapter around this call still owns authentication, HTTP, SSE, CORS, body li
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/surface` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/surface` `0.1.0-alpha.3` |
 | Protocol | `pling.surface/0.1` (Draft) |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
@@ -18315,7 +18356,7 @@ Reference implementations cover credentials, revocation, multi-instance invalida
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/delegation` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/delegation` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later on the server |
 | Peer dependencies | None; the application supplies the store, event bus, and identity adapter |
@@ -18483,7 +18524,7 @@ The gateway is not a policy engine, secret vault, cost-accounting service, or pr
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/server` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/server` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Node.js 20 or later |
 | Peer dependencies | None |
@@ -18603,6 +18644,53 @@ Peer range: Vue 3. The adapter does not depend on Vue Router or Pinia. Router su
 - `readonly`: show the application-managed connection without the key;
 - `byok`: let the user enter `baseUrl`, `model`, and `apiKey`; persistence is `memory` by default, `session` optional. `localStorage` is not supported.
 
+## External Agent Surface
+
+`useSurfaceGateway()` owns the repeated page-side plumbing for an external
+Agent: page session, WebSocket, `describe` / `invoke` bridge, pairing, token
+claim, reconnection, and teardown. It does not declare business actions. The
+existing `v-tool` / `useAgentTool` declarations remain the capability source,
+and `expose` remains an explicit allowlist.
+
+```ts
+import { computed } from "vue";
+import { useSurfaceGateway } from "@plingjs/vue";
+
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("Surface session unavailable");
+    return response.json();
+  },
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+Choose the mode by who creates the page session:
+
+| Mode | Page session source | Token display | Use |
+| --- | --- | --- | --- |
+| `public-demo` | Gateway demo endpoint from the browser | May show a short-lived Agent token | Hosted examples only |
+| `bff` | `getPageSession()` backed by your authenticated server | Application decides; never expose an admin token | Production |
+
+The controller exposes `state`, `surface`, `page`, `pairing`, `access`,
+`agent`, `busy`, `error`, `connect()`, `disconnect()`, `pair()`, `claim()`, and
+`revoke()`. `<SurfaceAccessPanel :gateway="gateway" />` renders an optional
+connection, pairing, token, scope, and revoke panel without creating a second
+runtime.
+
+Two rules do not move into the wrapper:
+
+- `expose` is never inferred. A capability absent from the allowlist is absent
+  from the external Surface even if the page can execute it.
+- Destructive actions still stop in the page confirmation UI. The gateway
+  receives `pending_approval` metadata; it never receives an approval tool.
+
 ## Defaults that affect behavior
 
 - No declaration means no action. `derive` is off.
@@ -18622,6 +18710,9 @@ Peer range: Vue 3. The adapter does not depend on Vue Router or Pinia. Router su
 | Router changes but the model still thinks it is on the old page | `page` disabled or router not supplied | Pass `page: { router }` and whitelist query keys |
 | Model settings do not appear | Mode is `off` or not passed to the mounted surface | Set `modelSettings` on `<AgentDock>` or `createPling({ agent })` |
 | Debug panel shows no calls | `debug` is off, or the call was cleared | Enable `debug` and reproduce one request |
+| Surface connects but exposes no capabilities | `expose` does not match registered action ids | Inspect action ids in `<AgentPanel>` and keep `expose` explicit |
+| No Agent token appears | `public-demo` is off, or `autoClaim` is false | Call `gateway.claim()` or enable `autoClaim` in `public-demo` only |
+| A destructive call appears to run immediately | The host did not pass an approval source or confirm function | Pass `approval` or `confirm`; never auto-approve external writes |
 
 ## Evidence
 
@@ -18636,7 +18727,7 @@ Peer range: Vue 3. The adapter does not depend on Vue Router or Pinia. Router su
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vue` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/vue` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Vue 3 in browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
 | Peer dependencies | `vue ^3` |
@@ -18797,7 +18888,7 @@ Do not import Vue components to fill these gaps. Add a React implementation or m
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/react` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/react` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | React 18 or later in browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
 | Peer dependencies | `react >=18` |
@@ -18968,7 +19059,7 @@ Attach Pling after the element exists. If a plugin replaces the DOM node later, 
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vanilla` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/vanilla` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for builds |
 | Peer dependencies | None; jQuery is optional |
@@ -19155,7 +19246,7 @@ Do not infer Vue 3 parity from the shared directive names. Compare the [Vue 3 ad
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vue2` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/vue2` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Vue 2.7 in browsers with ES2022 modules; Node.js 20 or later for builds |
 | Peer dependencies | `vue ^2.7.0` |
@@ -19275,7 +19366,7 @@ Do not map codes to adapter-specific strings in business code. Use `describePlin
 
 | Item | Value |
 | --- | --- |
-| Applies to | Runtime and adapter error surfaces in `@plingjs/*` `0.1.0-alpha.2` |
+| Applies to | Runtime and adapter error surfaces in `@plingjs/*` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
 | Peer dependencies | Those of the adapter being used |
@@ -19446,7 +19537,7 @@ Relevant examples cover MPA continuity, Shadow DOM projection, same-origin ifram
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/continuity-http` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/continuity-http` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for the HTTP backend |
 | Peer dependencies | None |
@@ -19591,7 +19682,7 @@ A future public conformance kit may exist, but until it is versioned, published,
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/surface` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/surface` `0.1.0-alpha.3` |
 | Protocol | `pling.surface/0.1` (Draft) |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
@@ -19732,7 +19823,7 @@ If these artifacts are added later, they must be generated from the same types a
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/surface` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/surface` `0.1.0-alpha.3` |
 | Protocol | `pling.surface/0.1` (Draft) |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
@@ -20457,7 +20548,7 @@ pnpm dev:examples
 2. **Switch to Integration.** Follow the short sequence from configuration to the final assistant entry.
 3. **Inspect the source.** Highlighted lines mark imports, runtime setup, declarations, and assistant entry points.
 
-Each example has its own page, live application, full source, and integration notes. Example 05 also includes a local MCP bridge for Codex, Claude, and other agents that accept stdio MCP servers.
+Each example has its own page, live application, full source, and integration notes. Example 05 connects the same Todo capabilities to a hosted Surface Gateway, so Codex, Claude, and other MCP clients can operate the live page with a short-lived access token. The page prepares a complete command for the user to copy; the source also keeps a loopback bridge for local development.
 
 If you are ready to modify your own application, continue to the [Vue quick start](/vue/quick-start-add-pling-to-a-vue-app) or the [React quick start](/react/quick-start-add-pling-to-a-react-app).
 
@@ -20671,22 +20762,23 @@ An upgrade starts by separating those two version lines and then deciding what h
 
 ## Current release line
 
-All public packages are at `0.1.0-alpha.2`. This is an alpha line: APIs may change, and security fixes are provided only for the latest published alpha. A package being published or a demo running does not mean it is production-ready.
+All public packages are at `0.1.0-alpha.3`. This is an alpha line: APIs may change, and security fixes are provided only for the latest published alpha. A package being published or a demo running does not mean it is production-ready.
 
 | Package | Responsibility | Current line |
 | --- | --- | --- |
-| `@plingjs/core` | Registry, execution, policy, and result primitives | `0.1.0-alpha.2` |
-| `@plingjs/dom` | DOM targeting, projection, scrolling, and browser primitives | `0.1.0-alpha.2` |
-| `@plingjs/agent` | Loop, context, tools, and continuity contracts | `0.1.0-alpha.2` |
-| `@plingjs/surface` | Agent Surface projection and `describe` / `invoke` | `0.1.0-alpha.2` |
-| `@plingjs/delegation` | Optional delegation credential lifecycle | `0.1.0-alpha.2` |
-| `@plingjs/continuity-http` | Optional remote continuity over HTTP | `0.1.0-alpha.2` |
-| `@plingjs/server` | OpenAI-compatible model gateway | `0.1.0-alpha.2` |
-| `@plingjs/ui` | Shared interface components and styles for adapters | `0.1.0-alpha.2` |
-| `@plingjs/vue` | Vue 3 adapter | `0.1.0-alpha.2` |
-| `@plingjs/react` | React adapter | `0.1.0-alpha.2` |
-| `@plingjs/vanilla` | Framework-free DOM adapter | `0.1.0-alpha.2` |
-| `@plingjs/vue2` | Vue 2.7 adapter | `0.1.0-alpha.2` |
+| `@plingjs/core` | Registry, execution, policy, and result primitives | `0.1.0-alpha.3` |
+| `@plingjs/dom` | DOM targeting, projection, scrolling, and browser primitives | `0.1.0-alpha.3` |
+| `@plingjs/agent` | Loop, context, tools, and continuity contracts | `0.1.0-alpha.3` |
+| `@plingjs/surface` | Agent Surface projection and `describe` / `invoke` | `0.1.0-alpha.3` |
+| `@plingjs/surface-browser` | Page-side Surface sessions, WebSocket transport, bridge, and reconnect lifecycle | `0.1.0-alpha.3` |
+| `@plingjs/delegation` | Optional delegation credential lifecycle | `0.1.0-alpha.3` |
+| `@plingjs/continuity-http` | Optional remote continuity over HTTP | `0.1.0-alpha.3` |
+| `@plingjs/server` | OpenAI-compatible model gateway | `0.1.0-alpha.3` |
+| `@plingjs/ui` | Shared interface components and styles for adapters | `0.1.0-alpha.3` |
+| `@plingjs/vue` | Vue 3 adapter | `0.1.0-alpha.3` |
+| `@plingjs/react` | React adapter | `0.1.0-alpha.3` |
+| `@plingjs/vanilla` | Framework-free DOM adapter | `0.1.0-alpha.3` |
+| `@plingjs/vue2` | Vue 2.7 adapter | `0.1.0-alpha.3` |
 
 The protocol documented here is `pling.surface/0.1`, still a public draft. Version 0.1 defines only `describe` and `invoke`. It does not promise `attach`, `observe`, `handoff`, `detach`, or a mandatory transport.
 
@@ -20873,13 +20965,13 @@ Choose the framework you are integrating. Each page contains only that framework
 
 The parameter tables are the main contract here. Look up a field's type, required status, default, and applicable scenario on the current framework page; follow the linked reference only when you need field-level semantics or error codes.
 
-There are **5** API pages covering **8** capability groups; the current version is `0.1.0-alpha.2` with **preview** stability.
+There are **5** API pages covering **9** capability groups; the current version is `0.1.0-alpha.3` with **preview** stability.
 
 ## Choose by framework
 
 | Framework | Package | Entries | Page |
 | --- | --- | --- | --- |
-| **Vue 3 API** | `@plingjs/vue` | 41 | [Open](/reference/api/vue-3) |
+| **Vue 3 API** | `@plingjs/vue` | 43 | [Open](/reference/api/vue-3) |
 | **React API** | `@plingjs/react` | 39 | [Open](/reference/api/react) |
 | **Vue 2.7 API** | `@plingjs/vue2` | 25 | [Open](/reference/api/vue-2) |
 | **Vanilla JS API** | `@plingjs/vanilla` | 27 | [Open](/reference/api/vanilla) |
@@ -20894,10 +20986,10 @@ Runtime, page continuity, testing, and diagnostic APIs share one implementation:
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |
@@ -20934,9 +21026,9 @@ This page lists only `@plingjs/vue` entry points, plus the shared-package types 
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.2` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.3` |
 
-The current package version is `0.1.0-alpha.2`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.3`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -22585,6 +22677,123 @@ console.log(ui.t("chat.send"));
 [Open the corresponding reference](/reference/ui-messages-theme-locale)
 
 
+## External Agent Surface
+
+Vue wrappers for exposing declared capabilities through a Surface gateway. They manage credentials and transport; the capability allowlist and human approval stay in the application.
+
+| API | Kind | Reference |
+| --- | --- | --- |
+| [useSurfaceGateway](#api-usesurfacegateway) | Function | [Reference](/reference/vue-3-adapter) |
+| [SurfaceAccessPanel](#api-surfaceaccesspanel) | Component | [Reference](/reference/vue-3-adapter) |
+
+<a id="api-usesurfacegateway"></a>
+
+### `useSurfaceGateway`
+
+Creates and owns the page session, WebSocket, Surface bridge, pairing, claim, and revocation lifecycle for one Vue component scope.
+
+**Imports**
+
+`@plingjs/vue`
+
+**Signature**
+
+```ts
+// Vue 3
+useSurfaceGateway(options: UseSurfaceGatewayOptions): SurfaceGatewayController
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `app` | `string` | Yes | — | Stable application name sent in the bridge hello. |
+| `expose` | `SurfaceExpose` | Yes | — | Explicit capability allowlist. The composable never infers capabilities from the DOM or registry. |
+| `mode` | `"public-demo" \| "bff"` | Yes | — | public-demo creates a page session from the browser and may show an Agent token. bff requires getPageSession and must be backed by an authenticated application server. |
+| `gatewayUrl` | `string` | No | — | Gateway origin for public-demo mode, for example https://surface.example.com. |
+| `getPageSession` | `() => Promise<SurfacePageSession>` | No | — | Required in bff mode. The application server verifies the user session and returns only a short-lived page session. |
+| `gatewayClient` | `SurfaceGatewayClient` | No | — | Injected HTTP client for tests or a custom BFF contract. |
+| `approval` | `SurfaceApprovalSource & { confirm?: Confirm }` | No | — | Human approval source. Its subscribe callback relays pending state; the page still owns the decision UI. |
+| `confirm` | `Confirm \| null` | No | — | Confirmation function used by the Surface executor. Defaults to approval.confirm, then null (fail closed). |
+| `autoConnect` | `boolean` | No | `true` | Connects when the component mounts. Set false when the host owns an explicit connect button. |
+| `autoClaim` | `boolean` | No | `true (public-demo only)` | Claims an Agent token automatically. Defaults to true only in public-demo mode. |
+| `agentId` | `string` | No | — | Agent id recorded when claiming a public-demo pairing. |
+| `tenantId` | `string` | No | — | Optional tenant hint for the public-demo page-session endpoint. |
+| `clientKey` | `string` | No | — | Optional client hint for the public-demo page-session endpoint. |
+| `reconnectMs` | `number` | No | `1500` | Delay before reconnecting the page WebSocket. |
+| `webSocket` | `SurfaceWebSocketFactory` | No | — | WebSocket implementation injection for tests or non-browser hosts. |
+| `surface` | `Partial<CreatePlingSurfaceOptions>` | No | — | Extra Surface options such as recordLimit, rateLimit, replay, audit, or custom settle. |
+
+**Example 1 · Public demo with an explicit allowlist**
+
+```ts
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "public-demo",
+  gatewayUrl: "https://surface.example.com",
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+**Example 2 · Production BFF session**
+
+```ts
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("Surface session unavailable");
+    return response.json();
+  },
+  approval,
+});
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/vue-3-adapter)
+
+
+<a id="api-surfaceaccesspanel"></a>
+
+### `SurfaceAccessPanel`
+
+Optional Vue panel for connection state, pairing, a copyable Agent token, the current scope, and revocation. It renders a controller; it does not create capabilities.
+
+**Imports**
+
+`@plingjs/vue`
+
+**Signature**
+
+```ts
+// Vue 3
+<SurfaceAccessPanel :gateway="gateway" title="External Agent" />
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `gateway` | `SurfaceGatewayController` | Yes | — | Controller returned by useSurfaceGateway. The component renders its state but never creates capabilities or tokens by itself. |
+| `title` | `string` | No | — | Panel title. Defaults to the localized External Agent label. |
+
+**Example 1 · Render the optional access panel**
+
+```ts
+<SurfaceAccessPanel :gateway="gateway" title="外部 Agent" />
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/vue-3-adapter)
+
+
 ## Page identity and continuity
 
 Read page identity, share a runtime across frames, and inspect declared coverage.
@@ -22887,10 +23096,10 @@ console.log(report.coveragePercent, report.targets);
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |
@@ -22916,9 +23125,9 @@ This page lists only `@plingjs/react` entry points, plus the shared-package type
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/react` | react >=18 | `0.1.0-alpha.2` |
+| `@plingjs/react` | react >=18 | `0.1.0-alpha.3` |
 
-The current package version is `0.1.0-alpha.2`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.3`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -24765,10 +24974,10 @@ const report = pling.inspectCoverage(document.getElementById("root"));
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |
@@ -24794,9 +25003,9 @@ This page lists only `@plingjs/vue2` entry points, plus the shared-package types
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.2` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.3` |
 
-The current package version is `0.1.0-alpha.2`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.3`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -25983,10 +26192,10 @@ dock.destroy();
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |
@@ -26012,9 +26221,9 @@ This page lists only `@plingjs/vanilla` entry points, plus the shared-package ty
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.2` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.3` |
 
-The current package version is `0.1.0-alpha.2`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.3`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -27334,10 +27543,10 @@ createPling({ shared: page });
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |
@@ -27363,9 +27572,9 @@ This page covers public APIs in `@plingjs/core`, `@plingjs/agent`, `@plingjs/dom
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.2` |
+| `@plingjs/core` | — | `0.1.0-alpha.3` |
 
-The current package version is `0.1.0-alpha.2`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.3`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -28980,10 +29189,10 @@ const config = resolveAgentConfig({
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |

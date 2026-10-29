@@ -123,6 +123,47 @@ The page token and the Agent token have different holders:
 None of these should be placed in a model prompt, a public log, or an audit
 record.
 
+## Let the adapter own the browser lifecycle
+
+The page still declares its capabilities and renders the approval UI. It should
+not also hand-write the session, socket, bridge, pairing, claim, reconnect, and
+teardown sequence. In Vue 3, `useSurfaceGateway()` owns that lifecycle:
+
+```ts
+import { computed } from "vue";
+import { useSurfaceGateway } from "@plingjs/vue";
+
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("Surface session unavailable");
+    return response.json();
+  },
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+`bff` mode requires `getPageSession`. The application server verifies the user
+and calls the gateway with its admin token; the browser receives only the
+short-lived page session. `public-demo` exists for hosted examples that need to
+show a copyable Agent token. Do not switch a product to `public-demo` just to
+avoid writing the BFF endpoint.
+
+The same controller covers reconnection, pairing, revocation, and unmount
+cleanup. `<SurfaceAccessPanel :gateway="gateway" />` is an optional starting
+point for connection and token controls; product teams can replace it with
+their own UI.
+
+The wrapper does not widen the security boundary. `expose` remains explicit, and
+the page remains the only place that can approve a destructive action. The
+framework-independent primitives are available from `@plingjs/surface-browser`
+when the host is React, vanilla JavaScript, or a non-browser runtime.
+
 ## Keep execution in the application
 
 The Agent calls one of three MCP operations:

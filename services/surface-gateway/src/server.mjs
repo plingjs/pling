@@ -25,6 +25,7 @@ export function createSurfaceServer(options) {
   const requestedPort = options.port ?? 5219;
   const allowedOrigins = new Set(options.config.tenants.flatMap((tenant) => tenant.origins));
   const logger = options.logger ?? ((message) => process.stderr.write(`${message}\n`));
+  const demoTenantId = options.demoTenantId?.trim() || "demo";
   let gateway = null;
   let mcp = null;
   let baseUrl = null;
@@ -151,6 +152,20 @@ export function createSurfaceServer(options) {
       return sendJson(response, 201, gateway.createPageSession(await readJson(request)));
     }
 
+    if (request.method === "POST" && url.pathname === "/v1/demo/page-sessions") {
+      if (!origin) throw new GatewayError("ORIGIN_REQUIRED", "公开案例请求必须携带 Origin", 403);
+      await readJson(request);
+      return sendJson(
+        response,
+        201,
+        gateway.createPublicDemoPageSession({
+          tenantId: demoTenantId,
+          origin,
+          clientKey: clientKeyOf(request),
+        }),
+      );
+    }
+
     if (request.method === "POST" && url.pathname === "/v1/pairings") {
       const body = await readJson(request);
       if (!origin) throw new GatewayError("ORIGIN_REQUIRED", "页面请求必须携带 Origin", 403);
@@ -274,6 +289,13 @@ export function createSurfaceServer(options) {
     start,
     stop,
   };
+}
+
+function clientKeyOf(request) {
+  const forwarded = request.headers["x-forwarded-for"];
+  const first = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  const address = first?.split(",")[0]?.trim() || request.socket.remoteAddress || "unknown";
+  return address;
 }
 
 function requestUrl(request) {

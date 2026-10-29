@@ -49,7 +49,15 @@ const guideTitle = computed(() => (isZh.value ? example.value?.guide.titleZh : u
 const guideIntro = computed(() => (isZh.value ? example.value?.guide.introZh : undefined) ?? example.value?.guide.intro ?? "");
 const guideNote = computed(() => (isZh.value ? example.value?.guide.noteZh : undefined) ?? example.value?.guide.note);
 const demoOrigin = ref("");
-const launchUrl = computed(() => `${demoOrigin.value}${example.value?.url ?? ""}${isZh.value ? "?lang=zh" : ""}`);
+const launchUrl = computed(() => {
+  const origin = demoOrigin.value || (typeof window !== "undefined" ? window.location.origin : "https://plingjs.dev");
+  const url = new URL(example.value?.url ?? "/", origin);
+  if (example.value?.liveQuery) {
+    for (const [key, value] of new URLSearchParams(example.value.liveQuery)) url.searchParams.set(key, value);
+  }
+  if (isZh.value) url.searchParams.set("lang", "zh");
+  return url.toString();
+});
 const sourcePath = computed(() => example.value?.source ?? `examples/demos/${props.id}/`);
 const runCommand = computed(() => example.value?.run ?? "pnpm dev:examples");
 const sourceRoot = computed(() => sourcePath.value.replace(/\/$/, "").split("/").pop() ?? props.id);

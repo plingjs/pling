@@ -41,7 +41,16 @@ export default defineConfig({
     },
     rollupOptions: {
       // 运行时依赖由使用方安装；Vue 是 peer，不能打进来。
-      external: ["vue", "@plingjs/core", "@plingjs/agent", "@plingjs/dom", "@plingjs/ui", "markdown-it"],
+      external: [
+        "vue",
+        "@plingjs/core",
+        "@plingjs/agent",
+        "@plingjs/dom",
+        "@plingjs/surface",
+        "@plingjs/surface-browser",
+        "@plingjs/ui",
+        "markdown-it",
+      ],
     },
   },
 });

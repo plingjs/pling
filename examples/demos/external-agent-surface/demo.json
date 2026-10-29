@@ -4,9 +4,11 @@
   "titleZh": "案例05：暴露能力给外部",
   "eyebrow": "Beyond the page",
   "eyebrowZh": "页面之外",
-  "summary": "A complete Todo page keeps its own assistant. The same six named operations have two consumers: an in-page console, and Codex or Claude outside the page through a local MCP bridge. Records, approvals, and business handlers stay on the page.",
-  "summaryZh": "一个完整的 Todo 页面保留自己的助手，把同一组六项具名能力交给两个消费者：页面内的控制台，以及页面外经本地 MCP 桥接入的 Codex 或 Claude。记录、审批与业务处理仍留在页面内。",
+  "pageAssistant": false,
+  "summary": "One business page has three working views: the Todo itself, a protocol inspector, and a public Surface. Codex, Claude, Hermes Agent, or WorkBuddy connects over HTTPS MCP while records, approvals, and business handlers stay in the page.",
+  "summaryZh": "同一个业务页面分成三个工作区：Todo 本体、协议检查器，以及公网 Surface。Codex、Claude、Hermes Agent 或 WorkBuddy 通过 HTTPS MCP 接入，记录、审批与业务处理仍留在页面内。",
   "url": "/demos/external-agent-surface/",
+  "liveQuery": "mcp=1",
   "open": "src/App.vue",
   "files": [
     {
@@ -26,9 +28,16 @@
     {
       "path": "src/surface.ts",
       "label": "surface.ts",
-      "role": "Allowlist, executor injection, and session",
-      "roleZh": "允许清单、执行器注入与会话",
+      "role": "External allowlist and the local Surface used by the inspector and loopback bridge",
+      "roleZh": "对外允许清单，以及协议检查器与本地回环桥使用的本地 Surface",
       "lang": "ts"
+    },
+    {
+      "path": "src/GatewayGuide.vue",
+      "label": "GatewayGuide.vue",
+      "role": "Token lifetime, connection rules, and four client setup tabs",
+      "roleZh": "token 有效期、连接规则与四个客户端接入标签页",
+      "lang": "vue"
     },
     {
       "path": "src/mcp-bridge.ts",
@@ -124,21 +133,57 @@
     "title": "Connect a real external agent to the page",
     "titleZh": "把一个真实的外部 Agent 接到页面上",
     "intro": [
-      "The page already has a useful assistant. This example answers a different question: how can a user's own Codex or Claude operate the same page without receiving its DOM or internal store?",
-      "The agent starts from describe, chooses a named operation, then calls invoke. A local MCP server only transports those two protocol methods. The page still validates input, runs the existing business function, and asks its operator to confirm destructive work.",
-      "To try it: run pnpm dev:examples, open /external-agent-surface/?mcp=1, register mcp-server.mjs with your MCP client, then ask the agent to describe the page and add a task. The page shows a pending approval for deletion."
+      "This example answers one question: how can a user's own Codex, Claude, Hermes Agent, or WorkBuddy operate a business page without receiving its DOM or internal store?",
+      "On the hosted page, ?mcp=1 creates a page session with the official Surface Gateway and shows four client setup tabs. The page keeps the Todo, a protocol inspector, and the public Surface side by side; there is no page chat assistant in this example.",
+      "The gateway only transports describe and invoke. The page still validates input, runs the existing business function, and asks its operator to confirm destructive work. A loopback bridge remains in the source for local development."
     ],
     "introZh": [
-      "页面本身已经有一个可用的助手。这个案例回答的是另一个问题：用户自己的 Codex 或 Claude，如何在不拿 DOM、内部 store 的情况下操作同一个页面？",
-      "外部 Agent 先调用 describe，选择具名操作，再调用 invoke。本地 MCP server 只负责传输这两个协议方法；参数校验、业务处理与破坏性操作的真人确认仍由页面完成。",
-      "实际操作时：运行 pnpm dev:examples，打开 /external-agent-surface/?mcp=1，在 MCP 客户端里注册 mcp-server.mjs，再让 Agent 描述页面并新增一条待办。删除会在页面上等待真人审批。"
+      "这个案例回答一个问题：用户自己的 Codex、Claude、Hermes Agent 或 WorkBuddy，如何在不拿 DOM、内部 store 的情况下操作同一个业务页面？",
+      "打开线上页面并带上 ?mcp=1，页面会向官方 Surface Gateway 申请页面会话，并排展示 Todo、协议检查器与公网 Surface。公网 Surface 提供四个客户端标签页；这个案例不再挂页面聊天助手。",
+      "网关只传输 describe 与 invoke；参数校验、业务处理与破坏性操作的真人确认仍由页面完成。源码里保留了本地回环桥，供本地开发和传输层排查使用。"
     ],
     "steps": [
       {
+        "title": "Let the adapter own the browser lifecycle",
+        "titleZh": "让适配器托管浏览器生命周期",
+        "body": "The hosted path calls useSurfaceGateway() with an explicit capability allowlist. The adapter creates the page session, WebSocket transport, request bridge, claim, reconnect, and teardown; the demo does not reimplement them.",
+        "bodyZh": "公网路径用 useSurfaceGateway() 并传入显式能力清单。页面会话、WebSocket 传输、请求桥、申领、重连与清理都由适配器完成，案例不再重复实现。",
+        "file": "src/App.vue",
+        "match": "useSurfaceGateway({",
+        "lines": 14
+      },
+      {
+        "title": "Ask for a public demo session",
+        "titleZh": "申请公开案例页面会话",
+        "body": "public-demo mode calls a public endpoint bound to the page Origin. The browser receives a page token with a 24-hour maximum, never the admin token.",
+        "bodyZh": "public-demo 模式调用一个绑定页面 Origin 的公开端点。浏览器拿到最长 24 小时的页面 token，永远拿不到 admin token。",
+        "file": "src/App.vue",
+        "match": "mode: \"public-demo\"",
+        "lines": 8
+      },
+      {
+        "title": "Create an Agent session from the page",
+        "titleZh": "由页面创建 Agent 会话",
+        "body": "After the page WebSocket connects, the page claims an Agent session bound to this browser tab. The public case gives both the page session and Agent token a maximum lifetime of 24 hours and intentionally shows the token so setup stays copyable.",
+        "bodyZh": "页面 WebSocket 连上后，会申领一个只绑定当前浏览器标签页的 Agent 会话。公开案例把页面会话与 Agent token 的最长有效期都设为 24 小时，并刻意展示 token，让接入保持可复制。",
+        "file": "src/App.vue",
+        "match": "@access=\"gateway.claim()\"",
+        "lines": 8
+      },
+      {
+        "title": "Pass the allowlist, not the DOM",
+        "titleZh": "传允许清单，不传 DOM",
+        "body": "The adapter and the local inspector share the same registry and the same six-id allowlist. The gateway still forwards opaque describe and invoke envelopes; approval remains on the page.",
+        "bodyZh": "适配器与本地检查器共用同一个 registry 和同一份六项能力清单。网关仍然只转发不透明的 describe 与 invoke 信封，审批仍留在页面。",
+        "file": "src/App.vue",
+        "match": "expose: EXTERNAL_SCOPE",
+        "lines": 8
+      },
+      {
         "title": "Reuse the executor instead of writing a second one",
         "titleZh": "复用执行器，而不是另写一套执行逻辑",
-        "body": "The Surface receives the existing executor. Parameter checks, confirmations, expectations, and audit events therefore stay on one path.",
-        "bodyZh": "Surface 接收现有执行器。参数校验、确认、成功判据与审计事件因此仍走同一条路径。",
+        "body": "The protocol inspector and loopback bridge call the existing executor; the gateway adapter builds its Surface over the same registry. Parameter checks, confirmations, expectations, and audit events therefore stay on one declaration path.",
+        "bodyZh": "协议检查器与本地回环桥调用现有执行器；公网适配器也在同一个 registry 上构建 Surface。参数校验、确认、成功判据与审计事件因此仍走同一条声明路径。",
         "file": "src/surface.ts",
         "match": "const executor = createExecutor",
         "lines": 8
@@ -171,10 +216,10 @@
         "lines": 12
       },
       {
-        "title": "Connect the page to a loopback bridge",
-        "titleZh": "把页面接到本地回环桥",
-        "body": "With ?mcp=1, the page opens one WebSocket to 127.0.0.1. Incoming requests still go through surface.handle; the bridge has no DOM access and no generic click operation.",
-        "bodyZh": "带 ?mcp=1 打开时，页面只连接 127.0.0.1 的一条 WebSocket。收到的请求仍经过 surface.handle；桥没有 DOM 权限，也没有通用点击能力。",
+        "title": "Keep a loopback bridge for local development",
+        "titleZh": "保留本地回环桥用于开发",
+        "body": "When the page runs on localhost, ?mcp=1 can use the loopback bridge instead. Browsers block a public HTTPS page from reaching a private loopback socket, which is why the hosted page uses the gateway.",
+        "bodyZh": "页面在 localhost 运行时，?mcp=1 可以使用本地回环桥。浏览器会拦截公网 HTTPS 页面访问私有回环端口，所以线上页面必须走网关。",
         "file": "src/mcp-bridge.ts",
         "match": "export function installMcpBridge",
         "lines": 14
@@ -189,11 +234,11 @@
         "lines": 18
       },
       {
-        "title": "Register the server with the agent you already use",
-        "titleZh": "在现有的 Agent 中注册这个 server",
-        "body": "Codex and Claude Code provide CLI commands. Hermes, Claude Desktop, WorkBuddy, and other clients take the same command and arguments in their own MCP settings; there is no shared CLI syntax to copy. The client does not need a browser extension or a vendor-specific API.",
-        "bodyZh": "Codex 与 Claude Code 提供命令行命令；Hermes、Claude Desktop、WorkBuddy 等客户端则在各自的 MCP 设置里填写同一组 command 与 args，并不存在一条通用的 CLI 写法。客户端不需要浏览器扩展，也不需要厂商专用 API。",
-        "file": "src/McpGuide.vue",
+      "title": "Offer a client-specific setup tab",
+      "titleZh": "为每个客户端提供独立标签页",
+      "body": "Codex and Claude get copyable CLI commands; Hermes Agent and WorkBuddy get remote-MCP settings plus a generic mcpServers JSON block. Every path points at the same HTTPS endpoint and keeps the token outside tool arguments.",
+      "bodyZh": "Codex 与 Claude 得到可复制的 CLI 命令；Hermes Agent 与 WorkBuddy 得到远程 MCP 设置和通用 mcpServers JSON。所有路径都指向同一个 HTTPS 端点，token 也不会变成工具参数。",
+        "file": "src/GatewayGuide.vue",
         "match": "codex mcp add pling-todo",
         "lines": 14
       },
@@ -205,18 +250,9 @@
         "file": "src/App.vue",
         "match": "approval.current.value",
         "lines": 12
-      },
-      {
-        "title": "Mount the page assistant separately",
-        "titleZh": "单独挂载页面助手",
-        "body": "The page keeps its own chat entry. The external console is a second consumer of the same capabilities, not a replacement for the page assistant.",
-        "bodyZh": "页面保留自己的对话入口。外部控制台是同一组能力的第二个消费者，不替代页面助手。",
-        "file": "src/App.vue",
-        "match": "<AgentDock",
-        "lines": 10
       }
     ],
-    "note": "Open this page with ?mcp=1, register mcp-server.mjs in Codex, Claude Code, Hermes, or another stdio MCP client, then ask it to describe the Todo page and add a task. Codex and Claude Code use their CLI; other clients take the same command and args in their own settings. The node command is a local stdio MCP process, not a page data file; it reaches the open page over 127.0.0.1. A hosted deployment pairs the page with a Surface Gateway and gives the agent an HTTPS MCP endpoint. A delete must wait for approval on this page.",
-    "noteZh": "用 ?mcp=1 打开页面，在 Codex、Claude Code、Hermes 或其他 stdio MCP 客户端中注册 mcp-server.mjs，再让它描述 Todo 页面并新增一条待办。Codex 与 Claude Code 可用命令行，其他客户端在各自设置里填写同一组 command 与 args。node 命令是本地 stdio MCP 进程，不是页面数据文件；它通过 127.0.0.1 连接当前页面。线上部署时页面与 Surface Gateway 配对，Agent 使用 HTTPS MCP 端点。删除必须在本页等待审批。"
+    "note": "Open https://plingjs.dev/demos/external-agent-surface/?mcp=1&lang=zh, choose Codex, Claude, Hermes Agent, or WorkBuddy, and copy that tab's setup. Keep the page open. A page session lasts at most 24 hours; reloading creates a new token, and one page binds one Agent, so multiple Agents need separate pages. Deletion returns pending_approval and waits for the person on the page. The direct token is a public-demo convenience; production integrations should use OAuth or device authorization. The local stdio bridge remains in the source for development only.",
+    "noteZh": "打开 https://plingjs.dev/demos/external-agent-surface/?mcp=1&lang=zh，选择 Codex、Claude、Hermes Agent 或 WorkBuddy，复制对应标签页的接入片段。页面要保持打开。页面会话最长 24 小时；刷新会生成新 token，一个页面只绑定一个 Agent，多 Agent 请分别新开页面。删除会返回 pending_approval，并在本页等待真人确认。直接展示 token 是公开案例的便捷模式；生产环境应使用 OAuth 或设备授权。本地 stdio 桥只保留用于开发。"
   }
 }

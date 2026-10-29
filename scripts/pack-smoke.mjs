@@ -23,6 +23,7 @@ await writeFile(
         "@plingjs/surface": `file:${tarballs["@plingjs/surface"]}`,
         "@plingjs/delegation": `file:${tarballs["@plingjs/delegation"]}`,
         "@plingjs/agent": `file:${tarballs["@plingjs/agent"]}`,
+        "@plingjs/surface-browser": `file:${tarballs["@plingjs/surface-browser"]}`,
         "@plingjs/continuity-http": `file:${tarballs["@plingjs/continuity-http"]}`,
         "@plingjs/server": `file:${tarballs["@plingjs/server"]}`,
         "@plingjs/vanilla": `file:${tarballs["@plingjs/vanilla"]}`,
@@ -48,7 +49,7 @@ await writeFile(
 // pnpm 11+ 不再读 package.json 的 pnpm 字段，覆盖要写在 pnpm-workspace.yaml。
 await writeFile(
   join(app, "pnpm-workspace.yaml"),
-  `overrides:\n  "@plingjs/core": "file:${tarballs["@plingjs/core"]}"\n  "@plingjs/ui": "file:${tarballs["@plingjs/ui"]}"\n  "@plingjs/dom": "file:${tarballs["@plingjs/dom"]}"\n  "@plingjs/surface": "file:${tarballs["@plingjs/surface"]}"\n  "@plingjs/delegation": "file:${tarballs["@plingjs/delegation"]}"\n  "@plingjs/agent": "file:${tarballs["@plingjs/agent"]}"\n  "@plingjs/continuity-http": "file:${tarballs["@plingjs/continuity-http"]}"\n`,
+  `overrides:\n  "@plingjs/core": "file:${tarballs["@plingjs/core"]}"\n  "@plingjs/ui": "file:${tarballs["@plingjs/ui"]}"\n  "@plingjs/dom": "file:${tarballs["@plingjs/dom"]}"\n  "@plingjs/surface": "file:${tarballs["@plingjs/surface"]}"\n  "@plingjs/delegation": "file:${tarballs["@plingjs/delegation"]}"\n  "@plingjs/agent": "file:${tarballs["@plingjs/agent"]}"\n  "@plingjs/surface-browser": "file:${tarballs["@plingjs/surface-browser"]}"\n  "@plingjs/continuity-http": "file:${tarballs["@plingjs/continuity-http"]}"\n`,
 );
 await writeFile(
   join(app, "vite.config.mjs"),
@@ -132,6 +133,7 @@ await writeFile(
   `import { createRegistry } from "@plingjs/core";
 import { resolveLocale, resolveTheme, translate } from "@plingjs/ui";
 import { createSurface } from "@plingjs/surface";
+import { createPlingSurface } from "@plingjs/surface-browser";
 import { createMemoryDelegationStore } from "@plingjs/delegation";
 import { assertDelegationStoreConformance } from "@plingjs/delegation/testing";
 import { HookRegistry } from "@plingjs/agent";
@@ -151,6 +153,7 @@ if (resolveLocale("zh-CN") !== "zh-CN" || translate("en-US", "dock.launcher.open
 }
 if (resolveTheme("dark").mode !== "dark") throw new Error("ui theme 行为异常");
 if (typeof createSurface !== "function") throw new Error("surface 导出缺失");
+if (typeof createPlingSurface !== "function") throw new Error("surface-browser 导出缺失");
 if (typeof createMemoryDelegationStore !== "function") throw new Error("delegation 导出缺失");
 if (typeof assertDelegationStoreConformance !== "function") throw new Error("delegation/testing 导出缺失");
 if (typeof HookRegistry !== "function") throw new Error("agent 导出缺失");

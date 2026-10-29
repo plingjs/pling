@@ -115,7 +115,7 @@ const text = describePlingError(
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/*` `0.1.0-alpha.2` 的运行时与适配器错误码 |
+| 适用版本 | `@plingjs/*` `0.1.0-alpha.3` 的运行时与适配器错误码 |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
 | Peer 依赖 | 取决于所用适配器 |

@@ -10,9 +10,9 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@plingjs/agent": "0.1.0-alpha.2",
-    "@plingjs/core": "0.1.0-alpha.2",
-    "@plingjs/react": "0.1.0-alpha.2",
+    "@plingjs/agent": "0.1.0-alpha.3",
+    "@plingjs/core": "0.1.0-alpha.3",
+    "@plingjs/react": "0.1.0-alpha.3",
     "react": "^19",
     "react-dom": "^19",
     "react-router-dom": "^7"

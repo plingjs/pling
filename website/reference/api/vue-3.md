@@ -16,9 +16,9 @@ This page lists only `@plingjs/vue` entry points, plus the shared-package types 
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.2` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.3` |
 
-The current package version is `0.1.0-alpha.2`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.3`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -1667,6 +1667,123 @@ console.log(ui.t("chat.send"));
 [Open the corresponding reference](/reference/ui-messages-theme-locale)
 
 
+## External Agent Surface
+
+Vue wrappers for exposing declared capabilities through a Surface gateway. They manage credentials and transport; the capability allowlist and human approval stay in the application.
+
+| API | Kind | Reference |
+| --- | --- | --- |
+| [useSurfaceGateway](#api-usesurfacegateway) | Function | [Reference](/reference/vue-3-adapter) |
+| [SurfaceAccessPanel](#api-surfaceaccesspanel) | Component | [Reference](/reference/vue-3-adapter) |
+
+<a id="api-usesurfacegateway"></a>
+
+### `useSurfaceGateway`
+
+Creates and owns the page session, WebSocket, Surface bridge, pairing, claim, and revocation lifecycle for one Vue component scope.
+
+**Imports**
+
+`@plingjs/vue`
+
+**Signature**
+
+```ts
+// Vue 3
+useSurfaceGateway(options: UseSurfaceGatewayOptions): SurfaceGatewayController
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `app` | `string` | Yes | — | Stable application name sent in the bridge hello. |
+| `expose` | `SurfaceExpose` | Yes | — | Explicit capability allowlist. The composable never infers capabilities from the DOM or registry. |
+| `mode` | `"public-demo" \| "bff"` | Yes | — | public-demo creates a page session from the browser and may show an Agent token. bff requires getPageSession and must be backed by an authenticated application server. |
+| `gatewayUrl` | `string` | No | — | Gateway origin for public-demo mode, for example https://surface.example.com. |
+| `getPageSession` | `() => Promise<SurfacePageSession>` | No | — | Required in bff mode. The application server verifies the user session and returns only a short-lived page session. |
+| `gatewayClient` | `SurfaceGatewayClient` | No | — | Injected HTTP client for tests or a custom BFF contract. |
+| `approval` | `SurfaceApprovalSource & { confirm?: Confirm }` | No | — | Human approval source. Its subscribe callback relays pending state; the page still owns the decision UI. |
+| `confirm` | `Confirm \| null` | No | — | Confirmation function used by the Surface executor. Defaults to approval.confirm, then null (fail closed). |
+| `autoConnect` | `boolean` | No | `true` | Connects when the component mounts. Set false when the host owns an explicit connect button. |
+| `autoClaim` | `boolean` | No | `true (public-demo only)` | Claims an Agent token automatically. Defaults to true only in public-demo mode. |
+| `agentId` | `string` | No | — | Agent id recorded when claiming a public-demo pairing. |
+| `tenantId` | `string` | No | — | Optional tenant hint for the public-demo page-session endpoint. |
+| `clientKey` | `string` | No | — | Optional client hint for the public-demo page-session endpoint. |
+| `reconnectMs` | `number` | No | `1500` | Delay before reconnecting the page WebSocket. |
+| `webSocket` | `SurfaceWebSocketFactory` | No | — | WebSocket implementation injection for tests or non-browser hosts. |
+| `surface` | `Partial<CreatePlingSurfaceOptions>` | No | — | Extra Surface options such as recordLimit, rateLimit, replay, audit, or custom settle. |
+
+**Example 1 · Public demo with an explicit allowlist**
+
+```ts
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "public-demo",
+  gatewayUrl: "https://surface.example.com",
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+**Example 2 · Production BFF session**
+
+```ts
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("Surface session unavailable");
+    return response.json();
+  },
+  approval,
+});
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/vue-3-adapter)
+
+
+<a id="api-surfaceaccesspanel"></a>
+
+### `SurfaceAccessPanel`
+
+Optional Vue panel for connection state, pairing, a copyable Agent token, the current scope, and revocation. It renders a controller; it does not create capabilities.
+
+**Imports**
+
+`@plingjs/vue`
+
+**Signature**
+
+```ts
+// Vue 3
+<SurfaceAccessPanel :gateway="gateway" title="External Agent" />
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `gateway` | `SurfaceGatewayController` | Yes | — | Controller returned by useSurfaceGateway. The component renders its state but never creates capabilities or tokens by itself. |
+| `title` | `string` | No | — | Panel title. Defaults to the localized External Agent label. |
+
+**Example 1 · Render the optional access panel**
+
+```ts
+<SurfaceAccessPanel :gateway="gateway" title="外部 Agent" />
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/vue-3-adapter)
+
+
 ## Page identity and continuity
 
 Read page identity, share a runtime across frames, and inspect declared coverage.
@@ -1969,10 +2086,10 @@ console.log(report.coveragePercent, report.targets);
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |

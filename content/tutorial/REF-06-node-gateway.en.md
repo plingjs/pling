@@ -163,7 +163,7 @@ The gateway is not a policy engine, secret vault, cost-accounting service, or pr
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/server` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/server` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Node.js 20 or later |
 | Peer dependencies | None |

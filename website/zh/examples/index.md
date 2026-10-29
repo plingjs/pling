@@ -40,6 +40,6 @@ pnpm dev:examples
 2. **切换到接入说明。** 按顺序看配置、运行时、动作声明和助手入口。
 3. **查看源码。** 高亮行分别标出导入、运行时初始化、动作声明和助手入口。
 
-每个案例都有独立说明页、在线案例、完整源码与逐行走查。案例05另附本地 MCP 桥，可把同一组 Todo 能力接到 Codex、Claude，以及其他支持 stdio MCP 的 Agent。
+每个案例都有独立说明页、在线案例、完整源码与逐行走查。案例05把同一组 Todo 能力接到公网 Surface Gateway，页面会生成短时访问 token，并给出可直接复制的 Codex 命令；源码另保留本地回环桥供开发调试。
 
 准备修改自己的应用时，继续进入 [Vue 快速上手](/zh/vue/quick-start-add-pling-to-a-vue-app)或 [React 快速上手](/zh/react/quick-start-add-pling-to-a-react-app)。

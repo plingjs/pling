@@ -178,7 +178,7 @@ The adapter around this call still owns authentication, HTTP, SSE, CORS, body li
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/surface` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/surface` `0.1.0-alpha.3` |
 | Protocol | `pling.surface/0.1` (Draft) |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |

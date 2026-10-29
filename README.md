@@ -11,7 +11,7 @@ Pling is not a browser agent, a replacement for backend APIs, or a generic click
 layer. It provides a bounded, auditable interface between a web application and
 an agent runtime. An action being visible never means it is authorized.
 
-> Status: `0.1.0-alpha.2`. Package APIs and the Surface protocol may still change.
+> Status: `0.1.0-alpha.3`. Package APIs and the Surface protocol may still change.
 > Check [releases](https://plingjs.dev/releases/) before relying on a production deployment.
 
 ## What it provides
@@ -36,6 +36,7 @@ an agent runtime. An action being visible never means it is authorized.
 | `@plingjs/dom` | DOM targeting, visibility, scrolling, and browser primitives |
 | `@plingjs/agent` | Agent loop, context assembly, confirmation, continuity, and telemetry |
 | `@plingjs/surface` | Agent Surface projection and the `describe` / `invoke` protocol |
+| `@plingjs/surface-browser` | Page-side Surface sessions, WebSocket transport, bridge, and reconnect lifecycle |
 | `@plingjs/delegation` | Delegation contracts and web-standard handlers |
 | `@plingjs/continuity-http` | HTTP integration for cross-device task continuity |
 | `@plingjs/server` | Node model gateway for credentials, authentication, limits, and audit |
@@ -59,13 +60,15 @@ English is served from the root, Chinese from `/zh`:
 
 ```bash
 pnpm install
+pnpm build
 pnpm tutorial:build
 pnpm dev:docs
 ```
 
-Open `http://localhost:5190/`. Tutorial previews are generated assets, so run
-`pnpm tutorial:build` once on a fresh checkout. The introductory examples use a
-deterministic scripted model and do not require a provider key.
+Open `http://localhost:5190/`. Workspace packages resolve through their built
+`dist/` directories, so run `pnpm build` once after cloning. Tutorial previews
+are generated assets, so run `pnpm tutorial:build` once as well. The introductory
+examples use a deterministic scripted model and do not require a provider key.
 
 To build one tutorial fixture against locally packed packages:
 
@@ -92,9 +95,9 @@ scripts/    repository and release checks
 ```bash
 pnpm check
 pnpm release:check
+pnpm build
 pnpm typecheck
 pnpm test
-pnpm build
 pnpm pack:check
 pnpm --filter @plingjs/website build
 ```

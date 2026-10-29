@@ -115,7 +115,7 @@ Do not map codes to adapter-specific strings in business code. Use `describePlin
 
 | Item | Value |
 | --- | --- |
-| Applies to | Runtime and adapter error surfaces in `@plingjs/*` `0.1.0-alpha.2` |
+| Applies to | Runtime and adapter error surfaces in `@plingjs/*` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
 | Peer dependencies | Those of the adapter being used |

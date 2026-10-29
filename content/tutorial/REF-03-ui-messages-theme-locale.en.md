@@ -181,7 +181,7 @@ Do not send the whole application translation catalog into the model context. Th
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/ui` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/ui` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for Node-side use |
 | Peer dependencies | None |

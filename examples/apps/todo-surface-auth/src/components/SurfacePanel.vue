@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref } from "vue";
 import type { SurfaceSession } from "@plingjs/surface";
+import type { SurfaceConnectionState } from "@plingjs/vue";
 import type { Pairing, PageSession } from "../api";
-import type { GatewayConnectionState } from "../surface/transport";
+
+type GatewayConnectionState = SurfaceConnectionState | "idle";
 
 const props = defineProps<{
   connection: GatewayConnectionState | "idle";

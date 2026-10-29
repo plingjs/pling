@@ -182,7 +182,7 @@ Do not infer Vue 3 parity from the shared directive names. Compare the [Vue 3 ad
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vue2` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/vue2` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Vue 2.7 in browsers with ES2022 modules; Node.js 20 or later for builds |
 | Peer dependencies | `vue ^2.7.0` |

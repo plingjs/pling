@@ -6,12 +6,20 @@ import { normalizeConfig } from "../src/config.mjs";
 import { createSurfaceServer } from "../src/server.mjs";
 
 const ORIGIN = "https://demo.example";
+const PUBLIC_DEMO_ORIGIN = "https://plingjs.dev";
 const ADMIN = "transport-admin-token";
 
 async function startServer() {
   const server = createSurfaceServer({
     config: normalizeConfig({
-      tenants: [{ id: "demo", displayName: "Demo", origins: [ORIGIN] }],
+      tenants: [
+        {
+          id: "demo",
+          displayName: "Demo",
+          origins: [ORIGIN, PUBLIC_DEMO_ORIGIN],
+          publicDemo: { origins: [PUBLIC_DEMO_ORIGIN], scope: ["todo.overview", "todo.add"] },
+        },
+      ],
     }),
     adminToken: ADMIN,
     port: 0,
@@ -21,6 +29,37 @@ async function startServer() {
   });
   return { server, ...(await server.start()) };
 }
+
+test("public demo endpoint issues a scoped page session without an admin token", async (t) => {
+  const { server, baseUrl } = await startServer();
+  t.after(async () => {
+    await server.stop();
+  });
+
+  const denied = await call(`${baseUrl}/v1/demo/page-sessions`, {
+    method: "POST",
+    headers: jsonHeaders(null, ORIGIN),
+    body: "{}",
+  });
+  assert.equal(denied.response.status, 403);
+  assert.equal(denied.body.error.code, "ORIGIN_NOT_ALLOWED");
+
+  const created = await call(`${baseUrl}/v1/demo/page-sessions`, {
+    method: "POST",
+    headers: jsonHeaders(null, PUBLIC_DEMO_ORIGIN),
+    body: "{}",
+  });
+  assert.equal(created.response.status, 201);
+  assert.equal(created.body.tenantId, "demo");
+  assert.match(created.body.surfaceUrl, /^ws:\/\//);
+
+  const ws = new WebSocket(`${created.body.surfaceUrl}?token=${created.body.token}`, { origin: PUBLIC_DEMO_ORIGIN });
+  const inbox = createInbox(ws);
+  await once(ws, "open");
+  ws.send(JSON.stringify({ type: "hello", protocol: "pling.bridge/0.1", app: "public-demo-test" }));
+  assert.equal((await inbox.waitFor((message) => message.type === "hello_ack")).protocol, "pling.bridge/0.1");
+  ws.close();
+});
 
 async function call(url, options = {}) {
   const response = await fetch(url, options);

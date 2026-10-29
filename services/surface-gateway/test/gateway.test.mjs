@@ -4,6 +4,7 @@ import { normalizeConfig } from "../src/config.mjs";
 import { createSurfaceGateway } from "../src/gateway.mjs";
 
 const ORIGIN = "https://demo.example";
+const PUBLIC_DEMO_ORIGIN = "https://plingjs.dev";
 const ADMIN = "admin-token-for-tests";
 
 class MockSocket {
@@ -31,9 +32,17 @@ function setup(overrides = {}) {
         {
           id: "demo",
           displayName: "Demo",
-          origins: [ORIGIN],
+          origins: [ORIGIN, PUBLIC_DEMO_ORIGIN],
           maxPageSessionTtlMs: 60_000,
           maxAgentSessionTtlMs: 60_000,
+          publicDemo: {
+            origins: [PUBLIC_DEMO_ORIGIN],
+            scope: ["todo.overview", "todo.add"],
+            pageSessionTtlMs: 30_000,
+            maxSessionsPerWindow: 2,
+            windowMs: 60_000,
+            maxActiveSessions: 2,
+          },
         },
       ],
     }),
@@ -81,6 +90,29 @@ test("page sessions require an allowed Origin and explicit scope", () => {
     () => gateway.authenticatePage(created.token, "https://evil.example"),
     (error) => error.code === "ORIGIN_NOT_ALLOWED",
   );
+});
+
+test("public demo sessions are origin-bound, fixed-scope, and rate limited", () => {
+  const { gateway, advance } = setup();
+
+  const created = gateway.createPublicDemoPageSession({ tenantId: "demo", origin: PUBLIC_DEMO_ORIGIN, clientKey: "203.0.113.10" });
+  assert.deepEqual(gateway.authenticatePage(created.token, PUBLIC_DEMO_ORIGIN).allowedScope, ["todo.overview", "todo.add"]);
+  assert.equal(created.expiresAt - 1_000_000, 30_000);
+
+  assert.throws(
+    () => gateway.createPublicDemoPageSession({ tenantId: "demo", origin: ORIGIN, clientKey: "203.0.113.10" }),
+    (error) => error.code === "ORIGIN_NOT_ALLOWED",
+  );
+
+  gateway.createPublicDemoPageSession({ tenantId: "demo", origin: PUBLIC_DEMO_ORIGIN, clientKey: "203.0.113.10" });
+  assert.throws(
+    () => gateway.createPublicDemoPageSession({ tenantId: "demo", origin: PUBLIC_DEMO_ORIGIN, clientKey: "203.0.113.10" }),
+    (error) => error.code === "RATE_LIMITED",
+  );
+
+  advance(61_000);
+  const next = gateway.createPublicDemoPageSession({ tenantId: "demo", origin: PUBLIC_DEMO_ORIGIN, clientKey: "203.0.113.10" });
+  assert.ok(next.pageSessionId);
 });
 
 test("pairing is single-use and an Agent scope cannot exceed the page session", async () => {

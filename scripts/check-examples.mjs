@@ -170,7 +170,12 @@ for (const name of names) {
       fail(mainEntry, "Vue examples must import @plingjs/vue/style.css");
     }
   }
-  if (!/(?:<AgentDock\b|<AgentInline\b|<PlingProvider\b|AgentDock\s*\(|\bpling\.dock\s*\()/.test(source)) {
+  if (manifest.pageAssistant !== undefined && typeof manifest.pageAssistant !== "boolean") {
+    fail(manifestPath, "pageAssistant must be a boolean when present");
+  }
+  const hasPageAssistant = /(?:<AgentDock\b|<AgentInline\b|<PlingProvider\b|AgentDock\s*\(|\bpling\.dock\s*\()/.test(source);
+  const externalOnly = manifest.pageAssistant === false && /createSurface\s*\(/.test(source);
+  if (!hasPageAssistant && !externalOnly) {
     fail(manifestPath, "example must mount an assistant entry");
   }
   if (!/(?:v-tool\b|v-record\b|usePlingTool\b|usePlingRecord\b|\bpling\.(?:tool|record)\s*\()/.test(source)) {

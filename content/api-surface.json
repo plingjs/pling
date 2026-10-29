@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "categories": [
@@ -752,6 +752,41 @@
           "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
           "symbols": [{"package": "@plingjs/vue", "name": "createPlingUi"}],
           "ref": "/reference/ui-messages-theme-locale"
+        }
+      ]
+    },
+    {
+      "id": "external",
+      "title": "External Agent Surface",
+      "titleZh": "外部 Agent Surface",
+      "summary": "Vue wrappers for exposing declared capabilities through a Surface gateway. They manage credentials and transport; the capability allowlist and human approval stay in the application.",
+      "summaryZh": "通过 Surface 网关开放已声明能力的 Vue 封装。它们管理凭证与传输；能力 allowlist 与真人审批仍归应用所有。",
+      "entries": [
+        {
+          "id": "useSurfaceGateway",
+          "anchor": "usesurfacegateway",
+          "name": "useSurfaceGateway",
+          "kind": "function",
+          "summary": "Creates and owns the page session, WebSocket, Surface bridge, pairing, claim, and revocation lifecycle for one Vue component scope.",
+          "summaryZh": "为一个 Vue 组件作用域创建并托管页面会话、WebSocket、Surface 桥接、配对、申领与撤销的生命周期。",
+          "imports": ["@plingjs/vue"],
+          "signatures": {"vue3": "useSurfaceGateway(options: UseSurfaceGatewayOptions): SurfaceGatewayController"},
+          "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
+          "symbols": [{"package": "@plingjs/vue", "name": "useSurfaceGateway"}],
+          "ref": "/reference/vue-3-adapter"
+        },
+        {
+          "id": "SurfaceAccessPanel",
+          "anchor": "surfaceaccesspanel",
+          "name": "SurfaceAccessPanel",
+          "kind": "component",
+          "summary": "Optional Vue panel for connection state, pairing, a copyable Agent token, the current scope, and revocation. It renders a controller; it does not create capabilities.",
+          "summaryZh": "可选的 Vue 面板：展示连接状态、配对、可复制的 Agent token、当前 scope 与撤销操作。它只渲染控制器，不创建能力。",
+          "imports": ["@plingjs/vue"],
+          "signatures": {"vue3": "<SurfaceAccessPanel :gateway=\"gateway\" title=\"External Agent\" />"},
+          "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
+          "symbols": [{"package": "@plingjs/vue", "name": "SurfaceAccessPanel"}],
+          "ref": "/reference/vue-3-adapter"
         }
       ]
     },

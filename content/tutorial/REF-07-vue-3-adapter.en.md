@@ -115,6 +115,53 @@ Peer range: Vue 3. The adapter does not depend on Vue Router or Pinia. Router su
 - `readonly`: show the application-managed connection without the key;
 - `byok`: let the user enter `baseUrl`, `model`, and `apiKey`; persistence is `memory` by default, `session` optional. `localStorage` is not supported.
 
+## External Agent Surface
+
+`useSurfaceGateway()` owns the repeated page-side plumbing for an external
+Agent: page session, WebSocket, `describe` / `invoke` bridge, pairing, token
+claim, reconnection, and teardown. It does not declare business actions. The
+existing `v-tool` / `useAgentTool` declarations remain the capability source,
+and `expose` remains an explicit allowlist.
+
+```ts
+import { computed } from "vue";
+import { useSurfaceGateway } from "@plingjs/vue";
+
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("Surface session unavailable");
+    return response.json();
+  },
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+Choose the mode by who creates the page session:
+
+| Mode | Page session source | Token display | Use |
+| --- | --- | --- | --- |
+| `public-demo` | Gateway demo endpoint from the browser | May show a short-lived Agent token | Hosted examples only |
+| `bff` | `getPageSession()` backed by your authenticated server | Application decides; never expose an admin token | Production |
+
+The controller exposes `state`, `surface`, `page`, `pairing`, `access`,
+`agent`, `busy`, `error`, `connect()`, `disconnect()`, `pair()`, `claim()`, and
+`revoke()`. `<SurfaceAccessPanel :gateway="gateway" />` renders an optional
+connection, pairing, token, scope, and revoke panel without creating a second
+runtime.
+
+Two rules do not move into the wrapper:
+
+- `expose` is never inferred. A capability absent from the allowlist is absent
+  from the external Surface even if the page can execute it.
+- Destructive actions still stop in the page confirmation UI. The gateway
+  receives `pending_approval` metadata; it never receives an approval tool.
+
 ## Defaults that affect behavior
 
 - No declaration means no action. `derive` is off.
@@ -134,6 +181,9 @@ Peer range: Vue 3. The adapter does not depend on Vue Router or Pinia. Router su
 | Router changes but the model still thinks it is on the old page | `page` disabled or router not supplied | Pass `page: { router }` and whitelist query keys |
 | Model settings do not appear | Mode is `off` or not passed to the mounted surface | Set `modelSettings` on `<AgentDock>` or `createPling({ agent })` |
 | Debug panel shows no calls | `debug` is off, or the call was cleared | Enable `debug` and reproduce one request |
+| Surface connects but exposes no capabilities | `expose` does not match registered action ids | Inspect action ids in `<AgentPanel>` and keep `expose` explicit |
+| No Agent token appears | `public-demo` is off, or `autoClaim` is false | Call `gateway.claim()` or enable `autoClaim` in `public-demo` only |
+| A destructive call appears to run immediately | The host did not pass an approval source or confirm function | Pass `approval` or `confirm`; never auto-approve external writes |
 
 ## Evidence
 
@@ -148,7 +198,7 @@ Peer range: Vue 3. The adapter does not depend on Vue Router or Pinia. Router su
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vue` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/vue` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Vue 3 in browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
 | Peer dependencies | `vue ^3` |

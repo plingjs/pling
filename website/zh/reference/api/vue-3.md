@@ -16,9 +16,9 @@ Vue 3 的完整 API：应用初始化、指令、组合式函数、组件，以�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.2` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.3` |
 
-当前包版本为 `0.1.0-alpha.2`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.3`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -1667,6 +1667,123 @@ console.log(ui.t("chat.send"));
 [查看对应参考页](/zh/reference/ui-messages-theme-locale)
 
 
+## 外部 Agent Surface
+
+通过 Surface 网关开放已声明能力的 Vue 封装。它们管理凭证与传输；能力 allowlist 与真人审批仍归应用所有。
+
+| API | 类型 | 参考 |
+| --- | --- | --- |
+| [useSurfaceGateway](#api-usesurfacegateway) | 函数 | [参考](/zh/reference/vue-3-adapter) |
+| [SurfaceAccessPanel](#api-surfaceaccesspanel) | 组件 | [参考](/zh/reference/vue-3-adapter) |
+
+<a id="api-usesurfacegateway"></a>
+
+### `useSurfaceGateway`
+
+为一个 Vue 组件作用域创建并托管页面会话、WebSocket、Surface 桥接、配对、申领与撤销的生命周期。
+
+**导入**
+
+`@plingjs/vue`
+
+**调用方式**
+
+```ts
+// Vue 3
+useSurfaceGateway(options: UseSurfaceGatewayOptions): SurfaceGatewayController
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `app` | `string` | 是 | — | 桥接 hello 中发送的稳定应用名。 |
+| `expose` | `SurfaceExpose` | 是 | — | 显式能力 allowlist。组合式函数不会从 DOM 或注册表自动推断能力。 |
+| `mode` | `"public-demo" \| "bff"` | 是 | — | `public-demo` 在浏览器创建页面会话并可展示 Agent token；`bff` 必须提供 `getPageSession`，由已认证的应用后端创建页面会话。 |
+| `gatewayUrl` | `string` | 否 | — | `public-demo` 模式的网关源，例如 `https://surface.example.com`。 |
+| `getPageSession` | `() => Promise<SurfacePageSession>` | 否 | — | `bff` 模式必填。应用服务端验证用户会话后，只返回短时页面会话。 |
+| `gatewayClient` | `SurfaceGatewayClient` | 否 | — | 用于测试或自定义 BFF 契约的 HTTP 客户端。 |
+| `approval` | `SurfaceApprovalSource & { confirm?: Confirm }` | 否 | — | 真人审批来源。它订阅并转发待审批状态；决定界面仍归页面所有。 |
+| `confirm` | `Confirm \| null` | 否 | — | Surface 执行器使用的确认函数。默认取 `approval.confirm`，否则为 `null`（fail-closed）。 |
+| `autoConnect` | `boolean` | 否 | `true` | 组件挂载时自动连接。传 `false` 时由宿主提供显式连接按钮。 |
+| `autoClaim` | `boolean` | 否 | `true (public-demo only)` | 是否自动申领 Agent token。仅在 `public-demo` 模式下默认开启。 |
+| `agentId` | `string` | 否 | — | 申领公开演示配对时记录的 Agent id。 |
+| `tenantId` | `string` | 否 | — | 公开演示页面会话端点的可选租户提示。 |
+| `clientKey` | `string` | 否 | — | 公开演示页面会话端点的可选客户端提示。 |
+| `reconnectMs` | `number` | 否 | `1500` | 页面 WebSocket 重连延迟。 |
+| `webSocket` | `SurfaceWebSocketFactory` | 否 | — | 供测试或非浏览器宿主注入的 WebSocket 实现。 |
+| `surface` | `Partial<CreatePlingSurfaceOptions>` | 否 | — | 额外的 Surface 选项，例如 `recordLimit`、`rateLimit`、`replay`、审计或自定义落定等待。 |
+
+**示例 1 · 公开演示：显式能力清单**
+
+```ts
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "public-demo",
+  gatewayUrl: "https://surface.example.com",
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+**示例 2 · 生产 BFF 会话**
+
+```ts
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("Surface session unavailable");
+    return response.json();
+  },
+  approval,
+});
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/vue-3-adapter)
+
+
+<a id="api-surfaceaccesspanel"></a>
+
+### `SurfaceAccessPanel`
+
+可选的 Vue 面板：展示连接状态、配对、可复制的 Agent token、当前 scope 与撤销操作。它只渲染控制器，不创建能力。
+
+**导入**
+
+`@plingjs/vue`
+
+**调用方式**
+
+```ts
+// Vue 3
+<SurfaceAccessPanel :gateway="gateway" title="External Agent" />
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `gateway` | `SurfaceGatewayController` | 是 | — | `useSurfaceGateway` 返回的控制器。组件只渲染其状态，不会自行创建能力或 token。 |
+| `title` | `string` | 否 | — | 面板标题。默认使用当前语言的“外部 Agent”文案。 |
+
+**示例 1 · 渲染可选的访问面板**
+
+```ts
+<SurfaceAccessPanel :gateway="gateway" title="外部 Agent" />
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/vue-3-adapter)
+
+
 ## 页面身份与连续性
 
 读取页面身份、在同源框架间共享运行时，并检查声明覆盖率。
@@ -1969,10 +2086,10 @@ console.log(report.coveragePercent, report.targets);
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | 项目 | 值 |
 | --- | --- |

@@ -86,6 +86,11 @@ const neutralBoundaries = [
     forbidden: [/^vue($|\/)/, /^react($|\/)/, /^@vue\//, /^@plingjs\/(vue|react|vanilla|dom)$/],
   },
   { dir: join(ROOT, "packages", "dom", "src"), name: "DOM", forbidden: [/^vue($|\/)/, /^react($|\/)/, /^@vue\//, /^@plingjs\/(vue|react)$/] },
+  {
+    dir: join(ROOT, "packages", "surface-browser", "src"),
+    name: "Surface Browser",
+    forbidden: [/^vue($|\/)/, /^react($|\/)/, /^@vue\//, /^@plingjs\/(vue|react|vanilla)$/],
+  },
   { dir: join(ROOT, "packages", "vanilla", "src"), name: "Vanilla", forbidden: [/^vue($|\/)/, /^react($|\/)/, /^@vue\//, /^@plingjs\/(vue|react)$/] },
   { dir: join(ROOT, "packages", "vue2", "src"), name: "Vue 2", forbidden: [/^@plingjs\/vue$/, /^react($|\/)/, /^@vue\//] },
   { dir: join(ROOT, "packages", "react", "src"), name: "React", forbidden: [/^vue($|\/)/, /^@vue\//, /^@plingjs\/vue$/] },

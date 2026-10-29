@@ -4,7 +4,7 @@
   "page": "vue3",
   "route": "/zh/reference/api/vue-3",
   "package": "@plingjs/vue",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "categories": [
@@ -3159,6 +3159,237 @@
             }
           ],
           "reference": "/reference/ui-messages-theme-locale"
+        }
+      ]
+    },
+    {
+      "id": "external",
+      "title": "外部 Agent Surface",
+      "summary": "通过 Surface 网关开放已声明能力的 Vue 封装。它们管理凭证与传输；能力 allowlist 与真人审批仍归应用所有。",
+      "entries": [
+        {
+          "id": "useSurfaceGateway",
+          "anchor": "api-usesurfacegateway",
+          "name": "useSurfaceGateway",
+          "kind": "function",
+          "summary": "为一个 Vue 组件作用域创建并托管页面会话、WebSocket、Surface 桥接、配对、申领与撤销的生命周期。",
+          "imports": [
+            "@plingjs/vue"
+          ],
+          "signature": "useSurfaceGateway(options: UseSurfaceGatewayOptions): SurfaceGatewayController",
+          "parameters": [
+            {
+              "name": "app",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Stable application name sent in the bridge hello.",
+              "descriptionZh": "桥接 hello 中发送的稳定应用名。"
+            },
+            {
+              "name": "expose",
+              "type": "SurfaceExpose",
+              "required": true,
+              "defaultValue": "",
+              "description": "Explicit capability allowlist. The composable never infers capabilities from the DOM or registry.",
+              "descriptionZh": "显式能力 allowlist。组合式函数不会从 DOM 或注册表自动推断能力。"
+            },
+            {
+              "name": "mode",
+              "type": "\"public-demo\" | \"bff\"",
+              "required": true,
+              "defaultValue": "",
+              "description": "public-demo creates a page session from the browser and may show an Agent token. bff requires getPageSession and must be backed by an authenticated application server.",
+              "descriptionZh": "`public-demo` 在浏览器创建页面会话并可展示 Agent token；`bff` 必须提供 `getPageSession`，由已认证的应用后端创建页面会话。"
+            },
+            {
+              "name": "gatewayUrl",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Gateway origin for public-demo mode, for example https://surface.example.com.",
+              "descriptionZh": "`public-demo` 模式的网关源，例如 `https://surface.example.com`。"
+            },
+            {
+              "name": "getPageSession",
+              "type": "() => Promise<SurfacePageSession>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Required in bff mode. The application server verifies the user session and returns only a short-lived page session.",
+              "descriptionZh": "`bff` 模式必填。应用服务端验证用户会话后，只返回短时页面会话。"
+            },
+            {
+              "name": "gatewayClient",
+              "type": "SurfaceGatewayClient",
+              "required": false,
+              "defaultValue": "",
+              "description": "Injected HTTP client for tests or a custom BFF contract.",
+              "descriptionZh": "用于测试或自定义 BFF 契约的 HTTP 客户端。"
+            },
+            {
+              "name": "approval",
+              "type": "SurfaceApprovalSource & { confirm?: Confirm }",
+              "required": false,
+              "defaultValue": "",
+              "description": "Human approval source. Its subscribe callback relays pending state; the page still owns the decision UI.",
+              "descriptionZh": "真人审批来源。它订阅并转发待审批状态；决定界面仍归页面所有。"
+            },
+            {
+              "name": "confirm",
+              "type": "Confirm | null",
+              "required": false,
+              "defaultValue": "",
+              "description": "Confirmation function used by the Surface executor. Defaults to approval.confirm, then null (fail closed).",
+              "descriptionZh": "Surface 执行器使用的确认函数。默认取 `approval.confirm`，否则为 `null`（fail-closed）。"
+            },
+            {
+              "name": "autoConnect",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "true",
+              "description": "Connects when the component mounts. Set false when the host owns an explicit connect button.",
+              "descriptionZh": "组件挂载时自动连接。传 `false` 时由宿主提供显式连接按钮。"
+            },
+            {
+              "name": "autoClaim",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "true (public-demo only)",
+              "description": "Claims an Agent token automatically. Defaults to true only in public-demo mode.",
+              "descriptionZh": "是否自动申领 Agent token。仅在 `public-demo` 模式下默认开启。"
+            },
+            {
+              "name": "agentId",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Agent id recorded when claiming a public-demo pairing.",
+              "descriptionZh": "申领公开演示配对时记录的 Agent id。"
+            },
+            {
+              "name": "tenantId",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Optional tenant hint for the public-demo page-session endpoint.",
+              "descriptionZh": "公开演示页面会话端点的可选租户提示。"
+            },
+            {
+              "name": "clientKey",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Optional client hint for the public-demo page-session endpoint.",
+              "descriptionZh": "公开演示页面会话端点的可选客户端提示。"
+            },
+            {
+              "name": "reconnectMs",
+              "type": "number",
+              "required": false,
+              "defaultValue": "1500",
+              "description": "Delay before reconnecting the page WebSocket.",
+              "descriptionZh": "页面 WebSocket 重连延迟。"
+            },
+            {
+              "name": "webSocket",
+              "type": "SurfaceWebSocketFactory",
+              "required": false,
+              "defaultValue": "",
+              "description": "WebSocket implementation injection for tests or non-browser hosts.",
+              "descriptionZh": "供测试或非浏览器宿主注入的 WebSocket 实现。"
+            },
+            {
+              "name": "surface",
+              "type": "Partial<CreatePlingSurfaceOptions>",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra Surface options such as recordLimit, rateLimit, replay, audit, or custom settle.",
+              "descriptionZh": "额外的 Surface 选项，例如 `recordLimit`、`rateLimit`、`replay`、审计或自定义落定等待。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Public demo with an explicit allowlist",
+              "titleZh": "公开演示：显式能力清单",
+              "code": "const gateway = useSurfaceGateway({\n  app: \"orders\",\n  expose: [\"orders.overview\", \"orders.update_note\"],\n  mode: \"public-demo\",\n  gatewayUrl: \"https://surface.example.com\",\n  approval,\n});\n\nconst surface = computed(() => gateway.surface.value);",
+              "lang": "ts"
+            },
+            {
+              "title": "Production BFF session",
+              "titleZh": "生产 BFF 会话",
+              "code": "const gateway = useSurfaceGateway({\n  app: \"orders\",\n  expose: [\"orders.overview\", \"orders.update_note\"],\n  mode: \"bff\",\n  getPageSession: async () => {\n    const response = await fetch(\"/api/surface/page-session\", { method: \"POST\" });\n    if (!response.ok) throw new Error(\"Surface session unavailable\");\n    return response.json();\n  },\n  approval,\n});",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "useSurfaceGateway"
+            }
+          ],
+          "reference": "/reference/vue-3-adapter"
+        },
+        {
+          "id": "SurfaceAccessPanel",
+          "anchor": "api-surfaceaccesspanel",
+          "name": "SurfaceAccessPanel",
+          "kind": "component",
+          "summary": "可选的 Vue 面板：展示连接状态、配对、可复制的 Agent token、当前 scope 与撤销操作。它只渲染控制器，不创建能力。",
+          "imports": [
+            "@plingjs/vue"
+          ],
+          "signature": "<SurfaceAccessPanel :gateway=\"gateway\" title=\"External Agent\" />",
+          "parameters": [
+            {
+              "name": "gateway",
+              "type": "SurfaceGatewayController",
+              "required": true,
+              "defaultValue": "",
+              "description": "Controller returned by useSurfaceGateway. The component renders its state but never creates capabilities or tokens by itself.",
+              "descriptionZh": "`useSurfaceGateway` 返回的控制器。组件只渲染其状态，不会自行创建能力或 token。"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Panel title. Defaults to the localized External Agent label.",
+              "descriptionZh": "面板标题。默认使用当前语言的“外部 Agent”文案。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Render the optional access panel",
+              "titleZh": "渲染可选的访问面板",
+              "code": "<SurfaceAccessPanel :gateway=\"gateway\" title=\"外部 Agent\" />",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "SurfaceAccessPanel"
+            }
+          ],
+          "reference": "/reference/vue-3-adapter"
         }
       ]
     },

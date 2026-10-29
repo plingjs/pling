@@ -156,7 +156,7 @@ Do not import Vue components to fill these gaps. Add a React implementation or m
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/react` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/react` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | React 18 or later in browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
 | Peer dependencies | `react >=18` |

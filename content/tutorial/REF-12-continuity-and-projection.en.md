@@ -166,7 +166,7 @@ Relevant examples cover MPA continuity, Shadow DOM projection, same-origin ifram
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/continuity-http` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/continuity-http` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for the HTTP backend |
 | Peer dependencies | None |

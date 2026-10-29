@@ -1,7 +1,5 @@
 import { SURFACE_PROTOCOL, type AgentSurface, type SurfaceResponse } from "@plingjs/surface";
-import { watch } from "vue";
-import type { ExternalApproval } from "./approval";
-import type { SurfaceTransport } from "./transport";
+import type { SurfaceApprovalSource, SurfaceTransport } from "./types";
 
 interface SurfaceRequestMessage {
   type: "request";
@@ -9,22 +7,29 @@ interface SurfaceRequestMessage {
   request: unknown;
 }
 
-/**
- * Connects the Surface protocol kernel to the page's WebSocket transport.
- *
- * `invoke` is serialized so one human approval can be tied to one request.
- * `describe` remains available while a confirmation is pending.
- */
-export function createSurfaceBridge(options: {
+export interface SurfaceBridgeOptions {
   surface: AgentSurface;
   transport: SurfaceTransport;
-  approval: ExternalApproval;
-}) {
+  approval?: SurfaceApprovalSource;
+}
+
+export interface SurfaceBridge {
+  close(): void;
+}
+
+/**
+ * Connect the Surface protocol kernel to the page transport.
+ *
+ * `invoke` is serialized so one confirmation belongs to one invocation.
+ * `describe` can still run while an invocation is awaiting a human decision.
+ * Approval UI stays in the host page; only its pending state crosses the bridge.
+ */
+export function createSurfaceBridge(options: SurfaceBridgeOptions): SurfaceBridge {
   let queue = Promise.resolve();
   let active: { requestId: string; input: Record<string, unknown> } | null = null;
 
-  const offApproval = subscribeApproval(options.approval, (request) => {
-    if (!active || !request) return;
+  const offApproval = options.approval?.subscribe((request) => {
+    if (!request || !active) return;
     options.transport.post({
       type: "approval_pending",
       requestId: active.requestId,
@@ -68,16 +73,12 @@ export function createSurfaceBridge(options: {
 
   return {
     close() {
-      offApproval();
+      offApproval?.();
       off();
       queue = Promise.resolve();
       active = null;
     },
   };
-}
-
-function subscribeApproval(approval: ExternalApproval, handler: (request: ExternalApproval["current"]["value"]) => void) {
-  return watch(approval.current, (request) => handler(request ?? null), { immediate: true, flush: "sync" });
 }
 
 function failure(id: string, error: unknown): SurfaceResponse {

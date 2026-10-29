@@ -8,7 +8,7 @@ Agent 通过用户正在使用的控件和业务逻辑完成操作。校验、�
 Pling 不是浏览器 Agent，不替代后端 API，也不是通用点击层。它在 Web 应用与
 Agent 运行时之间提供一个有边界、可审计的接口。动作对 Agent 可见，不等于它已被授权。
 
-> 状态：`0.1.0-alpha.2`。包 API 与 Surface 协议仍可能变化。用于生产环境前，请查看
+> 状态：`0.1.0-alpha.3`。包 API 与 Surface 协议仍可能变化。用于生产环境前，请查看
 > [版本与升级说明](https://plingjs.dev/zh/releases/)。
 
 ## 主要能力
@@ -28,6 +28,7 @@ Agent 运行时之间提供一个有边界、可审计的接口。动作对 Agen
 | `@plingjs/dom` | DOM 定位、可见性、滚动与浏览器原语 |
 | `@plingjs/agent` | Agent 循环、上下文、确认、连续性与观测 |
 | `@plingjs/surface` | Agent Surface 投影与 `describe` / `invoke` 协议 |
+| `@plingjs/surface-browser` | 页面侧 Surface 会话、WebSocket 传输、桥接与重连生命周期 |
 | `@plingjs/delegation` | 委托凭证契约与 Web 标准处理器 |
 | `@plingjs/continuity-http` | 跨设备任务连续性的 HTTP 集成 |
 | `@plingjs/server` | Node 模型网关：凭据、鉴权、限额与审计 |
@@ -49,11 +50,13 @@ Agent 运行时之间提供一个有边界、可审计的接口。动作对 Agen
 
 ```bash
 pnpm install
+pnpm build
 pnpm tutorial:build
 pnpm dev:docs
 ```
 
-打开 `http://localhost:5190/`。教程预览是生成产物，新检出的仓库先执行一次
+打开 `http://localhost:5190/`。工作区包通过各自的 `dist/` 解析，所以新检出的
+仓库要先执行一次 `pnpm build`；教程预览同样是生成产物，再执行一次
 `pnpm tutorial:build`。入门示例使用确定性的脚本模型，不需要模型密钥。
 
 单独构建并检查一个教程夹具：
@@ -81,9 +84,9 @@ scripts/    仓库与发布检查
 ```bash
 pnpm check
 pnpm release:check
+pnpm build
 pnpm typecheck
 pnpm test
-pnpm build
 pnpm pack:check
 pnpm --filter @plingjs/website build
 ```

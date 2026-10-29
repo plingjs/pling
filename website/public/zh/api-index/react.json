@@ -4,7 +4,7 @@
   "page": "react",
   "route": "/zh/reference/api/react",
   "package": "@plingjs/react",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "categories": [

@@ -30,7 +30,7 @@ const copy = computed(() =>
         desktopClients: "Claude Desktop、WorkBuddy 或其他 MCP 客户端",
         generic: "如果客户端使用 JSON 配置，填入同一个 command 与 args；支持 stdio MCP 即可。",
         boundary:
-          "这是本机开发参考。node 命令是客户端启动的 stdio MCP 进程，不读取页面文件；它通过 127.0.0.1 连接当前页面。线上页面应与 Surface Gateway 配对，向 Agent 提供 HTTPS MCP 端点；身份、授权、审计与审批仍不进入模型。",
+          "这是本机开发参考。node 命令是客户端启动的 stdio MCP 进程，不读取页面文件；它通过 127.0.0.1 连接当前页面。线上页面会通过 Surface Gateway 创建最长 24 小时的 Agent 访问会话，并向 Agent 提供 HTTPS MCP 端点；刷新页面会换新 token，多 Agent 要分别新开页面。身份、授权、审计与审批仍不进入模型。",
       }
     : {
         eyebrow: "Connect a real agent",
@@ -52,7 +52,7 @@ const copy = computed(() =>
         desktopClients: "Claude Desktop, WorkBuddy, or another MCP client",
         generic: "If the client uses JSON configuration, provide the same command and args. Any stdio MCP client can use it.",
         boundary:
-          "This is a local development reference. The node command is the stdio MCP process your client launches; it does not read page data from a file, and it reaches the open page over 127.0.0.1. A hosted page pairs with a Surface Gateway and exposes an HTTPS MCP endpoint; identity, authorization, audit, and approval remain outside the model.",
+          "This is a local development reference. The node command is the stdio MCP process your client launches; it does not read page data from a file, and it reaches the open page over 127.0.0.1. A hosted page creates an Agent session of up to 24 hours through the Surface Gateway and exposes an HTTPS MCP endpoint; reloading changes the token, and multiple Agents need separate pages. Identity, authorization, audit, and approval remain outside the model.",
       },
 );
 

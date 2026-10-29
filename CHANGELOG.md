@@ -3,6 +3,17 @@
 Pling 使用[语义化版本](https://semver.org/lang/zh-CN/)。`0.x` 阶段 API 仍可能调整，
 每次影响接入方式的变更都会记录在这里，并同步到 `website/releases/index.md` 的版本策略。
 
+## [0.1.0-alpha.3] — 2026-10-30
+
+- 新增 `@plingjs/surface-browser`：把页面侧 Surface 会话、WebSocket 传输、`describe` / `invoke`
+  桥接、审批转发、配对、重连与卸载清理收敛为一个浏览器运行时包。
+- Vue 3 新增 `useSurfaceGateway()` 与 `SurfaceAccessPanel`，接入方不再手写页面会话、socket、
+  bridge、配对码和撤销流程；能力声明与 `expose` 白名单仍由应用显式提供。
+- 带登录的 Todo Surface 案例改用 BFF 页面会话和 `useSurfaceGateway()`；浏览器仍不接触
+  Surface admin token，破坏性动作仍由页面确认。
+- 13 个公开包统一升级到 `0.1.0-alpha.3`；npm README 改为英文，并链接到
+  `https://plingjs.dev` 的当前文档。
+
 ## [0.1.0-alpha.2] — 2026-10-29
 
 首个可发布 alpha 的工作版本，当前包含：

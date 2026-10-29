@@ -9,6 +9,7 @@ export const ALL_PACKAGES = [
   "@plingjs/surface",
   "@plingjs/delegation",
   "@plingjs/agent",
+  "@plingjs/surface-browser",
   "@plingjs/continuity-http",
   "@plingjs/server",
   "@plingjs/vanilla",
@@ -16,6 +17,33 @@ export const ALL_PACKAGES = [
   "@plingjs/vue",
   "@plingjs/vue2",
 ];
+
+/**
+ * Expand the requested public packages with their workspace dependencies.
+ * Tutorial fixtures and preview builds install only local tarballs, so a new
+ * internal dependency must be packed even when the fixture does not import it
+ * directly.
+ */
+export async function expandWorkspacePackages(root, packageNames) {
+  const expanded = [];
+  const visiting = new Set();
+
+  async function visit(name) {
+    if (!ALL_PACKAGES.includes(name)) throw new Error(`Unknown public package: ${name}`);
+    if (visiting.has(name) || expanded.includes(name)) return;
+    visiting.add(name);
+    const directory = join(root, "packages", name.slice("@plingjs/".length));
+    const manifest = JSON.parse(await readFile(join(directory, "package.json"), "utf8"));
+    for (const dependency of Object.keys(manifest.dependencies ?? {})) {
+      if (dependency.startsWith("@plingjs/")) await visit(dependency);
+    }
+    visiting.delete(name);
+    expanded.push(name);
+  }
+
+  for (const name of packageNames) await visit(name);
+  return expanded;
+}
 
 export function run(command, args, options = {}) {
   const result = spawnSync(command, args, {

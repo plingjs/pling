@@ -2,7 +2,7 @@
 import { access, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { constants } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
-import { ALL_PACKAGES, buildAndPackPackages, run } from "./lib/pack-packages.mjs";
+import { buildAndPackPackages, expandWorkspacePackages, run } from "./lib/pack-packages.mjs";
 import {
   PUBLIC_PREVIEW_AGENT,
   tutorialFramework,
@@ -201,10 +201,8 @@ async function writeGallery() {
   await writeFile(join(outputRoot, "index.html"), html);
 }
 
-const packageNames = [...new Set(selectedIds.flatMap((id) => registry[id].packages ?? []))];
-for (const name of packageNames) {
-  if (!ALL_PACKAGES.includes(name)) throw new Error(`Unknown package in registry: ${name}`);
-}
+const requestedPackages = [...new Set(selectedIds.flatMap((id) => registry[id].packages ?? []))];
+const packageNames = await expandWorkspacePackages(root, requestedPackages);
 
 console.log(`[tutorial-preview] packing ${packageNames.length} public packages`);
 const tarballs = await buildAndPackPackages({ root, temp: packRoot, packages: packageNames });
@@ -224,9 +222,9 @@ for (const [index, id] of selectedIds.entries()) {
 
   const manifestPath = join(app, "package.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
-  await writeFile(manifestPath, `${JSON.stringify(rewriteManifest(manifest, entry.packages, tarballs), null, 2)}\n`);
+  await writeFile(manifestPath, `${JSON.stringify(rewriteManifest(manifest, packageNames, tarballs), null, 2)}\n`);
 
-  const overrides = entry.packages.map((name) => `  "${name}": "file:${tarballs[name]}"`).join("\n");
+  const overrides = packageNames.map((name) => `  "${name}": "file:${tarballs[name]}"`).join("\n");
   await writeFile(join(app, "pnpm-workspace.yaml"), `packages:\n  - "."\noverrides:\n${overrides}\n`);
 
   run("pnpm", ["install", "--ignore-scripts", "--prefer-offline"], { cwd: app });

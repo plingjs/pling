@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/vue2",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 的 Vue 2.7 适配器：插件、指令、只读状态桥接与原生问答入口",
+  "description": "Vue 2.7 adapter for Pling declarations and the shared assistant surface.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

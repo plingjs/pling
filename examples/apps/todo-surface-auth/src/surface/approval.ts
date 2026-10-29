@@ -6,6 +6,8 @@ export interface ExternalApprovalRequest extends ConfirmRequest {
   expiresAt: number;
 }
 
+type ApprovalListener = (request: ExternalApprovalRequest | null) => void;
+
 /**
  * Human confirmation queue for an external Agent.
  *
@@ -15,8 +17,13 @@ export interface ExternalApprovalRequest extends ConfirmRequest {
 export function createExternalApproval(options: { timeoutMs?: number } = {}) {
   const timeoutMs = options.timeoutMs ?? 120_000;
   const current = shallowRef<ExternalApprovalRequest | null>(null);
+  const listeners = new Set<ApprovalListener>();
   let settleCurrent: ((decision: boolean | "always") => void) | null = null;
   let timer: ReturnType<typeof setTimeout> | null = null;
+
+  const publish = (request: ExternalApprovalRequest | null): void => {
+    for (const listener of listeners) listener(request);
+  };
 
   const settle = (decision: boolean | "always"): void => {
     const finish = settleCurrent;
@@ -24,6 +31,7 @@ export function createExternalApproval(options: { timeoutMs?: number } = {}) {
     if (timer) clearTimeout(timer);
     timer = null;
     current.value = null;
+    publish(null);
     finish?.(decision);
   };
 
@@ -34,6 +42,7 @@ export function createExternalApproval(options: { timeoutMs?: number } = {}) {
       const requestedAt = Date.now();
       const entry: ExternalApprovalRequest = { ...request, requestedAt, expiresAt: requestedAt + timeoutMs };
       current.value = entry;
+      publish(entry);
       timer = setTimeout(() => {
         if (current.value === entry) settle(false);
       }, timeoutMs);
@@ -42,11 +51,18 @@ export function createExternalApproval(options: { timeoutMs?: number } = {}) {
   return {
     current,
     confirm,
+    subscribe(listener: ApprovalListener) {
+      listeners.add(listener);
+      listener(current.value);
+      return () => listeners.delete(listener);
+    },
     decide(approved: boolean) {
       if (settleCurrent) settle(approved);
     },
     close() {
       if (settleCurrent) settle(false);
+      publish(null);
+      listeners.clear();
     },
   };
 }

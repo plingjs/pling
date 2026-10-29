@@ -16,7 +16,7 @@
   },
   "packageManager": "pnpm@12.11.2",
   "scripts": {
-    "build": "pnpm --filter @plingjs/core build && pnpm --filter @plingjs/ui build && pnpm --filter @plingjs/dom build && pnpm --filter @plingjs/surface build && pnpm --filter @plingjs/delegation build && pnpm --filter @plingjs/agent build && pnpm --filter @plingjs/continuity-http build && pnpm --filter @plingjs/server build && pnpm --filter @plingjs/vanilla build && pnpm --filter @plingjs/react build && pnpm --filter @plingjs/vue build && pnpm --filter @plingjs/vue2 build",
+    "build": "pnpm --filter @plingjs/core build && pnpm --filter @plingjs/ui build && pnpm --filter @plingjs/dom build && pnpm --filter @plingjs/surface build && pnpm --filter @plingjs/delegation build && pnpm --filter @plingjs/agent build && pnpm --filter @plingjs/surface-browser build && pnpm --filter @plingjs/continuity-http build && pnpm --filter @plingjs/server build && pnpm --filter @plingjs/vanilla build && pnpm --filter @plingjs/react build && pnpm --filter @plingjs/vue build && pnpm --filter @plingjs/vue2 build",
     "pack:check": "node scripts/pack-smoke.mjs",
     "release:check": "node scripts/check-release.mjs",
     "test": "pnpm -r --workspace-concurrency=2 --if-present run test --testTimeout=30000",

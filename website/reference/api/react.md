@@ -16,9 +16,9 @@ This page lists only `@plingjs/react` entry points, plus the shared-package type
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/react` | react >=18 | `0.1.0-alpha.2` |
+| `@plingjs/react` | react >=18 | `0.1.0-alpha.3` |
 
-The current package version is `0.1.0-alpha.2`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.3`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -1865,10 +1865,10 @@ const report = pling.inspectCoverage(document.getElementById("root"));
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |

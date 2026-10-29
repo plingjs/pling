@@ -40,12 +40,43 @@ export function normalizeConfig(raw) {
       id,
       displayName: typeof tenant.displayName === "string" && tenant.displayName.trim() ? tenant.displayName.trim() : id,
       origins: origins.map((origin) => normalizeOrigin(origin)),
-      maxPageSessionTtlMs: positiveInt(tenant.maxPageSessionTtlMs, 8 * 60 * 60_000),
-      maxAgentSessionTtlMs: positiveInt(tenant.maxAgentSessionTtlMs, 2 * 60 * 60_000),
+      maxPageSessionTtlMs: positiveInt(tenant.maxPageSessionTtlMs, 24 * 60 * 60_000),
+      maxAgentSessionTtlMs: positiveInt(tenant.maxAgentSessionTtlMs, 24 * 60 * 60_000),
+      publicDemo: normalizePublicDemo(tenant.publicDemo, id, origins.map((origin) => normalizeOrigin(origin)), tenant.maxPageSessionTtlMs),
     };
   });
   if (tenants.length === 0) throw new ConfigError("至少需要一个 tenant");
   return { tenants };
+}
+
+function normalizePublicDemo(value, tenantId, tenantOrigins, maxPageSessionTtlMs) {
+  if (value === undefined || value === null) return null;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new ConfigError(`tenant ${tenantId}.publicDemo 必须是对象`);
+  }
+  const allowedOrigins = new Set(tenantOrigins);
+  const origins = Array.isArray(value.origins) ? value.origins : [];
+  if (origins.length === 0 || origins.some((origin) => typeof origin !== "string" || !origin.trim())) {
+    throw new ConfigError(`tenant ${tenantId}.publicDemo 必须至少配置一个 origin`);
+  }
+  const normalizedOrigins = origins.map(normalizeOrigin);
+  const unknownOrigin = normalizedOrigins.find((origin) => !allowedOrigins.has(origin));
+  if (unknownOrigin) {
+    throw new ConfigError(`tenant ${tenantId}.publicDemo origin 必须也出现在 tenant.origins 中: ${unknownOrigin}`);
+  }
+  const scope = Array.isArray(value.scope)
+    ? [...new Set(value.scope.map((item) => (typeof item === "string" ? item.trim() : "")).filter(Boolean))]
+    : [];
+  if (scope.length === 0) throw new ConfigError(`tenant ${tenantId}.publicDemo.scope 不能为空`);
+  return {
+    origins: normalizedOrigins,
+    scope,
+    pageSessionTtlMs: Math.min(positiveInt(value.pageSessionTtlMs, 24 * 60 * 60_000), maxPageSessionTtlMs),
+    maxSessionsPerWindow: positiveInt(value.maxSessionsPerWindow, 30),
+    windowMs: positiveInt(value.windowMs, 10 * 60_000),
+    maxActiveSessions: positiveInt(value.maxActiveSessions, 40),
+    userIdPrefix: typeof value.userIdPrefix === "string" && value.userIdPrefix.trim() ? value.userIdPrefix.trim() : "public-demo",
+  };
 }
 
 export function normalizeOrigin(value) {

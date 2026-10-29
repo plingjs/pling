@@ -156,7 +156,7 @@ Reference implementations cover credentials, revocation, multi-instance invalida
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/delegation` `0.1.0-alpha.2` |
+| Applies to | `@plingjs/delegation` `0.1.0-alpha.3` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later on the server |
 | Peer dependencies | None; the application supplies the store, event bus, and identity adapter |

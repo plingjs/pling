@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/server",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 的薄 Node 层：OpenAI 兼容代理 / 服务端密钥 / 鉴权钩子 / 审计（不搬 agent 循环）",
+  "description": "Thin Node gateway for OpenAI-compatible model access, authentication, limits, and audit.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

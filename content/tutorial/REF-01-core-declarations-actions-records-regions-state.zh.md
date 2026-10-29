@@ -197,7 +197,7 @@ useAgentState("task_view", () => ({
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/core` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/core` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无 |

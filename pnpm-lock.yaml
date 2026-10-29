@@ -3256,6 +3256,29 @@ importers:
         version: 2.1.9(@types/node@26.6.5)(jsdom@25.0.1(supports-color@10.2.2))(supports-color@10.2.2)
     publishDirectory: dist
 
+  packages/surface-browser:
+    dependencies:
+      '@plingjs/agent':
+        specifier: workspace:*
+        version: link:../agent/dist
+      '@plingjs/core':
+        specifier: workspace:*
+        version: link:../core/dist
+      '@plingjs/surface':
+        specifier: workspace:*
+        version: link:../surface/dist
+    devDependencies:
+      tsup:
+        specifier: ^9.0.0
+        version: 9.0.0(postcss@8.5.30)(tsx@4.23.15)(typescript@5.9.3)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+      vitest:
+        specifier: ^2
+        version: 2.1.9(@types/node@26.6.5)(jsdom@25.0.1(supports-color@10.2.2))(supports-color@10.2.2)
+    publishDirectory: dist
+
   packages/ui:
     devDependencies:
       tsup:
@@ -3312,6 +3335,12 @@ importers:
       '@plingjs/dom':
         specifier: workspace:*
         version: link:../dom/dist
+      '@plingjs/surface':
+        specifier: workspace:*
+        version: link:../surface/dist
+      '@plingjs/surface-browser':
+        specifier: workspace:*
+        version: link:../surface-browser/dist
       '@plingjs/ui':
         specifier: workspace:*
         version: link:../ui/dist

@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/dom",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 的框架无关 DOM 执行层：目标解析、可用性判定、UI 原语与滚动观察",
+  "description": "Framework-neutral DOM execution layer for Pling adapters.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

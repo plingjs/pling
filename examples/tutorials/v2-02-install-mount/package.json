@@ -10,8 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@plingjs/agent": "0.1.0-alpha.2",
-    "@plingjs/vue2": "0.1.0-alpha.2",
+    "@plingjs/agent": "0.1.0-alpha.3",
+    "@plingjs/vue2": "0.1.0-alpha.3",
     "vue": "2.7.16"
   },
   "devDependencies": {

@@ -163,7 +163,7 @@ true
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/server` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/server` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | Node.js 20 或更高版本 |
 | Peer 依赖 | 无 |

@@ -51,6 +51,9 @@ export * from "./state";
 export * from "./model-settings";
 // 函数级动作（S15）：没有按钮的活儿也能登记成动作。
 export * from "./tools";
+// 外部 Agent Surface：页面会话 / WebSocket / 审批桥接 / 连接生命周期。
+// 协议内核仍在 @plingjs/surface，这里只提供 Vue 的生命周期与响应式外壳。
+export * from "./surface-gateway";
 // 敏感值（S14）：写 `v-record` / `useAgentState` 的人不该为了一个标记再去认 @plingjs/core。
 export { sensitive, type SensitivityMode, type SensitiveOptions, type SensitiveValue } from "@plingjs/core";
 // 遗留模块（001）：兼容薄壳，刻意用具名导出而非 `export *`，避免旧 API 混进主路径的补全列表。
@@ -60,5 +63,6 @@ export { default as AgentPanel } from "./components/AgentPanel.vue";
 export { default as AgentChat } from "./components/AgentChat.vue";
 export { default as AgentInline } from "./components/AgentInline.vue";
 export { default as AgentDock } from "./components/AgentDock.vue";
+export { default as SurfaceAccessPanel } from "./components/SurfaceAccessPanel.vue";
 export { createPlingUi, DEFAULT_VUE_LOCALE, STANDALONE_UI, type PlingUiController } from "./ui";
 export type { PlingClassNames, PlingTheme, PlingThemeMode, PlingUiOptions } from "@plingjs/ui";

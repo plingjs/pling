@@ -9,6 +9,7 @@ const adminToken = process.env.SURFACE_ADMIN_TOKEN?.trim();
 const publicBaseUrl = process.env.SURFACE_PUBLIC_BASE_URL?.trim();
 const host = process.env.SURFACE_HOST?.trim() || "127.0.0.1";
 const port = numberFromEnv("SURFACE_PORT", 5219);
+const demoTenantId = process.env.SURFACE_DEMO_TENANT_ID?.trim() || "demo";
 
 if (!adminToken) {
   process.stderr.write(
@@ -45,6 +46,7 @@ const server = createSurfaceServer({
   publicBaseUrl,
   host,
   port,
+  demoTenantId,
 });
 
 try {

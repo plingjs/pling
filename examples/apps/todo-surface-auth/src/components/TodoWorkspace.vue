@@ -1,14 +1,14 @@
 <script setup lang="ts">
-import { computed, nextTick, onUnmounted, ref, shallowRef, watch } from "vue";
-import { createExecutor, createPolicy } from "@plingjs/core";
-import { defaultSettle } from "@plingjs/agent";
-import { createSurface, type SurfaceSession } from "@plingjs/surface";
-import { AgentDock, useAgentState, usePling, type ToolOptions } from "@plingjs/vue";
-import { api, ApiError, type PageSession, type Pairing, type Todo, type User } from "../api";
+import { computed, onUnmounted, ref } from "vue";
+import {
+  AgentDock,
+  useAgentState,
+  useSurfaceGateway,
+  type SurfaceConnectionState,
+  type ToolOptions,
+} from "@plingjs/vue";
+import { api, ApiError, type Todo, type User } from "../api";
 import { createExternalApproval } from "../surface/approval";
-import { createSurfaceBridge } from "../surface/bridge";
-import { createPairing, revokeAgentSession } from "../surface/pairing";
-import { createGatewayTransport, type GatewayConnectionState, type GatewayTransport } from "../surface/transport";
 import ExternalApprovalPanel from "./ExternalApprovalPanel.vue";
 import SurfacePanel from "./SurfacePanel.vue";
 
@@ -16,7 +16,6 @@ const props = defineProps<{ user: User; initialTodos: Todo[] }>();
 
 const MAX_TODOS = 50;
 
-const pling = usePling();
 const todos = ref<Todo[]>(props.initialTodos.map((todo) => ({ ...todo })));
 const draft = ref("");
 const operationError = ref("");
@@ -24,17 +23,25 @@ const pending = ref<Record<string, boolean>>({});
 const lastAddedId = ref<string | null>(null);
 
 const approval = createExternalApproval();
-const pageSession = shallowRef<PageSession | null>(null);
-const pairing = ref<Pairing | null>(null);
-const externalError = ref("");
-const externalBusy = ref("");
-const transport = shallowRef<GatewayTransport | null>(null);
-let bridge: { close(): void } | null = null;
+const EXTERNAL_SCOPE = ["add_task", "toggle@", "delete@", "clear_completed"];
+const gateway = useSurfaceGateway({
+  app: "case077-todo-surface",
+  expose: EXTERNAL_SCOPE,
+  mode: "bff",
+  getPageSession: () => api.pageSession(),
+  approval,
+  confirm: approval.confirm,
+  autoConnect: false,
+});
 
 const openCount = computed(() => todos.value.filter((todo) => !todo.done).length);
 const completedCount = computed(() => todos.value.filter((todo) => todo.done).length);
-const gatewayState = computed<GatewayConnectionState | "idle">(() => transport.value?.state.value ?? "idle");
-const connectedAgent = computed<SurfaceSession | null>(() => transport.value?.agent.value ?? null);
+const gatewayState = computed<SurfaceConnectionState | "idle">(() => gateway.state.value);
+const pageSession = gateway.page;
+const pairing = gateway.pairing;
+const connectedAgent = gateway.agent;
+const externalBusy = gateway.busy;
+const externalError = gateway.error;
 
 useAgentState(
   "todo",
@@ -199,74 +206,15 @@ function replaceTodo(next: Todo): void {
 }
 
 async function connectSurface(): Promise<void> {
-  if (externalBusy.value) return;
-  closeSurface();
-  externalBusy.value = "connect";
-  externalError.value = "";
-  pairing.value = null;
-  try {
-    const granted = await api.pageSession();
-    pageSession.value = granted;
-    const next = createGatewayTransport({ url: granted.surfaceUrl, app: "case077-todo-surface" });
-    transport.value = next;
-    await nextTick();
-    const executor = createExecutor({
-      registry: pling.registry,
-      policy: createPolicy(approval.confirm),
-      settle: defaultSettle,
-    });
-    const surface = createSurface({
-      registry: pling.registry,
-      execute: (id, args) => executor.execute(id, args),
-      app: "case077-todo-surface",
-      expose: granted.scope,
-      session: () => next.agent.value,
-    });
-    bridge = createSurfaceBridge({ surface, transport: next, approval });
-  } catch (error) {
-    externalError.value = messageOf(error);
-    closeSurface();
-  } finally {
-    externalBusy.value = "";
-  }
+  await gateway.connect();
 }
 
 async function requestPairing(): Promise<void> {
-  if (!pageSession.value || externalBusy.value) return;
-  externalBusy.value = "pair";
-  externalError.value = "";
-  try {
-    pairing.value = await createPairing(pageSession.value);
-  } catch (error) {
-    externalError.value = messageOf(error);
-  } finally {
-    externalBusy.value = "";
-  }
+  await gateway.pair();
 }
 
 async function revokeAgent(): Promise<void> {
-  const page = pageSession.value;
-  const agent = connectedAgent.value;
-  if (!page || !agent || externalBusy.value) return;
-  externalBusy.value = "revoke";
-  externalError.value = "";
-  try {
-    await revokeAgentSession(page, agent.sessionId);
-  } catch (error) {
-    externalError.value = messageOf(error);
-  } finally {
-    externalBusy.value = "";
-  }
-}
-
-function closeSurface(): void {
-  approval.close();
-  bridge?.close();
-  bridge = null;
-  transport.value?.close();
-  transport.value = null;
-  pageSession.value = null;
-  pairing.value = null;
+  await gateway.revoke();
 }
 
 function messageOf(error: unknown): string {
@@ -274,12 +222,7 @@ function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-watch(connectedAgent, (agent) => {
-  if (agent) pairing.value = null;
-});
-
 onUnmounted(() => {
-  closeSurface();
   approval.close();
 });
 </script>

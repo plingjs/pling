@@ -166,7 +166,7 @@ $("#add").on("click", addTask);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；jQuery 为可选项 |

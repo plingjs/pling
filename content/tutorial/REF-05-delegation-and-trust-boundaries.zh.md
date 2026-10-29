@@ -156,7 +156,7 @@ await assertDelegationEventBusConformance(productionEvents);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/delegation` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/delegation` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；服务端需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；存储、事件总线和身份适配器由应用提供 |

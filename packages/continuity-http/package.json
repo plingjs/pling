@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/continuity-http",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 跨设备任务连续性集成包：浏览器 HTTP authority / Web Request→Response handler / 测试内存后端",
+  "description": "Optional HTTP integration for Pling cross-device task continuity.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

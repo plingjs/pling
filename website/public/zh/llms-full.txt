@@ -2839,6 +2839,40 @@ Content-Type: application/json
 
 这些凭证都不应进入模型提示词、公开日志或审计记录。
 
+## 让适配器托管浏览器侧生命周期
+
+页面仍然负责声明能力、渲染审批界面；它不该再手写会话、Socket、桥接、配对、
+申领、重连与卸载清理。Vue 3 里可以直接用 `useSurfaceGateway()` 托管这段生命周期：
+
+```ts
+import { computed } from "vue";
+import { useSurfaceGateway } from "@plingjs/vue";
+
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("无法创建 Surface 页面会话");
+    return response.json();
+  },
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+`bff` 模式必须提供 `getPageSession`。应用服务端验证用户后，用自己的 admin token
+调用网关；浏览器只拿到短时页面会话。`public-demo` 只用于需要展示可复制 Agent token
+的公开演示，不要为了省掉 BFF 接口就把产品切到 `public-demo`。
+
+同一个控制器还覆盖重连、配对、撤销与卸载清理。`<SurfaceAccessPanel :gateway="gateway" />`
+是连接与 token 控件的可选起点，产品可以换成自己的界面。
+
+封装不会放宽安全边界：`expose` 仍然显式，页面仍然是唯一能批准破坏性动作的地方。
+React、原生 JavaScript 或非浏览器宿主可以直接使用框架无关的 `@plingjs/surface-browser` 原语。
+
 ## 执行仍留在应用里
 
 Agent 调用三个 MCP 操作：
@@ -17463,7 +17497,7 @@ useAgentState("task_view", () => ({
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/core` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/core` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无 |
@@ -17722,7 +17756,7 @@ Trace 需要显式开启且有数量上限。它是诊断数据，不是审计�
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/agent` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/agent` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无 |
@@ -17908,7 +17942,7 @@ Vue 2.7 使用共享原生 Dock，因此也暴露同一套 `ui` 控制器与语�
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/ui` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/ui` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无 |
@@ -18091,7 +18125,7 @@ const response = await surface.handle({
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/surface` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/surface` `0.1.0-alpha.3` |
 | 协议 | `pling.surface/0.1`（Draft） |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
@@ -18253,7 +18287,7 @@ await assertDelegationEventBusConformance(productionEvents);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/delegation` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/delegation` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；服务端需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；存储、事件总线和身份适配器由应用提供 |
@@ -18421,7 +18455,7 @@ true
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/server` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/server` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | Node.js 20 或更高版本 |
 | Peer 依赖 | 无 |
@@ -18541,6 +18575,49 @@ createApp(App).use(pling.plugin).mount("#app");
 - `readonly`：只展示应用托管的连接，不显示密钥；
 - `byok`：允许用户填写 `baseUrl`、`model` 与 `apiKey`；默认只在内存中保留，显式 `persist: "session"` 才写入 sessionStorage。不支持 localStorage。
 
+## 外部 Agent Surface
+
+`useSurfaceGateway()` 托管外部 Agent 接入里重复的页面侧管线：页面会话、
+WebSocket、`describe` / `invoke` 桥接、配对、token 申领、重连与卸载清理。
+它不声明业务动作。能力来源仍是已有的 `v-tool` / `useAgentTool` 声明，
+`expose` 仍是一份显式 allowlist。
+
+```ts
+import { computed } from "vue";
+import { useSurfaceGateway } from "@plingjs/vue";
+
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("无法创建 Surface 页面会话");
+    return response.json();
+  },
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+按“谁创建页面会话”选择模式：
+
+| 模式 | 页面会话来源 | token 展示 | 用途 |
+| --- | --- | --- | --- |
+| `public-demo` | 浏览器直接调用网关演示端点 | 可展示短时 Agent token | 只用于公开演示 |
+| `bff` | 由已认证服务端支撑的 `getPageSession()` | 应用自行决定；不能把 admin token 交给页面 | 生产环境 |
+
+控制器提供 `state`、`surface`、`page`、`pairing`、`access`、`agent`、`busy`、
+`error`、`connect()`、`disconnect()`、`pair()`、`claim()` 与 `revoke()`。
+`<SurfaceAccessPanel :gateway="gateway" />` 是可选的连接、配对、token、scope 与撤销面板，
+不会创建第二份运行时。
+
+有两件事不会搬进封装：
+
+- `expose` 从不自动推断。页面内部能执行、但不在 allowlist 里的能力，对外仍然不存在。
+- 破坏性动作仍在页面确认界面停下。网关只收到 `pending_approval` 状态，不会得到审批工具。
+
 ## 会影响行为的默认值
 
 - 没有声明就没有动作。`derive` 默认关闭。
@@ -18560,6 +18637,9 @@ createApp(App).use(pling.plugin).mount("#app");
 | 路由变了，模型却以为还在旧页面 | `page` 关闭，或没有传 router | 传 `page: { router }` 并配置 query 白名单 |
 | 看不到模型设置 | 模式是 `off`，或没有传给实际挂载的入口 | 在 `<AgentDock>` 或 `createPling({ agent })` 上设置 `modelSettings` |
 | 调试面板没有请求 | `debug` 关闭，或调用被清空 | 开启 `debug`，复现一次请求 |
+| Surface 已连接，但没有任何能力 | `expose` 与已注册动作 id 不一致 | 在 `<AgentPanel>` 查看动作 id，并保持 `expose` 显式 |
+| 没有出现 Agent token | `public-demo` 未开启，或 `autoClaim` 为 `false` | 调用 `gateway.claim()`；只在 `public-demo` 下开启 `autoClaim` |
+| 破坏性调用似乎立即执行 | 宿主没有传入审批来源或确认函数 | 传入 `approval` 或 `confirm`，不要自动批准外部写操作 |
 
 ## 证据
 
@@ -18574,7 +18654,7 @@ createApp(App).use(pling.plugin).mount("#app");
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vue` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/vue` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器中的 Vue 3；SSR 与构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | `vue ^3` |
@@ -18735,7 +18815,7 @@ React 支持动作、函数级工具、记录、区域、状态、确认、人�
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/react` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/react` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器中的 React 18 或更高版本；SSR 与构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | `react >=18` |
@@ -18906,7 +18986,7 @@ $("#add").on("click", addTask);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；jQuery 为可选项 |
@@ -19093,7 +19173,7 @@ Dock 是共享的原生界面。它支持与其他适配器一致的会话、确
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vue2` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/vue2` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器中的 Vue 2.7；构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | `vue ^2.7.0` |
@@ -19213,7 +19293,7 @@ const text = describePlingError(
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/*` `0.1.0-alpha.2` 的运行时与适配器错误码 |
+| 适用版本 | `@plingjs/*` `0.1.0-alpha.3` 的运行时与适配器错误码 |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
 | Peer 依赖 | 取决于所用适配器 |
@@ -19384,7 +19464,7 @@ await assertContinuityBackendConformance(productionBackend, {
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/continuity-http` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/continuity-http` `0.1.0-alpha.3` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；HTTP 后端需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无 |
@@ -19529,7 +19609,7 @@ MCP 客户端应看到每项投影能力对应一个工具，schema 来自 `desc
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/surface` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/surface` `0.1.0-alpha.3` |
 | 协议 | `pling.surface/0.1`（Draft） |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
@@ -19670,7 +19750,7 @@ SESSION_REVOKED
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/surface` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/surface` `0.1.0-alpha.3` |
 | 协议 | `pling.surface/0.1`（Draft） |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |
@@ -20407,7 +20487,7 @@ pnpm dev:examples
 2. **切换到接入说明。** 按顺序看配置、运行时、动作声明和助手入口。
 3. **查看源码。** 高亮行分别标出导入、运行时初始化、动作声明和助手入口。
 
-每个案例都有独立说明页、在线案例、完整源码与逐行走查。案例05另附本地 MCP 桥，可把同一组 Todo 能力接到 Codex、Claude，以及其他支持 stdio MCP 的 Agent。
+每个案例都有独立说明页、在线案例、完整源码与逐行走查。案例05把同一组 Todo 能力接到公网 Surface Gateway，页面会生成短时访问 token，并给出可直接复制的 Codex 命令；源码另保留本地回环桥供开发调试。
 
 准备修改自己的应用时，继续进入 [Vue 快速上手](/zh/vue/quick-start-add-pling-to-a-vue-app)或 [React 快速上手](/zh/react/quick-start-add-pling-to-a-react-app)。
 
@@ -20621,22 +20701,23 @@ Pling 的软件包使用语义化版本，Surface 能力协议使用独立版本
 
 ## 当前发布线
 
-当前所有公开包处于 `0.1.0-alpha.2`。这是 alpha 线：API 可能变化，只为最新发布的 alpha 提供安全修复。包已发布或示例能运行，不代表已经适合生产。
+当前所有公开包处于 `0.1.0-alpha.3`。这是 alpha 线：API 可能变化，只为最新发布的 alpha 提供安全修复。包已发布或示例能运行，不代表已经适合生产。
 
 | 包 | 职责 | 当前版本线 |
 | --- | --- | --- |
-| `@plingjs/core` | 注册表、执行、策略与结果原语 | `0.1.0-alpha.2` |
-| `@plingjs/dom` | DOM 定位、投影、滚动与浏览器原语 | `0.1.0-alpha.2` |
-| `@plingjs/agent` | 循环、上下文、工具与连续性契约 | `0.1.0-alpha.2` |
-| `@plingjs/surface` | Agent Surface 投影与 `describe` / `invoke` | `0.1.0-alpha.2` |
-| `@plingjs/delegation` | 可选委托凭证生命周期 | `0.1.0-alpha.2` |
-| `@plingjs/continuity-http` | 可选远程连续性 HTTP 集成 | `0.1.0-alpha.2` |
-| `@plingjs/server` | OpenAI 兼容模型网关 | `0.1.0-alpha.2` |
-| `@plingjs/ui` | 适配器共享的界面组件与样式 | `0.1.0-alpha.2` |
-| `@plingjs/vue` | Vue 3 适配器 | `0.1.0-alpha.2` |
-| `@plingjs/react` | React 适配器 | `0.1.0-alpha.2` |
-| `@plingjs/vanilla` | 无框架 DOM 适配器 | `0.1.0-alpha.2` |
-| `@plingjs/vue2` | Vue 2.7 适配器 | `0.1.0-alpha.2` |
+| `@plingjs/core` | 注册表、执行、策略与结果原语 | `0.1.0-alpha.3` |
+| `@plingjs/dom` | DOM 定位、投影、滚动与浏览器原语 | `0.1.0-alpha.3` |
+| `@plingjs/agent` | 循环、上下文、工具与连续性契约 | `0.1.0-alpha.3` |
+| `@plingjs/surface` | Agent Surface 投影与 `describe` / `invoke` | `0.1.0-alpha.3` |
+| `@plingjs/surface-browser` | 页面侧 Surface 会话、WebSocket、桥接与重连 | `0.1.0-alpha.3` |
+| `@plingjs/delegation` | 可选委托凭证生命周期 | `0.1.0-alpha.3` |
+| `@plingjs/continuity-http` | 可选远程连续性 HTTP 集成 | `0.1.0-alpha.3` |
+| `@plingjs/server` | OpenAI 兼容模型网关 | `0.1.0-alpha.3` |
+| `@plingjs/ui` | 适配器共享的界面组件与样式 | `0.1.0-alpha.3` |
+| `@plingjs/vue` | Vue 3 适配器 | `0.1.0-alpha.3` |
+| `@plingjs/react` | React 适配器 | `0.1.0-alpha.3` |
+| `@plingjs/vanilla` | 无框架 DOM 适配器 | `0.1.0-alpha.3` |
+| `@plingjs/vue2` | Vue 2.7 适配器 | `0.1.0-alpha.3` |
 
 本站记录的协议是 `pling.surface/0.1`，仍为公开草案。`0.1` 只定义 `describe` 与 `invoke`，不承诺 `attach`、`observe`、`handoff`、`detach` 或强制传输。
 
@@ -20823,13 +20904,13 @@ Canonical: https://plingjs.dev/zh/reference/api/
 
 参数表是这里的重点。遇到某个选项时，先查它在当前框架页中的类型、必填性、默认值与适用场景；需要字段级语义或错误码时，再进入对应参考页。
 
-共 **5** 个 API 页面，覆盖 **8** 类能力；当前版本 `0.1.0-alpha.2`，稳定性为 **preview**。
+共 **5** 个 API 页面，覆盖 **9** 类能力；当前版本 `0.1.0-alpha.3`，稳定性为 **preview**。
 
 ## 按框架查阅
 
 | 框架 | 包 | 条目 | 页面 |
 | --- | --- | --- | --- |
-| **Vue 3 API** | `@plingjs/vue` | 41 | [打开](/zh/reference/api/vue-3) |
+| **Vue 3 API** | `@plingjs/vue` | 43 | [打开](/zh/reference/api/vue-3) |
 | **React API** | `@plingjs/react` | 39 | [打开](/zh/reference/api/react) |
 | **Vue 2.7 API** | `@plingjs/vue2` | 25 | [打开](/zh/reference/api/vue-2) |
 | **原生 JS API** | `@plingjs/vanilla` | 27 | [打开](/zh/reference/api/vanilla) |
@@ -20844,10 +20925,10 @@ Canonical: https://plingjs.dev/zh/reference/api/
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -20884,9 +20965,9 @@ Vue 3 的完整 API：应用初始化、指令、组合式函数、组件，以�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.2` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.3` |
 
-当前包版本为 `0.1.0-alpha.2`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.3`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -22535,6 +22616,123 @@ console.log(ui.t("chat.send"));
 [查看对应参考页](/zh/reference/ui-messages-theme-locale)
 
 
+## 外部 Agent Surface
+
+通过 Surface 网关开放已声明能力的 Vue 封装。它们管理凭证与传输；能力 allowlist 与真人审批仍归应用所有。
+
+| API | 类型 | 参考 |
+| --- | --- | --- |
+| [useSurfaceGateway](#api-usesurfacegateway) | 函数 | [参考](/zh/reference/vue-3-adapter) |
+| [SurfaceAccessPanel](#api-surfaceaccesspanel) | 组件 | [参考](/zh/reference/vue-3-adapter) |
+
+<a id="api-usesurfacegateway"></a>
+
+### `useSurfaceGateway`
+
+为一个 Vue 组件作用域创建并托管页面会话、WebSocket、Surface 桥接、配对、申领与撤销的生命周期。
+
+**导入**
+
+`@plingjs/vue`
+
+**调用方式**
+
+```ts
+// Vue 3
+useSurfaceGateway(options: UseSurfaceGatewayOptions): SurfaceGatewayController
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `app` | `string` | 是 | — | 桥接 hello 中发送的稳定应用名。 |
+| `expose` | `SurfaceExpose` | 是 | — | 显式能力 allowlist。组合式函数不会从 DOM 或注册表自动推断能力。 |
+| `mode` | `"public-demo" \| "bff"` | 是 | — | `public-demo` 在浏览器创建页面会话并可展示 Agent token；`bff` 必须提供 `getPageSession`，由已认证的应用后端创建页面会话。 |
+| `gatewayUrl` | `string` | 否 | — | `public-demo` 模式的网关源，例如 `https://surface.example.com`。 |
+| `getPageSession` | `() => Promise<SurfacePageSession>` | 否 | — | `bff` 模式必填。应用服务端验证用户会话后，只返回短时页面会话。 |
+| `gatewayClient` | `SurfaceGatewayClient` | 否 | — | 用于测试或自定义 BFF 契约的 HTTP 客户端。 |
+| `approval` | `SurfaceApprovalSource & { confirm?: Confirm }` | 否 | — | 真人审批来源。它订阅并转发待审批状态；决定界面仍归页面所有。 |
+| `confirm` | `Confirm \| null` | 否 | — | Surface 执行器使用的确认函数。默认取 `approval.confirm`，否则为 `null`（fail-closed）。 |
+| `autoConnect` | `boolean` | 否 | `true` | 组件挂载时自动连接。传 `false` 时由宿主提供显式连接按钮。 |
+| `autoClaim` | `boolean` | 否 | `true (public-demo only)` | 是否自动申领 Agent token。仅在 `public-demo` 模式下默认开启。 |
+| `agentId` | `string` | 否 | — | 申领公开演示配对时记录的 Agent id。 |
+| `tenantId` | `string` | 否 | — | 公开演示页面会话端点的可选租户提示。 |
+| `clientKey` | `string` | 否 | — | 公开演示页面会话端点的可选客户端提示。 |
+| `reconnectMs` | `number` | 否 | `1500` | 页面 WebSocket 重连延迟。 |
+| `webSocket` | `SurfaceWebSocketFactory` | 否 | — | 供测试或非浏览器宿主注入的 WebSocket 实现。 |
+| `surface` | `Partial<CreatePlingSurfaceOptions>` | 否 | — | 额外的 Surface 选项，例如 `recordLimit`、`rateLimit`、`replay`、审计或自定义落定等待。 |
+
+**示例 1 · 公开演示：显式能力清单**
+
+```ts
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "public-demo",
+  gatewayUrl: "https://surface.example.com",
+  approval,
+});
+
+const surface = computed(() => gateway.surface.value);
+```
+
+**示例 2 · 生产 BFF 会话**
+
+```ts
+const gateway = useSurfaceGateway({
+  app: "orders",
+  expose: ["orders.overview", "orders.update_note"],
+  mode: "bff",
+  getPageSession: async () => {
+    const response = await fetch("/api/surface/page-session", { method: "POST" });
+    if (!response.ok) throw new Error("Surface session unavailable");
+    return response.json();
+  },
+  approval,
+});
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/vue-3-adapter)
+
+
+<a id="api-surfaceaccesspanel"></a>
+
+### `SurfaceAccessPanel`
+
+可选的 Vue 面板：展示连接状态、配对、可复制的 Agent token、当前 scope 与撤销操作。它只渲染控制器，不创建能力。
+
+**导入**
+
+`@plingjs/vue`
+
+**调用方式**
+
+```ts
+// Vue 3
+<SurfaceAccessPanel :gateway="gateway" title="External Agent" />
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `gateway` | `SurfaceGatewayController` | 是 | — | `useSurfaceGateway` 返回的控制器。组件只渲染其状态，不会自行创建能力或 token。 |
+| `title` | `string` | 否 | — | 面板标题。默认使用当前语言的“外部 Agent”文案。 |
+
+**示例 1 · 渲染可选的访问面板**
+
+```ts
+<SurfaceAccessPanel :gateway="gateway" title="外部 Agent" />
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/vue-3-adapter)
+
+
 ## 页面身份与连续性
 
 读取页面身份、在同源框架间共享运行时，并检查声明覆盖率。
@@ -22837,10 +23035,10 @@ console.log(report.coveragePercent, report.targets);
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -22866,9 +23064,9 @@ React 的完整 API：Provider、声明 Hook、组件，以及它们使用的共
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/react` | react >=18 | `0.1.0-alpha.2` |
+| `@plingjs/react` | react >=18 | `0.1.0-alpha.3` |
 
-当前包版本为 `0.1.0-alpha.2`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.3`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -24715,10 +24913,10 @@ const report = pling.inspectCoverage(document.getElementById("root"));
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -24744,9 +24942,9 @@ Vue 2.7 适配器沿用 DOM 运行时，提供指令与共享的 DOM 问答入�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.2` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.3` |
 
-当前包版本为 `0.1.0-alpha.2`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.3`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -25933,10 +26131,10 @@ dock.destroy();
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -25962,9 +26160,9 @@ Canonical: https://plingjs.dev/zh/reference/api/vanilla
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.2` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.3` |
 
-当前包版本为 `0.1.0-alpha.2`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.3`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -27284,10 +27482,10 @@ createPling({ shared: page });
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -27313,9 +27511,9 @@ Canonical: https://plingjs.dev/zh/reference/api/shared
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.2` |
+| `@plingjs/core` | — | `0.1.0-alpha.3` |
 
-当前包版本为 `0.1.0-alpha.2`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.3`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -28930,10 +29128,10 @@ const config = resolveAgentConfig({
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | 项目 | 值 |
 | --- | --- |

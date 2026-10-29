@@ -4,7 +4,7 @@
   "page": "vue2",
   "route": "/zh/reference/api/vue-2",
   "package": "@plingjs/vue2",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "categories": [

@@ -1,7 +1,7 @@
 {
   "title": "Pling API 参考",
   "locale": "zh",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "pages": [
@@ -11,7 +11,7 @@
       "route": "/zh/reference/api/vue-3",
       "json": "/zh/api-index/vue-3.json",
       "package": "@plingjs/vue",
-      "entries": 41
+      "entries": 43
     },
     {
       "id": "react",

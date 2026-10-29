@@ -3,9 +3,24 @@
     {
       "id": "demo",
       "displayName": "Pling Todo Demo",
-      "origins": ["https://todo.plingjs.dev"],
-      "maxPageSessionTtlMs": 28800000,
-      "maxAgentSessionTtlMs": 7200000
+      "origins": ["https://todo.plingjs.dev", "https://plingjs.dev"],
+      "maxPageSessionTtlMs": 86400000,
+      "maxAgentSessionTtlMs": 86400000,
+      "publicDemo": {
+        "origins": ["https://plingjs.dev"],
+        "scope": [
+          "todo.overview",
+          "todo.add",
+          "todo.update",
+          "todo.toggle",
+          "todo.delete",
+          "todo.clear_completed"
+        ],
+        "pageSessionTtlMs": 86400000,
+        "maxSessionsPerWindow": 30,
+        "windowMs": 600000,
+        "maxActiveSessions": 40
+      }
     }
   ]
 }

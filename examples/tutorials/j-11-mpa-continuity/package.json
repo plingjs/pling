@@ -11,9 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@plingjs/agent": "0.1.0-alpha.2",
-    "@plingjs/core": "0.1.0-alpha.2",
-    "@plingjs/vanilla": "0.1.0-alpha.2"
+    "@plingjs/agent": "0.1.0-alpha.3",
+    "@plingjs/core": "0.1.0-alpha.3",
+    "@plingjs/vanilla": "0.1.0-alpha.3"
   },
   "devDependencies": {
     "jsdom": "^25",

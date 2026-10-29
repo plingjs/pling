@@ -1097,6 +1097,47 @@ return <button ref={addRef}>添加</button>;`, "tsx"),
     },
   },
 
+  useSurfaceGateway: {
+    parameters: {
+      vue3: [
+        p("app", "string", "Stable application name sent in the bridge hello.", "桥接 hello 中发送的稳定应用名。", { required: true }),
+        p("expose", "SurfaceExpose", "Explicit capability allowlist. The composable never infers capabilities from the DOM or registry.", "显式能力 allowlist。组合式函数不会从 DOM 或注册表自动推断能力。", { required: true }),
+        p("mode", '"public-demo" | "bff"', 'public-demo creates a page session from the browser and may show an Agent token. bff requires getPageSession and must be backed by an authenticated application server.', "`public-demo` 在浏览器创建页面会话并可展示 Agent token；`bff` 必须提供 `getPageSession`，由已认证的应用后端创建页面会话。", { required: true }),
+        p("gatewayUrl", "string", "Gateway origin for public-demo mode, for example https://surface.example.com.", "`public-demo` 模式的网关源，例如 `https://surface.example.com`。"),
+        p("getPageSession", "() => Promise<SurfacePageSession>", "Required in bff mode. The application server verifies the user session and returns only a short-lived page session.", "`bff` 模式必填。应用服务端验证用户会话后，只返回短时页面会话。"),
+        p("gatewayClient", "SurfaceGatewayClient", "Injected HTTP client for tests or a custom BFF contract.", "用于测试或自定义 BFF 契约的 HTTP 客户端。"),
+        p("approval", "SurfaceApprovalSource & { confirm?: Confirm }", "Human approval source. Its subscribe callback relays pending state; the page still owns the decision UI.", "真人审批来源。它订阅并转发待审批状态；决定界面仍归页面所有。"),
+        p("confirm", "Confirm | null", "Confirmation function used by the Surface executor. Defaults to approval.confirm, then null (fail closed).", "Surface 执行器使用的确认函数。默认取 `approval.confirm`，否则为 `null`（fail-closed）。"),
+        p("autoConnect", "boolean", "Connects when the component mounts. Set false when the host owns an explicit connect button.", "组件挂载时自动连接。传 `false` 时由宿主提供显式连接按钮。", { defaultValue: "true" }),
+        p("autoClaim", "boolean", "Claims an Agent token automatically. Defaults to true only in public-demo mode.", "是否自动申领 Agent token。仅在 `public-demo` 模式下默认开启。", { defaultValue: "true (public-demo only)" }),
+        p("agentId", "string", "Agent id recorded when claiming a public-demo pairing.", "申领公开演示配对时记录的 Agent id。"),
+        p("tenantId", "string", "Optional tenant hint for the public-demo page-session endpoint.", "公开演示页面会话端点的可选租户提示。"),
+        p("clientKey", "string", "Optional client hint for the public-demo page-session endpoint.", "公开演示页面会话端点的可选客户端提示。"),
+        p("reconnectMs", "number", "Delay before reconnecting the page WebSocket.", "页面 WebSocket 重连延迟。", { defaultValue: "1500" }),
+        p("webSocket", "SurfaceWebSocketFactory", "WebSocket implementation injection for tests or non-browser hosts.", "供测试或非浏览器宿主注入的 WebSocket 实现。"),
+        p("surface", "Partial<CreatePlingSurfaceOptions>", "Extra Surface options such as recordLimit, rateLimit, replay, audit, or custom settle.", "额外的 Surface 选项，例如 `recordLimit`、`rateLimit`、`replay`、审计或自定义落定等待。"),
+      ],
+    },
+    examples: {
+      vue3: [
+        ex("Public demo with an explicit allowlist", "公开演示：显式能力清单", `const gateway = useSurfaceGateway({\n  app: "orders",\n  expose: ["orders.overview", "orders.update_note"],\n  mode: "public-demo",\n  gatewayUrl: "https://surface.example.com",\n  approval,\n});\n\nconst surface = computed(() => gateway.surface.value);`),
+        ex("Production BFF session", "生产 BFF 会话", `const gateway = useSurfaceGateway({\n  app: "orders",\n  expose: ["orders.overview", "orders.update_note"],\n  mode: "bff",\n  getPageSession: async () => {\n    const response = await fetch("/api/surface/page-session", { method: "POST" });\n    if (!response.ok) throw new Error("Surface session unavailable");\n    return response.json();\n  },\n  approval,\n});`),
+      ],
+    },
+  },
+
+  SurfaceAccessPanel: {
+    parameters: {
+      vue3: [
+        p("gateway", "SurfaceGatewayController", "Controller returned by useSurfaceGateway. The component renders its state but never creates capabilities or tokens by itself.", "`useSurfaceGateway` 返回的控制器。组件只渲染其状态，不会自行创建能力或 token。", { required: true }),
+        p("title", "string", "Panel title. Defaults to the localized External Agent label.", "面板标题。默认使用当前语言的“外部 Agent”文案。"),
+      ],
+    },
+    examples: {
+      vue3: [ex("Render the optional access panel", "渲染可选的访问面板", `<SurfaceAccessPanel :gateway="gateway" title="外部 Agent" />`)],
+    },
+  },
+
   createPlingUi: {
     parameters: {
       vue3: [

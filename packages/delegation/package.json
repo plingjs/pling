@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/delegation",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 委托凭证集成包：稳定契约、内存适配器、SurfaceSession 映射、浏览器客户端与 Web HTTP/SSE handler",
+  "description": "Optional delegation credential contracts and web-standard handlers for Pling.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

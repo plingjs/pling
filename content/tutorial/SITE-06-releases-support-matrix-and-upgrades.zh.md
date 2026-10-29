@@ -15,22 +15,23 @@ Pling 的软件包使用语义化版本，Surface 能力协议使用独立版本
 
 ## 当前发布线
 
-当前所有公开包处于 `0.1.0-alpha.2`。这是 alpha 线：API 可能变化，只为最新发布的 alpha 提供安全修复。包已发布或示例能运行，不代表已经适合生产。
+当前所有公开包处于 `0.1.0-alpha.3`。这是 alpha 线：API 可能变化，只为最新发布的 alpha 提供安全修复。包已发布或示例能运行，不代表已经适合生产。
 
 | 包 | 职责 | 当前版本线 |
 | --- | --- | --- |
-| `@plingjs/core` | 注册表、执行、策略与结果原语 | `0.1.0-alpha.2` |
-| `@plingjs/dom` | DOM 定位、投影、滚动与浏览器原语 | `0.1.0-alpha.2` |
-| `@plingjs/agent` | 循环、上下文、工具与连续性契约 | `0.1.0-alpha.2` |
-| `@plingjs/surface` | Agent Surface 投影与 `describe` / `invoke` | `0.1.0-alpha.2` |
-| `@plingjs/delegation` | 可选委托凭证生命周期 | `0.1.0-alpha.2` |
-| `@plingjs/continuity-http` | 可选远程连续性 HTTP 集成 | `0.1.0-alpha.2` |
-| `@plingjs/server` | OpenAI 兼容模型网关 | `0.1.0-alpha.2` |
-| `@plingjs/ui` | 适配器共享的界面组件与样式 | `0.1.0-alpha.2` |
-| `@plingjs/vue` | Vue 3 适配器 | `0.1.0-alpha.2` |
-| `@plingjs/react` | React 适配器 | `0.1.0-alpha.2` |
-| `@plingjs/vanilla` | 无框架 DOM 适配器 | `0.1.0-alpha.2` |
-| `@plingjs/vue2` | Vue 2.7 适配器 | `0.1.0-alpha.2` |
+| `@plingjs/core` | 注册表、执行、策略与结果原语 | `0.1.0-alpha.3` |
+| `@plingjs/dom` | DOM 定位、投影、滚动与浏览器原语 | `0.1.0-alpha.3` |
+| `@plingjs/agent` | 循环、上下文、工具与连续性契约 | `0.1.0-alpha.3` |
+| `@plingjs/surface` | Agent Surface 投影与 `describe` / `invoke` | `0.1.0-alpha.3` |
+| `@plingjs/surface-browser` | 页面侧 Surface 会话、WebSocket、桥接与重连 | `0.1.0-alpha.3` |
+| `@plingjs/delegation` | 可选委托凭证生命周期 | `0.1.0-alpha.3` |
+| `@plingjs/continuity-http` | 可选远程连续性 HTTP 集成 | `0.1.0-alpha.3` |
+| `@plingjs/server` | OpenAI 兼容模型网关 | `0.1.0-alpha.3` |
+| `@plingjs/ui` | 适配器共享的界面组件与样式 | `0.1.0-alpha.3` |
+| `@plingjs/vue` | Vue 3 适配器 | `0.1.0-alpha.3` |
+| `@plingjs/react` | React 适配器 | `0.1.0-alpha.3` |
+| `@plingjs/vanilla` | 无框架 DOM 适配器 | `0.1.0-alpha.3` |
+| `@plingjs/vue2` | Vue 2.7 适配器 | `0.1.0-alpha.3` |
 
 本站记录的协议是 `pling.surface/0.1`，仍为公开草案。`0.1` 只定义 `describe` 与 `invoke`，不承诺 `attach`、`observe`、`handoff`、`detach` 或强制传输。
 

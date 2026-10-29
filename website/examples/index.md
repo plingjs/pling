@@ -39,6 +39,6 @@ pnpm dev:examples
 2. **Switch to Integration.** Follow the short sequence from configuration to the final assistant entry.
 3. **Inspect the source.** Highlighted lines mark imports, runtime setup, declarations, and assistant entry points.
 
-Each example has its own page, live application, full source, and integration notes. Example 05 also includes a local MCP bridge for Codex, Claude, and other agents that accept stdio MCP servers.
+Each example has its own page, live application, full source, and integration notes. Example 05 connects the same Todo capabilities to a hosted Surface Gateway, so Codex, Claude, and other MCP clients can operate the live page with a short-lived access token. The page prepares a complete command for the user to copy; the source also keeps a loopback bridge for local development.
 
 If you are ready to modify your own application, continue to the [Vue quick start](/vue/quick-start-add-pling-to-a-vue-app) or the [React quick start](/react/quick-start-add-pling-to-a-react-app).

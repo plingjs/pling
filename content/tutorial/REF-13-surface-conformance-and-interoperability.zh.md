@@ -140,7 +140,7 @@ MCP 客户端应看到每项投影能力对应一个工具，schema 来自 `desc
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/surface` `0.1.0-alpha.2` |
+| 适用版本 | `@plingjs/surface` `0.1.0-alpha.3` |
 | 协议 | `pling.surface/0.1`（Draft） |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；Node 侧使用需 Node.js 20 或更高版本 |

@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/react",
-  "version": "0.1.0-alpha.2",
+  "version": "0.1.0-alpha.3",
   "private": false,
   "type": "module",
-  "description": "Pling 的 React 适配器：动作 / 记录 / 区域 / 只读状态 / 悬浮问答入口",
+  "description": "React provider, hooks, and assistant UI for Pling.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

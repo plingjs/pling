@@ -12,13 +12,13 @@ Choose the framework you are integrating. Each page contains only that framework
 
 The parameter tables are the main contract here. Look up a field's type, required status, default, and applicable scenario on the current framework page; follow the linked reference only when you need field-level semantics or error codes.
 
-There are **5** API pages covering **8** capability groups; the current version is `0.1.0-alpha.2` with **preview** stability.
+There are **5** API pages covering **9** capability groups; the current version is `0.1.0-alpha.3` with **preview** stability.
 
 ## Choose by framework
 
 | Framework | Package | Entries | Page |
 | --- | --- | --- | --- |
-| **Vue 3 API** | `@plingjs/vue` | 41 | [Open](/reference/api/vue-3) |
+| **Vue 3 API** | `@plingjs/vue` | 43 | [Open](/reference/api/vue-3) |
 | **React API** | `@plingjs/react` | 39 | [Open](/reference/api/react) |
 | **Vue 2.7 API** | `@plingjs/vue2` | 25 | [Open](/reference/api/vue-2) |
 | **Vanilla JS API** | `@plingjs/vanilla` | 27 | [Open](/reference/api/vanilla) |
@@ -33,10 +33,10 @@ Runtime, page continuity, testing, and diagnostic APIs share one implementation:
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.2` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.2` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.2` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.2` | — |
+| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
+| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
 
 | Item | Value |
 | --- | --- |

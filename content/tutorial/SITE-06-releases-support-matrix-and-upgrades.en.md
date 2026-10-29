@@ -15,22 +15,23 @@ An upgrade starts by separating those two version lines and then deciding what h
 
 ## Current release line
 
-All public packages are at `0.1.0-alpha.2`. This is an alpha line: APIs may change, and security fixes are provided only for the latest published alpha. A package being published or a demo running does not mean it is production-ready.
+All public packages are at `0.1.0-alpha.3`. This is an alpha line: APIs may change, and security fixes are provided only for the latest published alpha. A package being published or a demo running does not mean it is production-ready.
 
 | Package | Responsibility | Current line |
 | --- | --- | --- |
-| `@plingjs/core` | Registry, execution, policy, and result primitives | `0.1.0-alpha.2` |
-| `@plingjs/dom` | DOM targeting, projection, scrolling, and browser primitives | `0.1.0-alpha.2` |
-| `@plingjs/agent` | Loop, context, tools, and continuity contracts | `0.1.0-alpha.2` |
-| `@plingjs/surface` | Agent Surface projection and `describe` / `invoke` | `0.1.0-alpha.2` |
-| `@plingjs/delegation` | Optional delegation credential lifecycle | `0.1.0-alpha.2` |
-| `@plingjs/continuity-http` | Optional remote continuity over HTTP | `0.1.0-alpha.2` |
-| `@plingjs/server` | OpenAI-compatible model gateway | `0.1.0-alpha.2` |
-| `@plingjs/ui` | Shared interface components and styles for adapters | `0.1.0-alpha.2` |
-| `@plingjs/vue` | Vue 3 adapter | `0.1.0-alpha.2` |
-| `@plingjs/react` | React adapter | `0.1.0-alpha.2` |
-| `@plingjs/vanilla` | Framework-free DOM adapter | `0.1.0-alpha.2` |
-| `@plingjs/vue2` | Vue 2.7 adapter | `0.1.0-alpha.2` |
+| `@plingjs/core` | Registry, execution, policy, and result primitives | `0.1.0-alpha.3` |
+| `@plingjs/dom` | DOM targeting, projection, scrolling, and browser primitives | `0.1.0-alpha.3` |
+| `@plingjs/agent` | Loop, context, tools, and continuity contracts | `0.1.0-alpha.3` |
+| `@plingjs/surface` | Agent Surface projection and `describe` / `invoke` | `0.1.0-alpha.3` |
+| `@plingjs/surface-browser` | Page-side Surface sessions, WebSocket transport, bridge, and reconnect lifecycle | `0.1.0-alpha.3` |
+| `@plingjs/delegation` | Optional delegation credential lifecycle | `0.1.0-alpha.3` |
+| `@plingjs/continuity-http` | Optional remote continuity over HTTP | `0.1.0-alpha.3` |
+| `@plingjs/server` | OpenAI-compatible model gateway | `0.1.0-alpha.3` |
+| `@plingjs/ui` | Shared interface components and styles for adapters | `0.1.0-alpha.3` |
+| `@plingjs/vue` | Vue 3 adapter | `0.1.0-alpha.3` |
+| `@plingjs/react` | React adapter | `0.1.0-alpha.3` |
+| `@plingjs/vanilla` | Framework-free DOM adapter | `0.1.0-alpha.3` |
+| `@plingjs/vue2` | Vue 2.7 adapter | `0.1.0-alpha.3` |
 
 The protocol documented here is `pling.surface/0.1`, still a public draft. Version 0.1 defines only `describe` and `invoke`. It does not promise `attach`, `observe`, `handoff`, `detach`, or a mandatory transport.
 
