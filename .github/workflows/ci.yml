@@ -20,9 +20,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm release:check
+      - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm build
       - run: pnpm pack:check
       - run: pnpm tutorial:check v3-03
       - run: pnpm tutorial:check v3-04
