@@ -25,7 +25,7 @@
   ],
   "vars": {
     "PLING_ALLOWED_ORIGINS": "https://plingjs.dev,https://www.plingjs.dev",
-    "PLING_PUBLIC_ACCESS": "false"
+    "PLING_PUBLIC_ACCESS": "true"
   },
   "observability": {
     "enabled": true

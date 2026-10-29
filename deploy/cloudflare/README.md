@@ -52,11 +52,11 @@ pnpm exec wrangler login
 ## Publish phase one
 
 The first deployment creates the Worker and attaches the two custom domains.
-Public access is closed by default: every page and API request returns `503`
-until `PLING_PUBLIC_ACCESS` is changed to `"true"` and the Worker is deployed
-again. This keeps an unfinished documentation site and demo from being indexed
-or shared. `workers.dev` and preview URLs are disabled so the Worker is
-reachable only through the two production domains.
+The production configuration publishes the documentation and demos. To stage a
+closed deployment, set `PLING_PUBLIC_ACCESS` to `"false"` before deploying;
+every page request will then return `503` while the health endpoint remains
+available for diagnosis. `workers.dev` and preview URLs are disabled so the
+Worker is reachable only through the two production domains.
 
 ```bash
 pnpm cloudflare:deploy
@@ -85,9 +85,8 @@ The health endpoint should return `{"ok":true,...,"configured":true}`. The
 browser at `https://plingjs.dev/demos/quickstart/` and
 `https://plingjs.dev/demos/orders/`.
 
-Before those checks, set `PLING_PUBLIC_ACCESS` to `"true"` in
-`wrangler.jsonc`, deploy again, and verify the result. Do this only after the
-documentation and demos are ready for public use.
+Before restoring public access, set `PLING_PUBLIC_ACCESS` to `"true"` in
+`wrangler.jsonc`, deploy, and repeat the checks above.
 
 ## Local runtime
 
