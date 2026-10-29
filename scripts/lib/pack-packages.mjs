@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdir, readFile, readdir } from "node:fs/promises";
+import { mkdir, readFile, readdir, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 export const ALL_PACKAGES = [
@@ -35,6 +35,7 @@ async function packPackage({ root, temp, name }) {
   const directory = join(root, "packages", name.slice("@plingjs/".length));
   const source = JSON.parse(await readFile(join(directory, "package.json"), "utf8"));
   const destination = join(temp, `tar-${name.slice("@plingjs/".length)}`);
+  await rm(destination, { recursive: true, force: true });
   await mkdir(destination, { recursive: true });
 
   // Run from the package root, exactly like `pnpm publish`. pnpm reads
@@ -43,8 +44,9 @@ async function packPackage({ root, temp, name }) {
   run("pnpm", ["build"], { cwd: directory });
   run("pnpm", ["pack", "--pack-destination", destination], { cwd: directory });
 
-  const file = (await readdir(destination)).find((entry) => entry.endsWith(".tgz"));
-  if (!file) throw new Error(`${name} 没有生成 tarball`);
+  const archives = (await readdir(destination)).filter((entry) => entry.endsWith(".tgz"));
+  if (archives.length !== 1) throw new Error(`${name} 期望生成 1 个 tarball，实际为 ${archives.length} 个`);
+  const file = archives[0];
   const tarball = join(destination, file);
 
   const contents = run("tar", ["-tzf", tarball]);
