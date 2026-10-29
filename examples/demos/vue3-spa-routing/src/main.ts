@@ -1,6 +1,7 @@
 import { createApp } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 import { createPling } from "@plingjs/vue";
+import "@plingjs/vue/style.css";
 import App from "./App.vue";
 import { copyFor, resolveDemoLocale } from "./copy";
 import { routes } from "./router";

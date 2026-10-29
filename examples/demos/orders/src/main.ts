@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import { createPling } from "@plingjs/vue";
+import "@plingjs/vue/style.css";
 import OrderWorkspace from "./OrderWorkspace.vue";
 import { quickTasks, resolveDemoLocale } from "./copy";
 import "./styles.css";

@@ -163,6 +163,13 @@ for (const name of names) {
 
   const source = [...sources.values()].join("\n");
   if (!source.includes("@plingjs/")) fail(manifestPath, "example must import at least one @plingjs package");
+  const mainEntry = join(sourceDir, "src", "main.ts");
+  if (existsSync(mainEntry) && readFileSync(mainEntry, "utf8").includes('from "@plingjs/vue"')) {
+    const entrySource = readFileSync(mainEntry, "utf8");
+    if (!entrySource.includes('import "@plingjs/vue/style.css"')) {
+      fail(mainEntry, "Vue examples must import @plingjs/vue/style.css");
+    }
+  }
   if (!/(?:<AgentDock\b|<AgentInline\b|<PlingProvider\b|AgentDock\s*\(|\bpling\.dock\s*\()/.test(source)) {
     fail(manifestPath, "example must mount an assistant entry");
   }
