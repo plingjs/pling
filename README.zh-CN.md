@@ -74,7 +74,7 @@ examples/   公开示例，包括带登录的 Todo Surface 应用
 content/    双语教程源稿与目录契约
 website/    VitePress 文档站
 services/   可独立运行的参考服务
-deploy/     Cloudflare、Docker 与主机部署参考
+deploy/     通用 Docker、Caddy 与自托管参考
 skills/     可复用的 Agent 接入指南
 scripts/    仓库与发布检查
 ```

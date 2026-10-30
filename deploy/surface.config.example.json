@@ -3,11 +3,11 @@
     {
       "id": "demo",
       "displayName": "Pling Todo Demo",
-      "origins": ["https://todo.plingjs.dev", "https://plingjs.dev"],
+      "origins": ["https://todo.example.com", "https://example.com"],
       "maxPageSessionTtlMs": 86400000,
       "maxAgentSessionTtlMs": 86400000,
       "publicDemo": {
-        "origins": ["https://plingjs.dev"],
+        "origins": ["https://example.com"],
         "scope": [
           "todo.overview",
           "todo.add",

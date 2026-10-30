@@ -1,12 +1,12 @@
 {
-	email {$ACME_EMAIL:admin@plingjs.dev}
+	email {$ACME_EMAIL:admin@example.com}
 }
 
-www.plingjs.dev {
-	redir https://plingjs.dev{uri} permanent
+{$PLING_WWW_HOST:www.example.com} {
+	redir https://{$PLING_DOCS_HOST:example.com}{uri} permanent
 }
 
-plingjs.dev {
+{$PLING_DOCS_HOST:example.com} {
 	handle_path /api/agent/* {
 		reverse_proxy api:5192
 	}
@@ -17,7 +17,7 @@ plingjs.dev {
 	file_server
 }
 
-demo.plingjs.dev {
+{$PLING_DEMO_HOST:demo.example.com} {
 	@root path /
 	redir @root /demos/quickstart/ 302
 
@@ -31,7 +31,7 @@ demo.plingjs.dev {
 	file_server
 }
 
-api.plingjs.dev {
+{$PLING_API_HOST:api.example.com} {
 	@api path /v1/* /health
 	handle @api {
 		reverse_proxy api:5192
@@ -39,11 +39,11 @@ api.plingjs.dev {
 	respond 404
 }
 
-surface.plingjs.dev {
+{$PLING_SURFACE_HOST:surface.example.com} {
 	reverse_proxy surface:5219
 }
 
-todo.plingjs.dev {
+{$PLING_TODO_HOST:todo.example.com} {
 	encode zstd gzip
 	reverse_proxy todo:5221
 }

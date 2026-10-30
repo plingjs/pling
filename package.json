@@ -35,12 +35,6 @@
     "surface:start": "pnpm --filter @plingjs/surface-gateway start",
     "surface:test": "pnpm --filter @plingjs/surface-gateway test",
     "surface:mcp": "pnpm --filter @plingjs/examples surface:mcp",
-    "surface:smoke": "pnpm --filter @plingjs/examples surface:smoke",
-    "cloudflare:dev": "pnpm --filter @plingjs/website build && wrangler dev --config deploy/cloudflare/wrangler.jsonc",
-    "cloudflare:deploy": "pnpm --filter @plingjs/website build && wrangler deploy --config deploy/cloudflare/wrangler.jsonc",
-    "cloudflare:check": "pnpm --filter @plingjs/website build && wrangler deploy --dry-run --config deploy/cloudflare/wrangler.jsonc"
-  },
-  "devDependencies": {
-    "wrangler": "^4.152.0"
+    "surface:smoke": "pnpm --filter @plingjs/examples surface:smoke"
   }
 }

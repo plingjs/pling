@@ -133,7 +133,7 @@ for (const a of groups("archive")) {
 // 4. 根目录只允许约定的顶层条目
 const ALLOWED_TOP = new Set([
   "packages", "cases", "examples", "archive", "docs", "opensource", "scripts", "website",
-  "content", "deploy", "services", "skills",
+  "content", "deploy", "ops", "services", "skills",
   "node_modules", ".gitignore", ".codex", "README.md", "README.en.md", "README.zh-CN.md", "AGENTS.md", "LICENSE", "NOTICE",
   "CHANGELOG.md", "CONTRIBUTING.md", "SECURITY.md", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml",
   "logo-dark.jpg", "logo-light.png",

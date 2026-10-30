@@ -15,8 +15,8 @@ dist
 deploy/release/
 deploy/.env
 deploy/surface.config.json
-deploy/cloudflare/.dev.vars
-deploy/cloudflare/.wrangler/
+**/.dev.vars
+**/.wrangler/
 
 # 只读的第三方参考基线（lesson13 / qwen-code 等），不是我们的代码，
 # 也不该出现在开源仓库里 —— 留着本地看，不进版本库。

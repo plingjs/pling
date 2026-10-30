@@ -85,7 +85,7 @@ examples/   public examples, including the authenticated Todo Surface app
 content/    bilingual tutorial sources and the locked outline
 website/    VitePress documentation site
 services/   independently runnable reference services
-deploy/     Cloudflare, Docker, and host deployment references
+deploy/     Generic Docker, Caddy, and self-hosting reference
 skills/     reusable agent integration guides
 scripts/    repository and release checks
 ```

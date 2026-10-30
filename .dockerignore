@@ -12,9 +12,11 @@ dist
 .codex
 .tmp
 .public-export
+ops
 deploy/release
 deploy/.env
 deploy/surface.config.json
+**/.wrangler
 docs
 archive
 opensource

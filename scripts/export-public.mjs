@@ -48,7 +48,7 @@ const allow = [
 ];
 if (withCases) allow.push("cases");
 
-const skipNames = new Set(["node_modules", "dist", ".data", ".codex", ".llm", ".DS_Store"]);
+const skipNames = new Set(["node_modules", "dist", ".data", ".codex", ".llm", ".wrangler", ".DS_Store"]);
 
 function filter(source) {
   const normalized = source.replaceAll("\\", "/");
@@ -82,6 +82,13 @@ publicPackage.scripts.dev = "pnpm dev:docs";
 delete publicPackage.scripts["export:public"];
 delete publicPackage.scripts["dev:mcp-reference"];
 delete publicPackage.scripts["mcp:reference"];
+delete publicPackage.scripts["cloudflare:dev"];
+delete publicPackage.scripts["cloudflare:deploy"];
+delete publicPackage.scripts["cloudflare:check"];
+if (publicPackage.devDependencies) {
+  delete publicPackage.devDependencies.wrangler;
+  if (Object.keys(publicPackage.devDependencies).length === 0) delete publicPackage.devDependencies;
+}
 await writeFile(join(target, "package.json"), `${JSON.stringify(publicPackage, null, 2)}\n`, { mode: 0o644 });
 await chmod(join(target, "package.json"), 0o644);
 
@@ -121,6 +128,17 @@ const requiredFiles = [
   "examples/package.json",
 ];
 const missing = requiredFiles.filter((file) => !existsSync(join(target, file)));
+
+const privateDeployPaths = [
+  "deploy/cloudflare",
+  "deploy/nginx",
+  "deploy/start-host.sh",
+  "deploy/build-image.sh",
+];
+const leakedPrivate = privateDeployPaths.filter((entry) => existsSync(join(target, entry)));
+if (leakedPrivate.length) {
+  throw new Error(`私有运维文件被错误导出：${leakedPrivate.join(", ")}`);
+}
 
 // A manifest is a promise to readers that every listed source file is present.
 // Check the exported copy as well, so a partial or concurrent export cannot get

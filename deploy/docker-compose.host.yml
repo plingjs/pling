@@ -2,7 +2,7 @@ version: "3.4"
 
 services:
   api:
-    image: ${PLING_IMAGE:-plingjs:amd64}
+    image: ${PLING_IMAGE:-plingjs:runtime}
     command: ["node", "examples/gateway.mjs"]
     environment:
       PLING_UPSTREAM_BASE_URL: ${PLING_UPSTREAM_BASE_URL:?set PLING_UPSTREAM_BASE_URL in deploy/.env}
@@ -19,12 +19,12 @@ services:
     restart: unless-stopped
 
   surface:
-    image: ${PLING_IMAGE:-plingjs:amd64}
+    image: ${PLING_IMAGE:-plingjs:runtime}
     command: ["node", "services/surface-gateway/src/index.mjs"]
     environment:
       SURFACE_CONFIG: /etc/pling/surface.json
       SURFACE_ADMIN_TOKEN: ${SURFACE_ADMIN_TOKEN:?set SURFACE_ADMIN_TOKEN in deploy/.env}
-      SURFACE_PUBLIC_BASE_URL: ${SURFACE_PUBLIC_BASE_URL:-https://surface.plingjs.dev}
+      SURFACE_PUBLIC_BASE_URL: ${SURFACE_PUBLIC_BASE_URL:-https://surface.example.com}
       SURFACE_HOST: 0.0.0.0
       SURFACE_PORT: "5219"
     volumes:
@@ -34,7 +34,7 @@ services:
     restart: unless-stopped
 
   todo:
-    image: ${PLING_IMAGE:-plingjs:amd64}
+    image: ${PLING_IMAGE:-plingjs:runtime}
     command: ["node", "examples/apps/todo-surface-auth/server/index.mjs"]
     depends_on:
       - surface
@@ -43,7 +43,7 @@ services:
       TODO_BFF_HOST: 0.0.0.0
       TODO_BFF_PORT: "5221"
       TODO_DIST: /app/examples/apps/todo-surface-auth/dist
-      TODO_ALLOWED_ORIGINS: ${TODO_ALLOWED_ORIGINS:-https://todo.plingjs.dev}
+      TODO_ALLOWED_ORIGINS: ${TODO_ALLOWED_ORIGINS:-https://todo.example.com}
       SURFACE_GATEWAY_URL: http://surface:5219
       SURFACE_ADMIN_TOKEN: ${SURFACE_ADMIN_TOKEN:?set SURFACE_ADMIN_TOKEN in deploy/.env}
       SURFACE_TENANT_ID: ${SURFACE_TENANT_ID:-demo}
