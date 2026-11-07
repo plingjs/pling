@@ -30,17 +30,18 @@ read by the browser.
 1. The page opens with the existing **Create a course** form and an active task.
 2. The user can describe the whole course at once, for example
    `孕妇瑜伽，陈老师，2 星，介绍自动填写` (or the English equivalent in `lang=en`).
-   The page parses the sentence, writes every recognised value into the original
-   Vue controls, and replies with what was filled.
+   The model reads the active task's objective, constraints, current values,
+   recommendations and gaps, then calls `pling_update_task` with only the fields
+   the person actually supplied. The page writes those values into the original
+   Vue controls.
 3. It then asks only for actual gaps. In the example sentence, eligible cards are
    the only required value left; optional price and booking notes are not turned
    into extra questions.
-4. Explicit field values are handled by the page's deterministic fast path.
-   Questions, help requests, vague corrections, and delegated choices such as
-   `卡片你来选` go to the model. The model reads the active task's goal,
-   constraints, and current working memory, then either answers or calls
-   `pling_update_task` for only the field being discussed. An unknown teacher
-   produces a list of choices instead of a silent substitution.
+4. Questions, help requests, corrections, pauses and delegated choices such as
+   `卡片你来选` remain normal conversation. The same model may answer without
+   touching a field, update one field, call `search_teachers`, point at a field
+   with `pling_focus_field`, or leave the task untouched. No natural-language
+   intent parser or `beforeSend` shortcut runs ahead of it.
 5. A cover is the deliberate human handoff. **Upload cover** locates the field
    and opens the file picker; the assistant does not choose a local file for the
    person.
@@ -50,11 +51,22 @@ read by the browser.
 7. The result card offers **View new course** and **Create another**.
 
 The chat card has no `input`, `textarea`, or `select`. That is an intentional
-contract, not a styling detail. The deterministic intake runs through
-`:before-send="handleBeforeSend"`. It handles only explicit values and explicit
-commands; `shouldUseAgent()` sends questions, help, vague corrections, and
-delegated choices to the model. A question is never written into the course
-name while the page is waiting for that field.
+contract, not a styling detail, and it is also why the business page does not
+need a second intent grammar. The model reads the same task context that the UI
+renders and proposes values through a narrow action; the page validates those
+values before writing them into the real controls.
+
+The guide exposes three page-owned controls to the model:
+
+- `pling_review_task` opens the read-only review command.
+- `pling_propose_save` opens the same review as a confirmation step. It never
+  executes `create_course`; the person still presses **Confirm save**.
+- `pling_cancel_task` closes the guide without undoing values already written.
+
+`pling_focus_field` is available for every declared field and only moves the
+person's attention. If a guide does not declare a review or save-confirmation
+command, the corresponding tool is reported unavailable rather than invoking a
+no-op.
 
 ## When does the task appear?
 
@@ -93,6 +105,11 @@ a choice; `agentWritable: false` marks page-owned actions such as the cover
 upload. The model may answer a question without changing any field, or update a
 single field that the user delegated while other required fields are still
 empty.
+
+Fields also carry value-level validation: numeric bounds, text length, allowed
+values, patterns, and an optional business `validate` callback run before a
+model value reaches the task snapshot. This is deliberately value validation,
+not intent classification.
 
 Both paths run through `<AgentInline>`, but this demo sets
 `task-placement="none"`. The conversation and the original form already have
@@ -159,7 +176,9 @@ writing the suggested value into the real Vue control and for focusing it.
 4. Handle emitted command names in the page. Commands may write values into
    existing controls, focus a field, open a dialog, or invoke the task
    controller. They must not create a second copy of the business form.
-5. Read the result back from the page's normal data source before showing
+5. Declare the safe model-callable commands in `guide.agent` (`review`,
+   `proposeSave`, and `cancel`). These are UI commands, not business writes.
+6. Read the result back from the page's normal data source before showing
    success.
 
 ## Where each piece lives
@@ -174,8 +193,9 @@ writing the suggested value into the real Vue control and for focusing it.
   presentation definition.
 - `examples/shared/course-create/model.ts` contains the course rules and mock
   catalogue.
-- `examples/shared/course-create/intake.ts` parses a whole course description,
-  applies corrections, and composes the local assistant reply.
+- `examples/shared/course-create/legacy-intake.ts` is retained only as a
+  historical reference for the earlier deterministic demo; the live example
+  does not import it.
 - `examples/shared/course-create/page.ts` and `copy.ts` contain business copy.
 - `packages/agent/src/task-catalog.ts` decides which tasks are available for
   the current route/scope and exposes the narrow `pling_start_task` and

@@ -2,9 +2,10 @@
 
 This is a real React 16.3 course back office for applications that cannot use Hooks. It
 uses `@plingjs/react/legacy`, class components, render props, and the shared DOM
-task card. The five tasks, duplicate-name lookup, conflict failure, and
-activity evidence are the same as in the Hooks version. The card is rendered in
-the assistant conversation, and the dock occupies a fused sidebar column.
+task view. The five tasks, agent-first course flow, duplicate-name lookup,
+conflict failure, and activity evidence are the same as in the Hooks version.
+The guide is rendered in the assistant conversation, and the dock occupies a
+fused sidebar column.
 
 ## Run
 
@@ -18,8 +19,11 @@ Open `http://127.0.0.1:5191/demos/course-workspace-react16/?lang=zh`.
 
 ## What to try
 
-1. Choose **New course**, enter a course name, pick a teacher, and run the task.
-   The new course should appear at the front of the catalogue.
+1. The create-course form opens on entry. Say
+   `孕妇瑜伽，陈老师，2 星，介绍自动填写，用月卡`. The model writes the values
+   it understood through `pling_update_task`; the page validates them and puts
+   them into the original form. Upload a cover, review, and confirm; the new
+   course appears first in the catalogue.
 2. Search `李娜` and distinguish the two records by masked phone.
 3. Add a teacher, then schedule a lesson with that teacher.
 4. Choose **Add note** on a schedule row and confirm that the note is saved to
@@ -27,6 +31,21 @@ Open `http://127.0.0.1:5191/demos/course-workspace-react16/?lang=zh`.
 5. Try the conflicting Zhou Min slot and confirm that the write step is not
    executed.
 6. Open Activity and Debug in the legacy assistant dock.
+
+## Agent-first, not a script
+
+React 16.3 changes the mounting API, not the task contract. The model reads the
+active task's goal, constraints, fields, values, and gaps, then calls
+`pling_update_task` with only what the person supplied. The page does not run a
+natural-language parser; a question, a correction, or a side request stays in the
+conversation.
+
+`TaskField` bounds and `validate` run before a value reaches the form. The cover
+is page-owned (`agentWritable: false`), so the assistant locates the upload
+control instead of inventing a file. `pling_focus_field` only highlights,
+`pling_review_task` opens a read-only review, `pling_propose_save` opens
+confirmation without writing, and `pling_cancel_task` ends the guide. The page
+re-reads the form and checks the catalogue after the real `create_course` call.
 
 ## How the pieces fit
 

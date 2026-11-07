@@ -239,7 +239,7 @@ export function createCourseForm(options: CourseFormOptions): CourseFormControll
           <div class="form-grid template-grid">
             <label class="field" data-field="deduct">
               <span class="field-label">${text.deduct} <span class="help-dot">?</span></span>
-              <span class="number-shell"><input data-input="deduct" value="1.0" /><span>${text.deductUnit}</span></span>
+              <span class="number-shell"><input data-input="deduct" value="1" /><span>${text.deductUnit}</span></span>
             </label>
             <label class="field" data-field="price">
               <span class="field-label">${text.price} <span class="help-dot">?</span></span>
@@ -390,9 +390,10 @@ export function createCourseForm(options: CourseFormOptions): CourseFormControll
     cardsSelect.value = "";
     introInput.value = "";
     noteInput.value = "";
-    deductInput.value = "1.0";
+    deductInput.value = "1";
     priceInput.value = "";
     coverUrl = "";
+    fileInput.value = "";
     uploadTile.classList.remove("is-uploaded");
     coverPreview.style.backgroundImage = "";
     setStar(0);

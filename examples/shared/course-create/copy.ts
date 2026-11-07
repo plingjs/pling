@@ -47,6 +47,7 @@ export interface CourseCreateCopy {
     done: string;
     pending: string;
     error: string;
+    skipped?: string;
   };
   stats: readonly [string, string, string];
   basics: {

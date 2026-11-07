@@ -110,6 +110,7 @@ export function createCourseService(locale: Locale, onChange: () => void, seedCo
   const teachers: Teacher[] = [
     { id: "tea_1", name: locale === "zh" ? "周敏" : "Zhou Min", phone: "138 0013 8801", subject: locale === "zh" ? "瑜伽" : "Yoga" },
     { id: "tea_2", name: locale === "zh" ? "林琳" : "Lin Lin", phone: "139 0011 2048", subject: locale === "zh" ? "普拉提" : "Pilates" },
+    { id: "tea_3", name: locale === "zh" ? "陈静" : "Chen Jing", phone: "137 0016 5520", subject: locale === "zh" ? "孕产瑜伽" : "Prenatal yoga" },
   ];
 
   const lessons: Lesson[] = [

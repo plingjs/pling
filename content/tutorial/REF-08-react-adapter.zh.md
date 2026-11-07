@@ -217,7 +217,7 @@ legacy 入口通过 render-prop 组件提供页面反馈、分步指引和任务
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/react` `0.1.0-alpha.7` |
+| 适用版本 | `@plingjs/react` `0.1.0-alpha.8` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | Hooks 入口要求 React 16.8+，legacy 入口支持 React 16.3+；浏览器需支持 ES2022 模块；SSR 与构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | `react >=16.3` |

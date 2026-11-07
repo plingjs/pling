@@ -12,7 +12,13 @@ import type {
   TaskRunSnapshot,
   TaskValues,
 } from "./task";
-import type { TaskGuideCommand, TaskGuideDefinition, TaskGuideState, GuidedTaskView } from "./task-guide";
+import type {
+  TaskGuideCommand,
+  TaskGuideDefinition,
+  TaskGuideField,
+  TaskGuideState,
+  GuidedTaskView,
+} from "./task-guide";
 import { guidedTaskViewOf } from "./task-guide";
 
 /**
@@ -92,6 +98,14 @@ export interface TaskCatalog {
    * the catalog but only available while a task is active.
    */
   readonly updateActionId: string;
+  /** Model action that points the person at one field in the active guide. */
+  readonly focusActionId: string;
+  /** Model action that opens the active task's read-only review. */
+  readonly reviewActionId: string;
+  /** Model action that opens the confirmation step; it never writes. */
+  readonly proposeSaveActionId: string;
+  /** Model action that pauses or abandons the active task. */
+  readonly cancelActionId: string;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -108,6 +122,10 @@ export interface TaskCatalog {
 
 const DEFAULT_ACTION_ID = "pling_start_task";
 const DEFAULT_UPDATE_ACTION_ID = "pling_update_task";
+const DEFAULT_FOCUS_ACTION_ID = "pling_focus_field";
+const DEFAULT_REVIEW_ACTION_ID = "pling_review_task";
+const DEFAULT_PROPOSE_SAVE_ACTION_ID = "pling_propose_save";
+const DEFAULT_CANCEL_ACTION_ID = "pling_cancel_task";
 
 function normalizedId(registration: GuidedTaskRegistration): string {
   const id = (registration.id ?? registration.definition.id).trim();
@@ -228,14 +246,64 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     registration: GuidedTaskRegistration,
     values: TaskValues | undefined,
   ): TaskValues => {
-    const allowed = new Set(agentWritableFields(registration).map((field) => field.name));
-    for (const key of Object.keys(values ?? {})) {
-      if (!allowed.has(key)) {
+    const fields = new Map(agentWritableFields(registration).map((field) => [field.name, field]));
+    const current = registration.controller?.snapshot()?.values ?? {};
+    for (const [key, value] of Object.entries(values ?? {})) {
+      const field = fields.get(key);
+      if (!field) {
         throw new ActionError(
           "INVALID_ARGS",
           `Field "${key}" cannot be written by the agent for guided task "${normalizedId(registration)}". Complete it in the page instead.`,
         );
       }
+      if (value === undefined || value === null) continue;
+
+      const expected = field.type === "number" ? "number" : field.type === "boolean" ? "boolean" : "string";
+      if (typeof value !== expected || (expected === "number" && !Number.isFinite(value))) {
+        throw new ActionError(
+          "INVALID_ARGS",
+          `${field.label} must be ${expected === "string" ? "text" : `a ${expected}`}. Got ${JSON.stringify(value)}.`,
+        );
+      }
+      if (typeof value === "string" && !value.trim() && !field.optional) {
+        throw new ActionError("INVALID_ARGS", `${field.label} must not be blank.`);
+      }
+      if (field.values?.length && !field.values.some((choice) => choice.value === value)) {
+        throw new ActionError(
+          "INVALID_ARGS",
+          `${field.label} must be one of: ${field.values.map((choice) => `${choice.label} (${choice.value})`).join(", ")}.`,
+        );
+      }
+      if (typeof value === "number") {
+        if (field.min !== undefined && value < field.min) {
+          throw new ActionError("INVALID_ARGS", `${field.label} must be at least ${field.min}.`);
+        }
+        if (field.max !== undefined && value > field.max) {
+          throw new ActionError("INVALID_ARGS", `${field.label} must be at most ${field.max}.`);
+        }
+      }
+      if (typeof value === "string") {
+        const text = value.trim();
+        if (field.minLength !== undefined && text.length < field.minLength) {
+          throw new ActionError("INVALID_ARGS", `${field.label} must be at least ${field.minLength} characters.`);
+        }
+        if (field.maxLength !== undefined && text.length > field.maxLength) {
+          throw new ActionError("INVALID_ARGS", `${field.label} must be at most ${field.maxLength} characters.`);
+        }
+        if (field.pattern) {
+          let pattern: RegExp;
+          try {
+            pattern = new RegExp(field.pattern);
+          } catch {
+            throw new Error(`Task field "${field.name}" has an invalid pattern.`);
+          }
+          if (!pattern.test(text)) {
+            throw new ActionError("INVALID_ARGS", `${field.label} does not match the required format.`);
+          }
+        }
+      }
+      const reason = field.validate?.(value, { ...current, ...values });
+      if (reason) throw new ActionError("INVALID_ARGS", `${field.label}: ${reason}`);
     }
     return values ?? {};
   };
@@ -247,6 +315,72 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     (registration.definition.fields ?? [])
       .filter((field) => !field.optional && !hasTaskValue(values[field.name]))
       .map((field) => field.name);
+
+  const guideFieldsOf = (registration: GuidedTaskRegistration): readonly TaskGuideField[] => {
+    const snapshot = registration.controller?.snapshot() ?? null;
+    const configured = registration.guide?.fields;
+    if (configured) {
+      try {
+        return typeof configured === "function" ? configured(snapshot) : configured;
+      } catch {
+        return [];
+      }
+    }
+    const values = snapshot?.values ?? {};
+    return (registration.definition.fields ?? []).map((field) => ({
+      field: field.name,
+      label: field.label,
+      required: field.optional !== true,
+      filled: hasTaskValue(values[field.name]),
+    }));
+  };
+
+  const guideCommand = (
+    registration: GuidedTaskRegistration,
+    kind: "review" | "proposeSave" | "cancel",
+  ): string => {
+    const guide = registration.guide;
+    const command =
+      kind === "review"
+        ? guide?.agent?.review?.trim()
+        : kind === "proposeSave"
+          ? guide?.agent?.proposeSave?.trim()
+          : guide?.agent?.cancel?.trim() || guide?.cancel?.command?.trim();
+    if (!command) {
+      throw new ActionError(
+        "ACTION_UNAVAILABLE",
+        `This task does not declare a ${kind === "proposeSave" ? "save-confirmation" : kind} guide command.`,
+      );
+    }
+    return command;
+  };
+
+  const focusCommand = (registration: GuidedTaskRegistration, field: TaskGuideField): string =>
+    field.command?.trim() ||
+    registration.guide?.agent?.focusField?.(field)?.trim() ||
+    `focus-${field.field}`;
+
+  const runRegistrationCommand = async (
+    registration: GuidedTaskRegistration,
+    command: string,
+    label = command,
+  ): Promise<boolean> => {
+    if (!registration.onCommand) return false;
+    const guideCommand: TaskGuideCommand = {
+      action: { label, command },
+      step: null,
+      stepIndex: 0,
+      done: false,
+    };
+    try {
+      const result = registration.onCommand(guideCommand, activeTaskOf(registration));
+      if (result && typeof (result as Promise<void>).then === "function") await result;
+      emit();
+      return true;
+    } catch {
+      return false;
+    }
+  };
 
   const start = (registration: GuidedTaskRegistration, values?: TaskValues): void => {
     const controller = registration.controller;
@@ -408,6 +542,11 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
       type,
       description: `${field.label}${optional}.${field.help ? ` ${field.help}` : ""}${choices}${recommended}${lookup}`.trim(),
       ...(field.values?.length ? { enum: field.values.map((choice) => choice.value) } : {}),
+      ...(field.min !== undefined ? { minimum: field.min } : {}),
+      ...(field.max !== undefined ? { maximum: field.max } : {}),
+      ...(field.minLength !== undefined ? { minLength: field.minLength } : {}),
+      ...(field.maxLength !== undefined ? { maxLength: field.maxLength } : {}),
+      ...(field.pattern ? { pattern: field.pattern } : {}),
     };
   };
 
@@ -486,11 +625,134 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     };
   };
 
+  const activeRegistration = (): GuidedTaskRegistration | undefined =>
+    activeId ? registrations.get(activeId) : undefined;
+
+  const activeTaskAvailable = (
+    control: "focus" | "review" | "proposeSave" | "cancel",
+  ): true | {
+    available: false;
+    reason: string;
+    reasonKey: string;
+  } => {
+    const registration = activeRegistration();
+    if (!registration) {
+      return {
+        available: false,
+        reason: "No guided task is active. Start one first if the user's request matches a task.",
+        reasonKey: "availability.noActiveTask",
+      };
+    }
+    const snapshot = registration.controller?.snapshot();
+    if (snapshot && isTerminal(snapshot)) {
+      return {
+        available: false,
+        reason: "The active guided task is already complete.",
+        reasonKey: "availability.taskComplete",
+      };
+    }
+    if (!registration.onCommand) {
+      return {
+        available: false,
+        reason: "This task does not expose an interactive guide command. Use its values or business actions instead.",
+        reasonKey: "availability.noGuideCommand",
+      };
+    }
+    if (control === "focus" && guideFieldsOf(registration).length === 0) {
+      return {
+        available: false,
+        reason: "This task does not expose a field rail to point at.",
+        reasonKey: "availability.noGuideFields",
+      };
+    }
+    const command =
+      control === "review"
+        ? registration.guide?.agent?.review?.trim()
+        : control === "proposeSave"
+          ? registration.guide?.agent?.proposeSave?.trim()
+          : control === "cancel"
+            ? registration.guide?.agent?.cancel?.trim() || registration.guide?.cancel?.command?.trim()
+            : undefined;
+    if (control !== "focus" && !command) {
+      return {
+        available: false,
+        reason: `This task does not declare a ${control === "proposeSave" ? "save-confirmation" : control} guide command.`,
+        reasonKey: "availability.noGuideCommand",
+      };
+    }
+    return true;
+  };
+
+  const taskOnlySchema = (): JsonSchema => {
+    const registration = activeRegistration();
+    const ids = registration ? [normalizedId(registration)] : [];
+    return {
+      type: "object",
+      properties: {
+        task: {
+          type: "string",
+          ...(ids.length ? { enum: ids } : {}),
+          description: "The active guided task. It must match the task currently open in the page.",
+        },
+      },
+      required: ["task"],
+    };
+  };
+
+  const focusSchema = (): JsonSchema => {
+    const registration = activeRegistration();
+    const ids = registration ? [normalizedId(registration)] : [];
+    const fields = registration ? guideFieldsOf(registration).map((field) => field.field) : [];
+    return {
+      type: "object",
+      properties: {
+        task: {
+          type: "string",
+          ...(ids.length ? { enum: ids } : {}),
+          description: "The active guided task. It must match the task currently open in the page.",
+        },
+        field: {
+          type: "string",
+          ...(fields.length ? { enum: fields } : {}),
+          description:
+            "A field node in the active guide. Use the guide field name, not an arbitrary selector. This only points at the field; it does not write a value.",
+        },
+      },
+      required: ["task", "field"],
+    };
+  };
+
+  const requireActiveRegistration = (args: Record<string, unknown>): GuidedTaskRegistration => {
+    const registration = activeRegistration();
+    if (!registration) throw new ActionError("ACTION_UNAVAILABLE", "No guided task is active.");
+    const id = String(args.task ?? "").trim();
+    const activeTaskId = normalizedId(registration);
+    if (!id) throw new ActionError("INVALID_ARGS", `Choose the active task: ${activeTaskId}`);
+    if (id !== activeTaskId) {
+      throw new ActionError("INVALID_ARGS", `The active task is "${activeTaskId}", not "${id}".`);
+    }
+    return registration;
+  };
+
   let offStartAction: (() => void) | null = null;
   let offUpdateAction: (() => void) | null = null;
+  let offFocusAction: (() => void) | null = null;
+  let offReviewAction: (() => void) | null = null;
+  let offProposeSaveAction: (() => void) | null = null;
+  let offCancelAction: (() => void) | null = null;
   let actionId = requestedActionId;
   let updateActionId =
     requestedActionId === DEFAULT_ACTION_ID ? DEFAULT_UPDATE_ACTION_ID : `${requestedActionId}_update`;
+  let focusActionId =
+    requestedActionId === DEFAULT_ACTION_ID ? DEFAULT_FOCUS_ACTION_ID : `${requestedActionId}_focus`;
+  let reviewActionId =
+    requestedActionId === DEFAULT_ACTION_ID ? DEFAULT_REVIEW_ACTION_ID : `${requestedActionId}_review`;
+  let proposeSaveActionId =
+    requestedActionId === DEFAULT_ACTION_ID
+      ? DEFAULT_PROPOSE_SAVE_ACTION_ID
+      : `${requestedActionId}_propose_save`;
+  let cancelActionId =
+    requestedActionId === DEFAULT_ACTION_ID ? DEFAULT_CANCEL_ACTION_ID : `${requestedActionId}_cancel`;
 
   // The action appears only while this catalog has tasks. A page with no guided
   // tasks should not grow an always-unavailable tool, and multiple Pling
@@ -505,6 +767,18 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     let updateSuffix = 2;
     while (options.registry.get(updateCandidate)) updateCandidate = `${updateActionId}_${updateSuffix++}`;
     updateActionId = updateCandidate;
+    const reserved = new Set([actionId, updateActionId]);
+    const claim = (base: string): string => {
+      let next = base;
+      let nextSuffix = 2;
+      while (options.registry!.get(next) || reserved.has(next)) next = `${base}_${nextSuffix++}`;
+      reserved.add(next);
+      return next;
+    };
+    focusActionId = claim(focusActionId);
+    reviewActionId = claim(reviewActionId);
+    proposeSaveActionId = claim(proposeSaveActionId);
+    cancelActionId = claim(cancelActionId);
     offStartAction = options.registry.bind({
       descriptor: {
         id: actionId,
@@ -635,14 +909,192 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
         };
       },
     });
+
+    offFocusAction = options.registry.bind({
+      descriptor: {
+        id: focusActionId,
+        primitive: "call",
+        description:
+          "Point the person at one field in the active guided task. This opens or scrolls the page field into view; it never writes a value.",
+        label: "Focus a task field",
+        summary: "Moves attention to a declared guide field without changing the task or the page value.",
+        kind: "read",
+        confirm: false,
+        fidelity: "high",
+        params: focusSchema(),
+        playbook: [
+          "Use this when the person needs to see or edit a field themselves, or when you are explaining where a value belongs.",
+          "Use only a field listed in the active guide. Never invent a selector or a field name.",
+          "Focusing is not writing. If the person also supplied a value, use the update action separately.",
+        ],
+      },
+      resolveParams: focusSchema,
+      isAvailable: () => activeTaskAvailable("focus"),
+      run: async (args) => {
+        const registration = requireActiveRegistration(args);
+        const id = normalizedId(registration);
+        const fieldName = String(args.field ?? "").trim();
+        const fields = guideFieldsOf(registration);
+        const field = fields.find((candidate) => candidate.field === fieldName);
+        if (!field) {
+          throw new ActionError(
+            "INVALID_ARGS",
+            `Unknown guide field "${fieldName}". Available: ${fields.map((candidate) => candidate.field).join(", ") || "(none)"}`,
+          );
+        }
+        const command = focusCommand(registration, field);
+        const handled = await runRegistrationCommand(registration, command, `Locate ${field.label}`);
+        if (!handled) {
+          throw new ActionError("ACTION_UNAVAILABLE", "This task does not expose a focus command for the guide field.");
+        }
+        const snapshot = registration.controller?.snapshot() ?? null;
+        return {
+          taskId: id,
+          field: field.field,
+          label: field.label,
+          command,
+          handled: true,
+          status: snapshot?.status ?? "active",
+          missingRequiredFields: snapshot ? missingRequiredFields(registration, snapshot.values) : [],
+        };
+      },
+    });
+
+    offReviewAction = options.registry.bind({
+      descriptor: {
+        id: reviewActionId,
+        primitive: "call",
+        description:
+          "Open a read-only review of the active guided task. This does not write or save anything; the person can still edit or confirm.",
+        label: "Review the active task",
+        summary: "Shows the current values and gaps before any write.",
+        kind: "read",
+        confirm: false,
+        fidelity: "high",
+        params: taskOnlySchema(),
+        playbook: [
+          "Use this when the person asks to review, check, or see what is currently filled.",
+          "A review is read-only. Do not claim that anything was saved.",
+          "If required fields are missing, say which ones; do not turn the review into a save.",
+        ],
+      },
+      resolveParams: taskOnlySchema,
+      isAvailable: () => activeTaskAvailable("review"),
+      run: async (args) => {
+        const registration = requireActiveRegistration(args);
+        const id = normalizedId(registration);
+        const command = guideCommand(registration, "review");
+        const handled = await runRegistrationCommand(registration, command, "Review task");
+        if (!handled) {
+          throw new ActionError("ACTION_UNAVAILABLE", "This task does not expose a review command.");
+        }
+        const snapshot = registration.controller?.snapshot() ?? null;
+        return {
+          taskId: id,
+          command,
+          handled: true,
+          reviewed: true,
+          status: snapshot?.status ?? "active",
+          missingRequiredFields: snapshot ? missingRequiredFields(registration, snapshot.values) : [],
+        };
+      },
+    });
+
+    offProposeSaveAction = options.registry.bind({
+      descriptor: {
+        id: proposeSaveActionId,
+        primitive: "call",
+        description:
+          "Open the confirmation step for the active guided task. This never writes: the person must confirm in the page before the business action runs.",
+        label: "Propose saving the active task",
+        summary: "Shows the confirmation UI; the write still needs an explicit human confirmation.",
+        kind: "read",
+        confirm: false,
+        fidelity: "high",
+        params: taskOnlySchema(),
+        playbook: [
+          "Use this only when the person asked to save, submit, finish, or explicitly agreed to proceed.",
+          "Never claim the task was saved. The result only means the confirmation step is open.",
+          "If required fields are missing, ask for them instead of proposing a save.",
+          "If the person says not to save yet, do not call this action; answer and keep the task open.",
+        ],
+      },
+      resolveParams: taskOnlySchema,
+      isAvailable: () => activeTaskAvailable("proposeSave"),
+      run: async (args) => {
+        const registration = requireActiveRegistration(args);
+        const id = normalizedId(registration);
+        const snapshot = registration.controller?.snapshot() ?? null;
+        if (!snapshot) throw new ActionError("ACTION_UNAVAILABLE", `Guided task "${id}" is not running.`);
+        const missing = missingRequiredFields(registration, snapshot.values);
+        if (missing.length) {
+          return {
+            taskId: id,
+            handled: false,
+            awaitingConfirmation: false,
+            missingRequiredFields: missing,
+            reason: "Required fields are still missing. Ask for them before proposing save.",
+          };
+        }
+        const command = guideCommand(registration, "proposeSave");
+        const handled = await runRegistrationCommand(registration, command, "Review before saving");
+        if (!handled) {
+          throw new ActionError("ACTION_UNAVAILABLE", "This task does not expose a save-confirmation command.");
+        }
+        return {
+          taskId: id,
+          command,
+          handled: true,
+          awaitingConfirmation: true,
+          missingRequiredFields: [],
+        };
+      },
+    });
+
+    offCancelAction = options.registry.bind({
+      descriptor: {
+        id: cancelActionId,
+        primitive: "call",
+        description:
+          "Pause or abandon the active guided task. This only closes the task run; it does not undo values already written to the page.",
+        label: "Cancel the active task",
+        summary: "Ends the task guide without running a business write.",
+        kind: "read",
+        confirm: false,
+        fidelity: "high",
+        params: taskOnlySchema(),
+        playbook: [
+          "Use this only when the person asks to cancel, stop, or abandon the task.",
+          "Do not call it just because the person is asking a question or pausing to think.",
+        ],
+      },
+      resolveParams: taskOnlySchema,
+      isAvailable: () => activeTaskAvailable("cancel"),
+      run: async (args) => {
+        const registration = requireActiveRegistration(args);
+        const id = normalizedId(registration);
+        const command = guideCommand(registration, "cancel");
+        const handled = await runRegistrationCommand(registration, command, "Cancel task");
+        if (!handled || activeId === id) api.deactivate();
+        return { taskId: id, command, cancelled: true, handled };
+      },
+    });
   };
 
   const releaseAction = (): void => {
     if (registrations.size > 0) return;
     offStartAction?.();
     offUpdateAction?.();
+    offFocusAction?.();
+    offReviewAction?.();
+    offProposeSaveAction?.();
+    offCancelAction?.();
     offStartAction = null;
     offUpdateAction = null;
+    offFocusAction = null;
+    offReviewAction = null;
+    offProposeSaveAction = null;
+    offCancelAction = null;
   };
 
   const offRegistry = options.registry?.onChange(scheduleRecompute) ?? (() => undefined);
@@ -653,6 +1105,18 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     },
     get updateActionId() {
       return updateActionId;
+    },
+    get focusActionId() {
+      return focusActionId;
+    },
+    get reviewActionId() {
+      return reviewActionId;
+    },
+    get proposeSaveActionId() {
+      return proposeSaveActionId;
+    },
+    get cancelActionId() {
+      return cancelActionId;
     },
     define(registration) {
       if (destroyed) throw new Error("Task catalog has been destroyed");
@@ -752,8 +1216,16 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
       registrations.clear();
       offStartAction?.();
       offUpdateAction?.();
+      offFocusAction?.();
+      offReviewAction?.();
+      offProposeSaveAction?.();
+      offCancelAction?.();
       offStartAction = null;
       offUpdateAction = null;
+      offFocusAction = null;
+      offReviewAction = null;
+      offProposeSaveAction = null;
+      offCancelAction = null;
       offRegistry();
       listeners.clear();
     },

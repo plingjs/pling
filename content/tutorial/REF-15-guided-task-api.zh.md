@@ -110,6 +110,10 @@ panel.open("lesson.note", {}, {
 | `values` | `readonly TaskChoice[]` | 否 | 小型封闭选项集 |
 | `recommended` | `TaskValue` | 否 | 仅在用户明确委托这一项选择时使用的建议值 |
 | `lookup` | `TaskLookup` | 否 | 大集合的异步搜索 |
+| `min` / `max` | `number` | 否 | 数值字段的最小值与最大值；在模型建议值写入任务快照前校验 |
+| `minLength` / `maxLength` | `number` | 否 | 文本长度边界；按去除首尾空白后的字符数计算 |
+| `pattern` | `string` | 否 | 不带分隔符的正则源码；对文本值测试。需要整值匹配时请写锚点，例如 `^[1-9]\d*$` |
+| `validate` | `(value, values) => string \| null \| undefined` | 否 | 业务级校验，在写入前运行。返回可直接展示给用户的拒绝原因；通过时返回空。它只校验值，不得做意图识别或产生副作用 |
 | `searchAction` | `string` | 否 | 为该查找暴露的动作 id；默认 `search_<name>` |
 | `minChars` | `number` | 否 | 最少查询字符数；默认 1，且不会更低 |
 | `agentWritable` | `boolean` | 否 | 上传、验证码等页面专属值设为 `false`；默认 `true` |
@@ -125,8 +129,14 @@ const studentField: TaskField = {
   searchAction: "search_students",
   recommended: "student_li_na",
   lookup: async (query, { signal }) => api.searchStudents(query, { signal }),
+  validate: (value) =>
+    students.some((student) => student.id === value)
+      ? null
+      : "请从搜索结果中选择学员。",
 };
 ```
+
+这些检查在 `pling_update_task` 写入之前执行，页面不需要再维护一套自然语言解析器。一次提交里只要有字段类型不对、越界、长度不符、正则不匹配或 `validate` 返回原因，整次更新都不会落地，避免出现“写了一半”的表单。`validate` 接收的是本次提交后的候选值视图，但它仍然不能绕过字段白名单、`agentWritable`、权限、确认或业务执行器。
 
 ## TaskStep
 
@@ -243,6 +253,17 @@ const catalog = createTaskCatalog({
 Vue 3 通过 `pling.task` 暴露同一份目录，并把任务目录与任务控制器合并成一个对象。因此页面通常直接调用 `pling.task.define()`、`pling.task.active()` 和 `pling.task.command()`。
 
 目录暴露 `actionId` 与 `updateActionId`。前者是当前实际绑定的 `pling_start_task` id，后者是当前实际绑定的 `pling_update_task` id。多个运行时共享一个注册表时，应读取这两个属性，而不是假定默认 id。
+
+当 active 引导声明了页面控制命令时，目录还会暴露 `focusActionId`、`reviewActionId`、`proposeSaveActionId` 与 `cancelActionId`。它们对应四个窄动作，不会形成第二条执行路径：
+
+| 动作 id 属性 | 模型动作 | 作用 | 何时可用 |
+| --- | --- | --- | --- |
+| `focusActionId` | `pling_focus_field` | 把已声明的引导字段滚进视野并高亮，不写值 | active 引导有字段时 |
+| `reviewActionId` | `pling_review_task` | 打开页面自己的只读核对，不保存 | `guide.agent.review` 声明命令时 |
+| `proposeSaveActionId` | `pling_propose_save` | 只打开页面确认面，不执行业务写入 | `guide.agent.proposeSave` 声明命令时 |
+| `cancelActionId` | `pling_cancel_task` | 结束引导，不回滚已经写进页面的值 | `guide.agent.cancel` 或 `guide.cancel` 声明命令时 |
+
+未声明对应命令时，模型不会看到该工具；调用时返回 `ACTION_UNAVAILABLE`，而不是执行一个没有页面的空动作。真正的保存仍由页面按钮、执行器、确认与回读完成。
 
 ### define(registration)
 
@@ -378,6 +399,7 @@ useAgentTool({
 | `cancel` | `TaskGuideAction` | 否 | 标题栏的离开任务操作；渲染器只发出命令，由页面决定是否结束运行 |
 | `stepSubtitle` | `string` | 否 | 支持 `{step}` 与 `{total}` 的步骤副标题 |
 | `avatar` | `string` | 否 | 内置渲染器使用的短头像文字 |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | 否 | 模型可以触发的页面控制命令。声明 `review` 才启用 `pling_review_task`，声明 `proposeSave` 才启用 `pling_propose_save`，声明 `cancel` 才启用 `pling_cancel_task`；省略时对应工具不可用。`focusField(field)` 可以覆盖默认的 `focus-<field>`，但 `pling_focus_field` 仍只作用于引导声明的字段。这些命令都不执行业务写入 |
 | `labels` | `TaskGuideLabels` | 否 | 覆盖运行中、已完成、当前、未开始与错误文案 |
 | `fields` | `TaskGuideFields` | 否 | 提供后改为紧凑的水平字段轨道；完整步骤卡不再渲染 |
 | `steps` | `readonly TaskGuideStep[]` | 是 | 面向人的有序步骤 |
@@ -684,8 +706,8 @@ Surface 任务解释能力之间怎样配合。它不授予能力、不扩大会
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.7` |
-| 引入版本 | `0.1.0-alpha.7` |
+| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.8` |
+| 引入版本 | `0.1.0-alpha.6` |
 | 运行环境 | 支持 ES2022 模块的浏览器；任务控制器在 Node.js 20 或更高版本可用 |
 | Peer 依赖 | 无 |
 | 稳定性 | 实验性；快照可能增加字段，但不会改变已有字段的含义 |

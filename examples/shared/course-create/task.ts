@@ -74,6 +74,8 @@ export function createCourseTaskDefinition(options: CourseTaskOptions): TaskDefi
         name: "name",
         label: zh ? "课程名称" : "Course name",
         type: "text",
+        minLength: 1,
+        maxLength: 40,
         recommended: options.recommended.name,
       },
       {
@@ -83,6 +85,12 @@ export function createCourseTaskDefinition(options: CourseTaskOptions): TaskDefi
         lookup: teacherLookup,
         searchAction: "search_teachers",
         minChars: 1,
+        validate: (value) =>
+          options.teachers.some((teacher) => teacher.id === value)
+            ? null
+            : zh
+              ? "请从 search_teachers 的结果中选择老师。"
+              : "Choose a teacher from the search_teachers results.",
         recommended: options.recommended.teacherId,
       },
       {
@@ -97,6 +105,8 @@ export function createCourseTaskDefinition(options: CourseTaskOptions): TaskDefi
         label: zh ? "难度" : "Difficulty",
         type: "number",
         optional: true,
+        min: 1,
+        max: 5,
         recommended: options.recommended.difficulty,
       },
       {
@@ -104,6 +114,7 @@ export function createCourseTaskDefinition(options: CourseTaskOptions): TaskDefi
         label: zh ? "课程介绍" : "Course introduction",
         type: "textarea",
         optional: true,
+        maxLength: 200,
         recommended: options.recommended.intro,
       },
       {
@@ -111,6 +122,7 @@ export function createCourseTaskDefinition(options: CourseTaskOptions): TaskDefi
         label: zh ? "约课须知" : "Booking notes",
         type: "textarea",
         optional: true,
+        maxLength: 200,
         recommended: options.recommended.note,
       },
       {
@@ -118,6 +130,7 @@ export function createCourseTaskDefinition(options: CourseTaskOptions): TaskDefi
         label: zh ? "每节课扣卡次数" : "Classes deducted",
         type: "text",
         optional: true,
+        pattern: "^[1-9]\\d*$",
         recommended: options.recommended.deduct,
       },
       {
@@ -125,6 +138,7 @@ export function createCourseTaskDefinition(options: CourseTaskOptions): TaskDefi
         label: zh ? "每节课金额" : "Price per class",
         type: "text",
         optional: true,
+        pattern: "^\\d+(?:\\.\\d+)?$",
         recommended: options.recommended.price,
       },
       {

@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/continuity-http",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "private": false,
   "type": "module",
   "description": "Pling cross-device continuity integration: browser HTTP authority, Web Request/Response handlers, and an in-memory test backend.",

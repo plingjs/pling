@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/vue2",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "private": false,
   "type": "module",
   "description": "Pling Vue 2.7 adapter: plugin, directives, read-only state bridge, and native assistant entry point.",

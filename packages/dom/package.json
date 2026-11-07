@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/dom",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "private": false,
   "type": "module",
   "description": "Framework-agnostic DOM execution layer for Pling: target resolution, availability checks, UI primitives, and scrolling.",

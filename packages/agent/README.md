@@ -77,6 +77,18 @@ such as an uploaded file or a one-time code. The task catalog exposes
 `pling_start_task` and `pling_update_task`; the latter can update only the
 active task and only declared, agent-writable fields.
 
+Field constraints (`min`, `max`, `minLength`, `maxLength`, `pattern`, and a
+business `validate(value, values)`) run before a model-proposed value reaches
+the task snapshot. A rejected value changes nothing, so the page never shows a
+half-applied update.
+
+The page may also expose four narrow control tools: `pling_focus_field`,
+`pling_review_task`, `pling_propose_save`, and `pling_cancel_task`. They exist
+only when the guide's `agent` block declares the matching `review`,
+`proposeSave`, and `cancel` commands; `pling_focus_field` is limited to declared
+guide fields. `pling_propose_save` opens the page's confirmation surface and
+never performs the business write. Confirmation remains human-only.
+
 ### Bind the selected page record
 
 Some tasks only make sense for a record the user has already selected, such as a

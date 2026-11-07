@@ -2,6 +2,7 @@ packages:
   - "packages/*"
   - "services/*"
   - "examples"
+  - "examples/demos/course-workspace-react"
   - "examples/apps/*"
   - "examples/recipes/*"
   - "website"

@@ -4,8 +4,8 @@
   "titleZh": "冰草约课 · 课程管理后台（React 16.3）",
   "eyebrow": "React 16.3 · Guided workflow",
   "eyebrowZh": "React 16.3 · 引导式业务",
-  "summary": "The Bingcao Studio course back office running on real React 16.3 class components, using @plingjs/react/legacy, render props, and a guided-task card inside a fused assistant sidebar.",
-  "summaryZh": "真实运行在 React 16.3 上的冰草约课课程管理后台，使用 class 组件、@plingjs/react/legacy、render props，并在融合侧栏的聊天中展示任务卡。",
+  "summary": "The Bingcao Studio course back office running on real React 16.3 class components, using @plingjs/react/legacy, render props, and the same agent-first task guide inside a fused assistant sidebar.",
+  "summaryZh": "真实运行在 React 16.3 上的冰草约课课程管理后台，使用 class 组件、@plingjs/react/legacy、render props，并在融合侧栏的聊天中运行同一套 agent-first 引导。",
   "url": "/demos/course-workspace-react16/",
   "open": "src/App.tsx",
   "files": [

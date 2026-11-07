@@ -110,6 +110,10 @@ Fields are user decisions, not database columns. Omit server facts such as the c
 | `values` | `readonly TaskChoice[]` | No | Small closed choice set |
 | `recommended` | `TaskValue` | No | Suggestion used only when the person explicitly delegates this choice |
 | `lookup` | `TaskLookup` | No | Async search for a large collection |
+| `min` / `max` | `number` | No | Numeric bounds. Enforced before a model-proposed value reaches the task snapshot. |
+| `minLength` / `maxLength` | `number` | No | Text-length bounds, counted on the trimmed string. |
+| `pattern` | `string` | No | Regular-expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\d*$`. |
+| `validate` | `(value, values) => string \| null \| undefined` | No | Business-level check run before the value is written. Return a short human-readable reason to reject it, or nothing when valid. It validates a value; it must not classify intent or trigger side effects. |
 | `searchAction` | `string` | No | Action id exposed for this lookup; defaults to `search_<name>` |
 | `minChars` | `number` | No | Minimum query length; defaults to 1 and is never lower |
 | `agentWritable` | `boolean` | No | Set to `false` for page-owned values such as an upload or one-time code; defaults to `true` |
@@ -125,8 +129,14 @@ const studentField: TaskField = {
   searchAction: "search_students",
   recommended: "student_li_na",
   lookup: async (query, { signal }) => api.searchStudents(query, { signal }),
+  validate: (value) =>
+    students.some((student) => student.id === value)
+      ? null
+      : "Choose a student from the search results.",
 };
 ```
+
+These checks run before `pling_update_task` writes anything, so the page does not need a parallel natural-language parser. If one submitted value has the wrong type, exceeds a bound, fails a length or pattern check, or returns a reason from `validate`, the whole update is rejected and no half-applied form is left behind. `validate` sees the candidate values for this submission, but it still cannot bypass the field allowlist, `agentWritable`, permissions, confirmation, or the business executor.
 
 ## TaskStep
 
@@ -243,6 +253,17 @@ const catalog = createTaskCatalog({
 Vue 3 exposes the same catalog as `pling.task`, combined with the task controller. A page therefore usually calls `pling.task.define()`, `pling.task.active()`, and `pling.task.command()` directly.
 
 The catalog exposes `actionId` and `updateActionId`. The first is the actual bound id for `pling_start_task`; the second is the actual bound id for `pling_update_task`. Read both properties instead of assuming the default ids when multiple runtimes share one registry.
+
+When the active guide declares page-control commands, the catalog also exposes `focusActionId`, `reviewActionId`, `proposeSaveActionId`, and `cancelActionId`. They map to four narrow actions and never create a second execution path:
+
+| Property | Model action | Effect | Available when |
+| --- | --- | --- | --- |
+| `focusActionId` | `pling_focus_field` | Scrolls a declared guide field into view and highlights it; never writes | The active guide has fields |
+| `reviewActionId` | `pling_review_task` | Opens the page's read-only review; does not save | `guide.agent.review` declares a command |
+| `proposeSaveActionId` | `pling_propose_save` | Opens the page's confirmation surface only; does not perform the business write | `guide.agent.proposeSave` declares a command |
+| `cancelActionId` | `pling_cancel_task` | Ends the guide without rolling back values already written to the page | `guide.agent.cancel` or `guide.cancel` declares a command |
+
+When a command is missing, the model does not see the tool; a call returns `ACTION_UNAVAILABLE` instead of invoking an empty page action. The real save still goes through the page button, executor, confirmation, and read-back.
 
 ### define(registration)
 
@@ -378,6 +399,7 @@ The action exists only while the catalog has at least one task. A page with no g
 | `cancel` | `TaskGuideAction` | No | Header action for leaving the task; the renderer emits the command and the page decides whether to end the run |
 | `stepSubtitle` | `string` | No | Step subtitle supporting `{step}` and `{total}` |
 | `avatar` | `string` | No | Short avatar text for the built-in renderer |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | Page-control commands the model may trigger. Declaring `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; omitting a command makes its tool unavailable. `focusField(field)` overrides the default `focus-<field>` while `pling_focus_field` remains limited to declared guide fields. None of these commands performs a business write |
 | `labels` | `TaskGuideLabels` | No | Overrides the running, completed, current, pending, and error labels |
 | `fields` | `TaskGuideFields` | No | Switches to a compact horizontal field rail; the full step card is not rendered |
 | `steps` | `readonly TaskGuideStep[]` | Yes | Ordered human-facing steps |
@@ -684,8 +706,8 @@ Unknown task ids, unknown field names, duplicate definitions, a missing bound re
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.7` |
-| Introduced | `0.1.0-alpha.7` |
+| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.8` |
+| Introduced | `0.1.0-alpha.6` |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for the task controller |
 | Peer dependencies | None |
 | Stability | Experimental; snapshots may gain fields without changing existing meaning |

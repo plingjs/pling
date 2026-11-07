@@ -4,8 +4,8 @@
   "titleZh": "冰草约课 · 课程管理后台（React 19）",
   "eyebrow": "React 19 · Guided workflow",
   "eyebrowZh": "React 19 · 引导式业务",
-  "summary": "The Bingcao Studio course back office implemented with React 19 Hooks, Pling scope and record hooks, one shared task runtime, and a guided-task card inside a fused assistant sidebar.",
-  "summaryZh": "用 React 19 Hooks 实现的冰草约课课程管理后台：通过 Pling 的 scope、record Hook 声明页面，复用同一套任务运行时，并在融合侧栏的聊天中展示任务卡。",
+  "summary": "The Bingcao Studio course back office implemented with React 19 Hooks, Pling scope and record hooks, one shared agent-first task runtime, and a guide inside a fused assistant sidebar.",
+  "summaryZh": "用 React 19 Hooks 实现的冰草约课课程管理后台：通过 Pling 的 scope、record Hook 声明页面，复用同一套 agent-first 任务运行时，并在融合侧栏的聊天中展示引导。",
   "url": "/demos/course-workspace-react/",
   "open": "src/App.tsx",
   "files": [

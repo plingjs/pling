@@ -9,10 +9,10 @@
  *   node scripts/export-public.mjs /Users/mac/Workspace/Projects/plingjs-public
  *   node scripts/export-public.mjs .public-export --with-cases
  */
-import { chmod, cp, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, lstat, mkdir, readFile, readdir, readlink, rename, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const args = process.argv.slice(2);
@@ -82,10 +82,56 @@ if (hasGitDir) {
   await rename(gitBackup, gitDir);
 }
 
+// Node's fs.cp() intermittently skipped subtrees in this repository, so copy the
+// tree file by file. A missing file must fail the export, never the release.
+async function copyTree(source, destination) {
+  const info = await lstat(source).catch(() => undefined);
+  if (!info) throw new Error(`导出时源文件消失：${source}`);
+  await mkdir(dirname(destination), { recursive: true });
+  if (info.isSymbolicLink()) {
+    await symlink(await readlink(source), destination);
+    return;
+  }
+  if (info.isDirectory()) {
+    await mkdir(destination, { recursive: true });
+    for (const entry of await readdir(source, { withFileTypes: true })) {
+      const child = join(source, entry.name);
+      if (!filter(child)) continue;
+      await copyTree(child, join(destination, entry.name));
+    }
+    return;
+  }
+  await copyFile(source, destination);
+}
+
 for (const entry of allow) {
   const source = join(root, entry);
   if (!existsSync(source)) throw new Error(`公开导出缺少 ${entry}`);
-  await cp(source, join(target, entry), { recursive: true, filter });
+  if (!filter(source)) continue;
+  await copyTree(source, join(target, entry));
+}
+
+// fs.cp() can finish successfully while a subtree is missing (observed after an
+// interrupted export). Verify the copied tree against the exact filter we used,
+// so a partial export can never reach the public workspace guard or a release.
+async function collectExportedFiles(directory, collected) {
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const absolute = join(directory, entry.name);
+    if (!filter(absolute)) continue;
+    collected.push(relative(root, absolute).split("\\").join("/"));
+    if (entry.isDirectory()) await collectExportedFiles(absolute, collected);
+  }
+}
+
+const expectedFiles = [];
+for (const entry of allow) {
+  const source = join(root, entry);
+  if ((await stat(source)).isDirectory()) await collectExportedFiles(source, expectedFiles);
+  else expectedFiles.push(entry);
+}
+const unexported = expectedFiles.filter((file) => !existsSync(join(target, file)));
+if (unexported.length) {
+  throw new Error(`公开导出不完整（${unexported.length} 个文件缺失）：${unexported.slice(0, 20).join(", ")}`);
 }
 
 const publicPackage = JSON.parse(await readFile(join(target, "package.json"), "utf8"));
@@ -109,6 +155,7 @@ const workspace = [
   '  - "packages/*"',
   '  - "services/*"',
   '  - "examples"',
+  '  - "examples/demos/course-workspace-react"',
   '  - "examples/apps/*"',
   '  - "examples/recipes/*"',
   '  - "website"',

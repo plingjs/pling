@@ -116,6 +116,33 @@ export interface TaskGuideDefinition {
   cancel?: TaskGuideAction;
   labels?: TaskGuideLabels;
   /**
+   * Model-callable UI commands for this guide.
+   *
+   * These commands only move the person's attention or open a review. They
+   * never execute a business write; the page's confirmation button remains the
+   * only path to `save`.
+   */
+  agent?: {
+    /** Command for a guide field used by `pling_focus_field`. */
+    focusField?: (field: TaskGuideField) => string;
+    /**
+     * Command used by `pling_review_task`.
+     *
+     * Omit it when the guide has no read-only review surface; the review tool
+     * is then reported unavailable instead of invoking an unknown command.
+     */
+    review?: string;
+    /**
+     * Command used by `pling_propose_save` to open the confirmation surface.
+     *
+     * Omit it when there is no page-owned confirmation step. The action never
+     * writes, even when this command is present.
+     */
+    proposeSave?: string;
+    /** Command used by `pling_cancel_task`. Defaults to the visible `cancel` action. */
+    cancel?: string;
+  };
+  /**
    * When present, the renderer shows a compact horizontal field rail instead of
    * the full step card. Copy, recommendations and per-field guidance belong in
    * the conversation; the rail only carries progress and field location.

@@ -9,159 +9,151 @@ status: drafted
 
 # 面向真实业务流程的引导任务
 
-Vue 2.7 应用可以提供与 Vue 3 相同的引导任务。业务页面保留 options API 和员工已经熟悉的控件；共享任务控制器只收集页面无法推断的决定，实际写入仍交给现有服务校验和执行。
+Vue 2.7 也能提供与 Vue 3、React 和原生 JS 相同的引导任务，而且不需要把老项目重写成 Vue 3。业务页面继续使用已有的表单、服务和校验；Vue 2.7 负责组件生命周期与渲染，任务定义、字段推导、执行器和操作行来自共享的 `examples/shared/course-workspace/`。
 
-课程管理后台有四个从任务目录启动的任务，以及一个从课表行启动的任务。行级任务的关键区别在于：选中的课程是页面提供的事实，不是让用户填写的值。
+这一章沿用课程管理后台。页面进入时打开原有的“创建新课程”表单；助手不复制一套字段，而是理解用户的一段话，把变化写回原表单，再在需要人决定的地方停下来。
 
-## 先展示结果，而不是动作 id
+## 一句话接住整段课程描述
 
-任务首屏应列出当前角色稳定需要的结果。课程管理后台里，员工看到“新建课程”“查学员会员卡”“创建老师”“排一节课”。第五个结果“写课程备注”放在课程旁，因为它必须先有一节课。
+创建课程原本需要填写很多字段。逐项追问会把人拖回表单问答，因此这个示例不在页面里写自然语言正则，也不维护关键词表。用户可以直接说：
 
-任务标题、字段标签和示例都应使用工作台里的说法。动作 id 与参数 schema 留在调试视图，不进入普通界面。
+```text
+孕妇瑜伽，陈老师，2 星，介绍自动填写，用月卡
+```
 
-## 从 Vue 2 挂载共享任务卡
+模型看到当前任务的 `objective`、`constraints`、字段表、已填值、缺口和引导阶段，把这句话理解为 `name`、`teacherId`、`difficulty`、`intro` 和 `cards`，调用一次 `pling_update_task` 写入工作记忆。页面订阅 `TaskRunSnapshot`，把变化同步到原表单。
 
-DOM 任务卡独立于 Vue 渲染器。Vue 2 负责组件生命周期；控制器和任务卡在挂载后创建，并在 `beforeDestroy` 中释放。任务卡通过助手 Dock 的 `task` 选项挂进对话，不另占一块页面区域。
+如果老师不在列表里，助手会停下来列出候选；如果封面还没上传，它只把页面定位到上传区，文件选择交给人。用户中途问“这个字段是什么意思”、改主意或暂停，仍然是一段普通对话。任务状态是工作记忆，不是必须照做的脚本。
 
-```vue
-<script>
-import { createTaskController } from "@plingjs/agent";
-import { createTaskCard, registerTaskLookupActions } from "@plingjs/vanilla";
-import { courseApi } from "./course-api";
+字段校验属于页面。`TaskField` 支持 `min` / `max`、`minLength` / `maxLength`、`pattern`、封闭集合 `values` 和业务 `validate(value, values)`。模型只能通过 `pling_update_task` 写声明过的字段；类型不对、老师不存在或难度越界都会返回失败，不会留下“写了一半”的表单。
 
-export default {
-  name: "CourseTasks",
-  data() {
-    return { card: null, dock: null, stopLookups: null };
-  },
-  mounted() {
-    this.tasks = createTaskController({
-      invoke: (action, args) => courseApi.invoke(action, args),
+## 任务定义：目标、约束与工作记忆
+
+`TaskDefinition` 描述“要完成什么”，而不是“下一句该问什么”。课程任务的字段表既给模型看，也给页面推导当前缺口：
+
+```ts
+const courseTask: TaskDefinition = {
+  id: "course.create",
+  title: "创建课程",
+  objective: "帮助用户把一门可上架的课程创建到课程库，而不是机械地逐个询问字段。",
+  constraints: [
+    "课程名称、授课老师、可用卡与封面是完成条件；难度、介绍、须知、扣卡次数和价格可省略。",
+    "封面必须由用户亲自上传，助手不能伪造。",
+    "所有写入仍走 create_course 动作、执行器和回读校验。",
+  ],
+  successCriteria: ["新课程出现在课程库第一位", "写入后重新读取课程列表验证成功"],
+  fields: [
+    { name: "name", label: "课程名称", minLength: 1, maxLength: 40 },
+    { name: "teacherId", label: "授课老师", type: "lookup", searchAction: "search_teachers" },
+    { name: "cards", label: "可用卡片", type: "select", values: cardChoices },
+    { name: "cover", label: "课程封面", type: "boolean", agentWritable: false },
+  ],
+  steps: [{ id: "course.save", label: "写入课程库并回读", action: "create_course", args: (values) => values }],
+};
+```
+
+`steps` 只描述一次确定性业务写入，不代表对话脚本。先收集哪个字段、什么时候追问、什么时候回答用户，由模型根据任务工作记忆决定。
+
+## Vue 2.7 只负责挂载共享运行时
+
+这个示例使用 Vue 2.7 的组合式 API 和渲染函数。`onMounted` 中创建共享任务运行时，`Vue.nextTick` 保证任务激活时弹窗作用域已经挂上：
+
+```ts
+import { Vue, onBeforeUnmount, onMounted } from "./vue2-runtime";
+import { createTaskCard } from "@plingjs/vanilla";
+import {
+  createCourseTaskRuntime,
+  createCourseTaskView,
+} from "../../../shared/course-workspace/runtime";
+
+onMounted(() => {
+  void Vue.nextTick(() => {
+    taskRuntime = createCourseTaskRuntime({
+      registry: pling.registry,
+      ask: (prompt) => pling.ask(prompt),
+      catalog: pling.task,
+      service,
+      locale,
+      form: courseForm,
+      onComplete: () => { version.value += 1; },
     });
-    this.tasks.register({
-      id: "student.cards",
-      title: "查学员会员卡",
-      fields: [{
-        name: "studentRef",
-        label: "学员",
-        type: "lookup",
-        searchAction: "search_students",
-        lookup: (query) => courseApi.searchStudents(query),
-      }],
-      steps: [{ label: "读取会员卡", action: "get_student_cards" }],
+
+    taskCard = createTaskCard(taskRuntime.controller, {
+      locale: zh ? "zh-CN" : "en-US",
+      title: copy.value.taskPanelTitle,
+      onPrompt: (prompt) => void pling.ask(prompt),
     });
-    this.stopLookups = registerTaskLookupActions(
-      this.$pling,
-      this.tasks.list(),
-    );
-    this.card = createTaskCard(this.tasks, {
-      locale: "zh-CN",
-      catalog: false,
-    });
-    this.dock = this.$pling.dock({
+
+    taskView = createCourseTaskView(taskCard, taskRuntime);
+    dock = pling.dock({
+      title: zh ? "页灵助手" : "Pling assistant",
       layout: "sidebar",
       sidebarMode: "fused",
       defaultOpen: true,
-      task: this.card.element,
+      task: taskView.element,
+      mount: root.querySelector<HTMLElement>("#dock-mount"),
     });
-  },
-  beforeDestroy() {
-    this.stopLookups?.();
-    this.card?.destroy();
-    this.dock?.destroy();
-  },
-};
-</script>
-```
-
-控制器不会把 Vue 实例变成响应式，也不会复制动作注册表。它发布快照，任务卡只订阅这一份运行状态。执行桥由宿主注入，并继续调用应用服务。
-
-## 把课表行绑定到任务
-
-备注任务声明 `requiresRecord: true`。定义里只有备注字段，步骤从页面提供的绑定中读取课程 id。
-
-```ts
-this.tasks.register({
-  id: "lesson.note",
-  title: "写课程备注",
-  requiresRecord: true,
-  fields: [{ name: "note", label: "备注", type: "textarea" }],
-  steps: [{
-    label: "保存课程备注",
-    action: "update_lesson_note",
-    args: (values, binding) => ({
-      lessonId: binding.record?.id,
-      note: values.note,
-    }),
-  }],
+  });
 });
 
-openNote(lesson) {
-  this.dock.open();
-  this.card.open("lesson.note", {}, {
-    record: {
-      id: lesson.id,
-      label: `${lesson.course} · ${lesson.date} ${lesson.time}`,
-    },
-  });
-}
+onBeforeUnmount(() => {
+  taskRuntime?.destroy();
+  taskView?.destroy();
+  taskCard?.destroy();
+  dock?.destroy();
+});
 ```
 
-没有非空记录 id 时，`start()` 会拒绝启动，而不是拿空课程 id 去执行。通用任务列表也会把这类任务显示成必须从记录行或详情页打开的入口，而不是可以直接运行的任务卡。表单只问备注，任务头部显示绑定的课程。
+`course-form.ts` 仍是业务输入的唯一来源。用户点“自动填写”时，页面把推荐值写进原控件；用户直接改表单时，下一次引导读取的是页面新值。聊天里不会再长出一套课程表单。
 
-## 用查找代替原始 id
+## 页面只执行显式命令
 
-用户知道学员姓名或手机号，不知道 `studentId`。查找应返回带标签的选项；两名学员重名时，还要带上足以区分的脱敏信息。
+页面不解析用户说了什么，只执行已经声明的界面命令。课程引导暴露少量命令：
 
-```ts
-const search = (query) =>
-  courseApi.searchStudents(query).then((students) =>
-    students.map((student) => ({
-      value: student.ref,
-      label: student.name,
-      description: student.maskedPhone,
-    })),
-  );
-```
+- `focus-*`：把真实字段滚进视野并高亮；
+- `use-suggestion` / `apply-*`：把推荐值写进原控件；
+- `skip-field`：跳过可选项；
+- `review-task`：打开只读核对；
+- `propose-save`：打开确认，不执行写入；
+- `cancel-task`：结束引导。
 
-选中的 `ref` 仍然不构成授权。服务端会在读取会员卡或写入课程前重新解析它，并检查当前店铺、会话与权限。缺失、过期或跨店铺的引用都必须明确失败。
+模型侧对应的窄工具是 `pling_focus_field`、`pling_review_task`、`pling_propose_save` 和 `pling_cancel_task`。它们和普通动作一样经过权限、审计和可用性判断；没有在 `guide.agent` 里声明的命令不会出现在模型上下文里。
 
-`registerTaskLookupActions` 会把同一份查找暴露成助手使用的窄范围只读动作。它不会开放整表查询，也不会绕过写操作自己的审批路径。
+## 保存必须由人确认
 
-## 业务执行留在 Vue 2 之外
+任务的最后一步不是模型“宣布完成”，而是页面执行一次真实写入：
 
-任务桥可以调用现有函数动作或应用服务。不要在 Vue 2 组件里放第二套模型循环、第二套权限校验或直接 `fetch`。
+1. 必填项没有齐时，操作行只提供定位、自动填写或跳过，不出现“确认保存”。
+2. 封面未上传时，只保留“上传封面”，并高亮原页面的文件选择区。
+3. 用户点击“确认保存”后，页面重新读取全部字段，调用 `controller.run()`。
+4. `create_course` 以 `modelVisible: false` 注册，模型不能绕过确认直接写入。
+5. 写入后检查课程库，新记录必须出现在第一位，才进入完成态。
 
-写入后回读结果，或使用动作已有的期望验证。必填步骤失败时停止并保留错误；可选步骤失败时可标记跳过。服务端失败或取消的运行不能显示成成功。
+创建完成后点“再做一次”，第一门课程仍留在课程库；第二门课程继续走同一套任务。消息变多后，聊天记录仍可上下滚动。
 
-## 在真实 Vue 2.7 构建中核对
+## 在浏览器里核对
 
-打开 [Vue 2.7 课程管理后台](/demos/course-workspace-vue2/?lang=zh)，逐项检查：
+打开 [Vue 2.7 课程管理后台](/demos/course-workspace-vue2/?lang=zh)，依次检查：
 
-课程创建演示采用更接近真实后台的方式：进入页面时打开原有的“创建新课程”表单，助手侧栏只显示四步引导。第一步展示推荐值摘要并写入原表单；第二步选择老师和可用卡；第三步停下来，让用户在页面里选择封面；第四步从页面重新读取并核对。聊天里不再复制一套课程字段。`examples/shared/course-workspace/course-guide.ts` 负责这段引导，`course-form.ts` 仍是业务输入的唯一来源。下一步动作使用 `@plingjs/dom` 的共享紧凑操作行，Vue 2.7、React 与原生 JS 挂载的是同一份 DOM。
+- 首屏打开创建课程表单，助手只显示一条轻量操作行，没有独立任务面板。
+- 输入“孕妇瑜伽，陈老师，2 星，介绍自动填写，用月卡”，值一次写回原表单，老师解析为陈静。
+- 任务中问无关问题，助手先回答，不会把问题当成课程名。
+- 说“难度改成 4 星”，只更新难度。
+- 输入不存在的老师，助手停下来列出可选老师，不静默替换。
+- 没有封面不能保存；上传后出现“确认保存”。
+- 确认后新课程出现在课程库第一位，扣卡次数显示为 `1`。
+- 再做一次创建第二门课程，第一门仍存在，聊天记录可以滚动。
 
-但这四个阶段只是页面自己的呈现，不是任务层的脚本。`course.create` 同时声明 `objective`、`constraints` 和 `successCriteria`，并通过 `pling.task.define` 把同一个 controller 注册进任务目录。模型可以回答“你会做什么”，接收“课程名叫减脂瑜伽”这样的修正，或者在用户说“卡片你来选”时调用 `pling_update_task`，只写被委托的字段；页面订阅 `TaskRunSnapshot`，把变化同步回原表单并重新推导当前阶段。真正的保存仍走 `create_course`、执行器和回读。
+## Vue 2.7 的边界
 
-- 助手对话里不要求写提示词，也能看到业务任务卡。
-- 搜索重名学员时，两个候选与区分信息都出现。
-- “写课程备注”从课表行打开，任务头部显示对应课程。
-- 没有选择学员时，任务不能直接运行。
-- 成功排课后，显示人话结果和已完成步骤。
-- 服务端拒绝时，失败步骤与错误信息仍留在屏幕上。
-- 保存备注后，行内容与活动记录更新，表单全程不问课程 id。
-- 组件卸载时销毁任务卡，并中止尚未完成的查找。
+Vue 2.7 是最后一个提供组合式 API 的 Vue 2 版本，因此这个示例可以直接复用 Vue 3 章节的任务模型和 DOM 操作行。Vue 2.6 及更早版本没有这套组合式 API，不要强行安装 `@plingjs/vue2` 后期待同样的生命周期桥接；把页面当作原生 JS 使用 `@plingjs/vanilla` 即可，业务任务定义和 `course-form.ts` 不需要重写。
 
-用 Vue 2.7 运行页面，而不是 Vue 3 兼容模式。共享任务卡应使用与其他章节相同的快照、文案与失败行为。
+## 最小接入顺序
 
-## 完成清单
+1. 用 `TaskDefinition` 声明字段、校验、动作和回读条件。
+2. 用 `TaskGuideDefinition` 声明欢迎语、字段表和 `agent` 命令；`steps` 只写业务阶段，不写逐字段脚本。
+3. 用 `pling.task.define()` 或共享运行时注册任务，声明 `route`、`scope` 和 `autoStart`。
+4. 在页面实现显式命令：定位、采用推荐、跳过、核对、确认保存、取消。
+5. 写入后重新读取业务数据，用页面结果决定是否完成。
 
-- 控制器在组件挂载后创建，并在组件销毁时释放。
-- 任务目录包含四个稳定任务；行级备注任务通过绑定打开。
-- 任务字段使用查找或带标签的选择，而不是原始 id。
-- 步骤调用现有业务边界。
-- 失败或取消不会显示成成功。
-- 同一份任务定义离开 Vue 2 仍然有效。
-
-## 下一步
-
-当角色有多个稳定任务时，把定义移到应用自己的 task 模块，让 Vue 继续负责布局与业务状态。自由请求用带提示词模板的 Agent 模式任务，而不是硬造确定性路径。
+Vue 2.7、Vue 3、React 19、React 16.3 和原生 JS 版本共用同一套任务定义、字段推导和操作行，只替换适配器的挂载方式。

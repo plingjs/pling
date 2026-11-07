@@ -4,8 +4,8 @@
   "titleZh": "案例06：引导任务创建课程（Vue 3）",
   "eyebrow": "Case 06 · Guided workflow",
   "eyebrowZh": "案例06 · 引导式任务",
-  "summary": "A realistic course page whose only job is creating a course. One sentence fills what it can infer, the assistant asks only for real gaps, long recommendations stay one-line previews, and the saved record is read back.",
-  "summaryZh": "一个真实的课程页面，只做“创建课程”这件事。一句话填写可推断的字段，助手只追问真正的缺口；长推荐保持单行预览，保存后回读课程列表。",
+  "summary": "A realistic course page whose only job is creating a course. The assistant understands a whole description through task working memory, asks only for real gaps, points at page fields, and reads the saved record back.",
+  "summaryZh": "一个真实的课程页面，只做“创建课程”这件事。助手基于任务工作记忆理解整段描述，只追问真正的缺口、定位页面字段，并在保存后回读课程列表。",
   "url": "/demos/course-workspace-vue3/",
   "open": "src/CourseWorkspace.vue",
   "files": [
@@ -44,14 +44,6 @@
       "label": "guide.ts",
       "role": "Framework-neutral guided-task presentation",
       "roleZh": "框架无关的引导任务展示定义",
-      "lang": "ts"
-    },
-    {
-      "path": "shared/course-create/intake.ts",
-      "scope": "workspace",
-      "label": "intake.ts",
-      "role": "One-sentence intake and correction parser",
-      "roleZh": "整句信息解析与修正",
       "lang": "ts"
     },
     {
@@ -123,19 +115,19 @@
     "title": "One page, one job, one reusable guide",
     "titleZh": "一页一件事，一套可复用的引导",
     "intro": [
-      "A Pling integration needs three things: declare the task fields, give the task a thin guide, and write values back into the existing form while an existing action saves. Step 1 below is the minimum path; the parser, custom guide, and read-back verification are upgrades, not prerequisites.",
-      "This example deliberately avoids a multi-module admin dashboard. The page is the original course form. It goes further than a minimum integration — one-sentence intake, precise field location, and read-back verification — so the code is larger on purpose."
+      "A Pling integration needs three things: declare the task fields, give the task a thin guide, and write values back into the existing form while an existing action saves. The assistant reads task working memory; the page only handles explicit UI commands.",
+      "This example deliberately avoids a multi-module admin dashboard. The page is the original course form. The model understands the full sentence, calls narrow task tools, and leaves the final save to the person."
     ],
     "introZh": [
-      "接入本身只有三件事：声明任务字段、给任务一个很薄的 guide、把值写回现有表单并交给已有动作保存。下面第 1 步就是最小路径；解析器、完整定制引导和回读校验都是增强项，不是前置条件。",
-      "这个示例刻意不混入多个后台模块。页面就是原来的创建课程表单；它额外做到了“一句话填写 + 精确定位 + 回读校验”，所以代码量高于最小接入。"
+      "接入本身只有三件事：声明任务字段、给任务一个很薄的 guide、把值写回现有表单并交给已有动作保存。助手读取任务工作记忆，页面只执行明确的界面命令。",
+      "这个示例刻意不混入多个后台模块。页面就是原来的创建课程表单；模型理解整段描述、调用少量窄工具，最终保存仍由人确认。"
     ],
     "steps": [
       {
         "title": "Minimum: register a task and its fields",
         "titleZh": "最小接入：注册任务与字段",
-        "body": "The minimum is one TaskDefinition (id, title, fields, save step), a thin guide (one step, a field rail, and the save action), and one registration. route, scope, and autoStart only decide when the task is available.",
-        "bodyZh": "最小接入是一个 TaskDefinition（id、title、fields、保存步骤）、一个很薄的 guide（一个步骤、字段轨道、保存动作），再加一次注册。route、scope、autoStart 只决定任务何时可用。",
+        "body": "The minimum is one TaskDefinition (id, title, fields, save step), a thin guide (one step, declared fields, and the save action), and one registration. route, scope, and autoStart only decide when the task is available.",
+        "bodyZh": "最小接入是一个 TaskDefinition（id、title、fields、保存步骤）、一个很薄的 guide（一个步骤、声明字段、保存动作），再加一次注册。route、scope、autoStart 只决定任务何时可用。",
         "file": "src/CourseWorkspace.vue",
         "match": "pling.task.define",
         "lines": 24
@@ -150,19 +142,28 @@
         "lines": 24
       },
       {
-        "title": "Catch a whole description (optional)",
-        "titleZh": "接住整段描述（可选）",
-        "body": "Deterministic intake is not a prerequisite. Without it, the model fills fields through pling_update_task and may take one extra round-trip. With it, common phrasings resolve locally, which is what this demo optimises for.",
-        "bodyZh": "确定性解析不是接入前置条件。没有它，模型会通过 pling_update_task 逐字段补全，可能多一次模型往返；有它，常见说法可以本地命中，这是本示例专门优化的部分。",
-        "file": "shared/course-create/intake.ts",
-        "match": "export function parseCourseIntake",
+        "title": "Let the model use working memory",
+        "titleZh": "让模型使用任务工作记忆",
+        "body": "The active task projects its objective, constraints, current values and gaps into the model context. A whole sentence can update several declared fields through pling_update_task; questions and corrections stay normal conversation.",
+        "bodyZh": "当前任务会把目标、约束、现有值与缺口投影到模型上下文。整段描述可以通过 pling_update_task 一次更新多个已声明字段；提问与修正仍然是普通对话。",
+        "file": "src/CourseWorkspace.vue",
+        "match": "function applyTaskValues",
         "lines": 24
+      },
+      {
+        "title": "Expose page-owned controls",
+        "titleZh": "暴露页面自有控制",
+        "body": "The guide names the review, confirmation and cancel commands that the model may invoke. These commands only move attention or open a read-only review; they never execute the business write.",
+        "bodyZh": "guide 声明模型可以调用的核对、确认与取消命令。这些命令只移动注意力或打开只读核对，不会执行业务写入。",
+        "file": "shared/course-create/guide.ts",
+        "match": "agent: {",
+        "lines": 5
       },
       {
         "title": "Customise what the user sees (optional)",
         "titleZh": "自定义用户看到什么（可省略）",
-        "body": "A full custom guide is optional. The minimum guide is one step, a field rail, and a save action; business-specific summary rows and handoff copy are what this demo adds.",
-        "bodyZh": "完整定制 guide 是可选的。最小 guide 只有一个步骤、字段轨道和保存动作；业务化的摘要行和人工接力文案才是本示例额外增加的。",
+        "body": "A full custom guide is optional. The minimum guide is one step, declared fields, and a save action; this demo adds explicit page commands and read-back evidence on top of that minimum.",
+        "bodyZh": "完整定制 guide 是可选的。最小 guide 只有一个步骤、声明字段和保存动作；本示例在此基础上增加了显式页面命令和回读证据。",
         "file": "shared/course-create/guide.ts",
         "match": "export function createCourseGuideDefinition",
         "lines": 20
@@ -186,7 +187,7 @@
         "lines": 8
       }
     ],
-    "note": "A minimum integration can stop after one TaskDefinition, a thin guide, and one pling.task.define. This demo adds local intake to save model round-trips and read-back verification to prove the write.",
-    "noteZh": "最小接入可以只写一个 TaskDefinition、一个薄 guide 和一次 pling.task.define；本示例额外用本地解析减少模型往返，并用回读验证完成态。"
+    "note": "A minimum integration can stop after one TaskDefinition, a thin guide, and one pling.task.define. This demo adds explicit model-callable guide commands and read-back verification; it contains no natural-language intent parser.",
+    "noteZh": "最小接入可以只写一个 TaskDefinition、一个薄 guide 和一次 pling.task.define；本示例额外声明模型可调用的引导命令并回读验证，不包含自然语言意图解析器。"
   }
 }

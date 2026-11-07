@@ -255,7 +255,7 @@ Attach Pling after the element exists. If a plugin replaces the DOM node afterwa
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vanilla` `0.1.0-alpha.7` |
+| Applies to | `@plingjs/vanilla` `0.1.0-alpha.8` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for builds |
 | Peer dependencies | None; jQuery is optional |

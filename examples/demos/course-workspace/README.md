@@ -1,10 +1,11 @@
 # Course management back office (Vanilla)
 
 A realistic course-management back office for a yoga studio. It has a course
-catalogue, students with membership cards, teachers, and a weekly schedule. Guided tasks appear as cards
-in the assistant conversation, so a user can finish a common workflow without
-knowing which controls to click or how to phrase a prompt. The page remains the
-place where business data is read and changed.
+catalogue, students with membership cards, teachers, and a weekly schedule. The
+assistant carries a guided task in chat as a compact action row, so a user can
+create a course from one sentence without knowing which controls to click or how
+to phrase a prompt. The page remains the place where business data is read and
+changed.
 
 The page uses a local mock service, not a business backend. Model requests still
 go through the shared example gateway; no provider key enters the browser.
@@ -24,9 +25,11 @@ Open:
 
 ## What to try
 
-1. **Create a course.** Choose **New course**, enter a name, pick a teacher and
-   eligible cards, then run the task. The new course appears at the front of the
-   catalogue and in the activity list.
+1. **Create a course.** The form opens on entry. Say
+   `孕妇瑜伽，陈老师，2 星，介绍自动填写，用月卡`. The model writes the
+   values it understood through `pling_update_task`; the page validates them and
+   puts them into the original form. Upload a cover, review, and confirm; the new
+   course appears first in the catalogue.
 2. **Check a student's membership.** Search `李娜` or `Li Na`. Two students have
    the same name; their masked phone numbers distinguish them.
 3. **Add a teacher.** Enter a name, phone, and subject. The new teacher is
@@ -39,6 +42,21 @@ Open:
 6. **Trigger a failure.** Schedule Zhou Min on `2026-03-16` at `10:00`. The first
    step reports the existing lesson and the second step does not run.
 
+## Agent-first, not a script
+
+The page does not parse natural language. It exposes a task definition, a guide,
+and explicit commands; the model reads the active task's goal, constraints,
+fields, current values, and gaps, then decides what to update or ask. A question,
+a correction, a pause, or a side request remains ordinary conversation.
+
+`TaskField` validation runs before a model value reaches the form. `cover` is
+`agentWritable: false`, so the assistant locates the upload control instead of
+faking a required file. `pling_focus_field` only moves attention,
+`pling_review_task` opens a read-only review, `pling_propose_save` opens
+confirmation without writing, and `pling_cancel_task` ends the guide. The real
+write still runs `create_course` from the page and checks the catalogue
+afterwards.
+
 Open the assistant dock and switch to Activity or Debug to inspect the model
 request, tool arguments, and page evidence.
 
@@ -46,10 +64,11 @@ request, tool arguments, and page evidence.
 
 - `examples/shared/course-workspace/course-service.ts` owns the mock data and
   business rules. Every operation is also registered as a Pling action.
-- `examples/shared/course-workspace/tasks.ts` defines five guided tasks.
-  Fields collect user decisions; steps name existing action ids and argument
-  templates. The lesson-note task reads the selected record from the task
-  binding instead of asking for a database id.
+- `examples/shared/course-workspace/tasks.ts` defines five guided tasks. The
+  course task is agent-first: fields hold working memory, validation belongs to
+  the page, and one deterministic step writes through `create_course`. The
+  lesson-note task reads the selected record from the task binding instead of
+  asking for a database id.
 - `examples/shared/course-workspace/runtime.ts` registers the actions, creates
   one executor, and passes `executor.execute` to the task controller. There is
   no second executor and no second approval path.

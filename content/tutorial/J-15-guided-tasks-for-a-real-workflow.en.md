@@ -9,125 +9,160 @@ status: drafted
 
 # Guided tasks for a real workflow
 
-A vanilla page does not need a framework to offer guided work. It needs a stable task definition, a conversation surface, and a bridge to the application's existing service. A task card then handles fields, lookup choices, progress, and errors without introducing a second execution path.
+A vanilla page does not need a framework to offer guided work. It needs a stable business boundary, an assistant entry point, and a thin adapter that writes task working memory back into the existing form. The course back office keeps its original form, actions, and validation; the assistant understands the person, updates working memory, and explains what happens next.
 
-## Put the card in the assistant conversation
+## Create a course from one sentence, not a field-by-field quiz
 
-Use `createTaskCard()` when the task belongs to the assistant conversation. The business page remains interactive, and the original controls stay in place. The card is an additional entrance for the decisions and steps that are hard to discover from the page alone.
+The demo opens the existing **Create course** form on entry. A person can simply say:
 
-For a course desk, start with four titled outcomes in the card catalogue: create a course, find a member's card, create a teacher, and schedule a lesson. Keep each definition local to the page or import it from the application's own task module. A fifth outcome, writing a lesson note, lives on each schedule row because it needs a selected lesson.
+```text
+Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card
+```
 
-## Bridge task steps to the business service
+The model reads that as `name`, `teacherId`, `difficulty`, `intro`, and `cards`, then calls `pling_update_task` once. `runtime.ts` subscribes to `TaskRunSnapshot` and writes the changes back into the original form. The page contains no natural-language regex and never treats the whole sentence as a course name.
 
-The controller receives one `invoke` function. That function decides whether a step reaches the action executor, a read-only API, or the application service. The card never receives direct access to the model or the network.
+An unknown teacher makes the assistant stop and ask. The cover must be uploaded by the person. Cards, difficulty, and the intro can arrive in one sentence or be edited directly in the page. A mid-task question, a change of mind, or a pause remains ordinary conversation.
+
+## A task is a goal, constraints, and working memory
+
+`TaskDefinition` describes **what must be true**, not what to ask next. The course field list serves both the model and the page's gap calculation:
 
 ```ts
-import { createTaskController } from "@plingjs/agent";
-import { createTaskCard } from "@plingjs/vanilla";
-import { courseApi } from "./course-api";
-
-const tasks = createTaskController({
-  invoke: (action, args) => courseApi.invoke(action, args),
-});
-
-tasks.register({
-  id: "student.cards",
-  title: "Find a member's card",
+const courseTask: TaskDefinition = {
+  id: "course.create",
+  title: "Create a course",
+  objective: "Help the person create a publishable course instead of walking a fixed field sequence.",
+  constraints: [
+    "The name, teacher, eligible cards, and cover are completion conditions; difficulty, intro, notes, deduction, and price are optional.",
+    "The cover must be uploaded by the person; the assistant must not fake it.",
+    "Every write still goes through the create_course action, executor, and read-back verification.",
+  ],
+  successCriteria: ["The new course appears first in the catalogue", "The catalogue is read back after the write"],
   fields: [
+    { name: "name", label: "Course name", minLength: 1, maxLength: 40 },
     {
-      name: "studentRef",
-      label: "Student",
+      name: "teacherId",
+      label: "Teacher",
       type: "lookup",
-      lookup: (query) => courseApi.searchStudents(query),
+      searchAction: "search_teachers",
+      validate: (value) => teachers.some((teacher) => teacher.id === value) ? null : "Choose a teacher from the search results.",
     },
+    { name: "cards", label: "Eligible cards", type: "select", values: cardChoices },
+    { name: "cover", label: "Course cover", type: "boolean", agentWritable: false },
+    { name: "difficulty", label: "Difficulty", type: "number", optional: true, min: 1, max: 5 },
   ],
   steps: [
-    { label: "Read the student", action: "get_student" },
-    { label: "Read the cards", action: "get_student_cards" },
+    {
+      id: "course.save",
+      label: "Write to the catalogue and read it back",
+      action: "create_course",
+      args: (values) => values,
+    },
   ],
+};
+```
+
+Fields support `min` / `max`, `minLength` / `maxLength`, `pattern`, closed `values` sets, and a business `validate(value, values)` callback. These checks run before a value enters the task snapshot; the model can retry or rephrase, but it cannot bypass page validation.
+
+`steps` only describes one deterministic business write. It is not a conversation script. Course creation has one `create_course` step; which fields to collect first, when to ask, and when to answer a question belongs to the model and the task's working memory.
+
+## The page executes explicit commands only
+
+The page does not parse what the person said. It executes declared UI commands. The shared runtime connects the task catalog, controller, and guide:
+
+```ts
+taskRuntime = createCourseTaskRuntime({
+  registry: pling.registry,
+  ask: (prompt) => pling.ask(prompt),
+  catalog: pling.task,
+  service,
+  locale,
+  form: courseForm,
+  onComplete: () => render(),
+});
+```
+
+`createCourseTaskRuntime` registers `course.create`, `teacher.create`, and `course.schedule`, then creates the course guide. The guide exposes a small set of commands:
+
+- `focus-*` scrolls to and highlights a real field;
+- `use-suggestion` / `apply-*` writes a recommendation into the existing control;
+- `skip-field` skips an optional value;
+- `start-review` / `review-task` opens the read-only review;
+- `propose-save` opens confirmation without writing;
+- `cancel-task` ends the guide.
+
+The model-facing tools are `pling_focus_field`, `pling_review_task`, `pling_propose_save`, and `pling_cancel_task`. They pass through the same permission, audit, and availability checks as any action. A command that the guide does not declare in `guide.agent` never reaches the model.
+
+## Mount it in the vanilla assistant
+
+The vanilla entry only connects the existing page, the task runtime, and the assistant dock:
+
+```ts
+import { createTaskCard } from "@plingjs/vanilla";
+import {
+  createCourseTaskRuntime,
+  createCourseTaskView,
+} from "../../../shared/course-workspace/runtime";
+
+taskRuntime = createCourseTaskRuntime({
+  registry: pling.registry,
+  ask: (prompt) => pling.ask(prompt),
+  catalog: pling.task,
+  service,
+  locale,
+  form: courseForm,
 });
 
-const card = createTaskCard(tasks, { locale: "en-US", catalog: false });
-pling.dock({
+taskCard = createTaskCard(taskRuntime.controller, {
+  locale: locale === "zh" ? "zh-CN" : "en-US",
+  title: copy.taskPanelTitle,
+  onPrompt: (prompt) => void pling.ask(prompt),
+});
+
+const taskView = createCourseTaskView(taskCard, taskRuntime);
+dock = pling.dock({
+  title: "Pling assistant",
   layout: "sidebar",
   sidebarMode: "fused",
   defaultOpen: true,
-  task: card.element,
+  task: taskView.element,
+  mount: document.querySelector("#dock-mount")!,
 });
 ```
 
-The same `invoke` boundary lets an application replace a DOM-backed action with an API-backed function action later. The task id and user-facing copy stay the same.
+`course-form.ts` remains the only business input surface. When the person clicks **Auto-fill**, the page writes the recommendation into the real control. When they edit the form directly, the next guide pass reads the new page value. Chat never grows a second course form.
 
-The [course back office](/demos/course-workspace/) is the runnable version of this chapter. It includes all five tasks, a rejected slot, and a course catalogue and schedule that update through the normal page renderer.
+## Saving needs a human confirmation
 
-The course-creation demo follows the business page more closely: it opens the existing “Create a course” form, and the assistant column only shows a four-step guide. Step one writes recommended values into the original form; step two selects the teacher and eligible cards; step three pauses while the user chooses a cover in the page; step four reads the page again and reviews it. The chat never duplicates the course fields. `examples/shared/course-workspace/course-guide.ts` owns the guide, while `course-form.ts` remains the only source of business input. Next actions use the shared compact row from `@plingjs/dom`; a long recommendation stays a one-line preview instead of stretching the button.
+The final step is not the model declaring success. It is a real write from the page:
 
-Those four stages are the page's own presentation, not a script imposed on the task layer. `course.create` also declares `objective`, `constraints`, and `successCriteria`, and registers the same controller in the task catalogue with `pling.task.define`. The model can answer “What can you do?”, accept a correction such as “rename the course to Fat-burn yoga”, or call `pling_update_task` with only the delegated field when the user says “You pick the cards”. The page subscribes to `TaskRunSnapshot`, writes the change back to the original form, and re-derives the current stage. The actual save still goes through `create_course`, the executor, and a read-back.
+1. While required fields are missing, the action row offers locate, auto-fill, or skip; **Confirm save** is absent.
+2. While the cover is missing, only **Upload cover** remains, pointing at the real file input.
+3. When the person clicks **Confirm save**, the page re-reads every field and calls `controller.run()`.
+4. `create_course` is registered with `modelVisible: false`, so the model cannot bypass confirmation.
+5. After the write, the catalogue is checked; the new course must be first before the task is complete.
 
-The note task uses a record binding instead of a hidden id field:
+After the first course, **Do it again** keeps the first course in the catalogue and starts the second through the same task. Once the transcript overflows, it still scrolls up and down.
 
-```ts
-tasks.register({
-  id: "lesson.note",
-  title: "Write a lesson note",
-  requiresRecord: true,
-  fields: [{ name: "note", label: "Note", type: "textarea" }],
-  steps: [{
-    label: "Save the note",
-    action: "update_lesson_note",
-    args: (values, binding) => ({ lessonId: binding.record?.id, note: values.note }),
-  }],
-});
+## Check it in the browser
 
-dock.open();
-card.open("lesson.note", {}, {
-  record: { id: lesson.id, label: `${lesson.course} · ${lesson.date} ${lesson.time}` },
-});
-```
+Open the [vanilla course back office](/demos/course-workspace/?lang=en) and verify:
 
-The definition refuses to start without a bound record. The form asks only for the note, and the controller shows the bound course in the task header.
+- The create-course form opens on entry; the assistant shows only a compact action row, not a separate task panel.
+- Entering “Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card” writes the values into the form and resolves Chen to Chen Jing.
+- Asking an unrelated question mid-task gets an answer; it is not treated as the course name.
+- Saying “change the difficulty to 4 stars” updates only that value.
+- An unknown teacher stops the assistant and lists available teachers; it is not silently replaced.
+- Saving without a cover is blocked; after uploading one, **Confirm save** appears.
+- Confirming puts the new course first and renders the deduction as `1`.
+- Creating a second course keeps the first one, and the transcript remains scrollable.
 
-## Keep lookup results safe and readable
+## Minimum integration order
 
-Searching returns choices with a stable reference and a human label. If two students share a name, show a masked phone number or another useful distinction. The reference is resolved again on the server, including shop and session scope, before a write.
+1. Declare fields, validation, actions, and read-back evidence with `TaskDefinition`.
+2. Declare welcome copy, the field list, and `agent` commands with `TaskGuideDefinition`; `steps` names business stages, not a per-field script.
+3. Register the task with `pling.task.define()` or the shared runtime, declaring `route`, `scope`, and `autoStart`.
+4. Implement explicit page commands: locate, use a suggestion, skip, review, confirm save, cancel.
+5. Read business data back before showing completion.
 
-```ts
-const lookup = (query: string) =>
-  courseApi.searchStudents(query).then((students) =>
-    students.map((student) => ({
-      value: student.ref,
-      label: student.name,
-      description: student.maskedPhone,
-    })),
-  );
-```
-
-Do not expose the reference as an editable text field. If no result matches, say so; do not invent a record or fall back to the first row silently.
-
-## Make the run observable
-
-While a task runs, show the current step and its reason. When a write finishes, read it back or use a declared expectation. A failure should keep the selected input and the failed step visible so the person can retry or change the choice.
-
-The card emits `pling-task-prompt` for agent-mode tasks and `pling-task-complete` when a deterministic task ends. A vanilla host can route the prompt to `pling.ask()` and refresh its own views from the complete event.
-
-## Test the page without a model
-
-Guided tasks are deterministic, so most checks need no model call. Test an empty field, a duplicate lookup, a successful write, a server rejection, and cancellation. Use the same task definition in the browser and in the unit test; the controller is framework-independent.
-
-Destroy the card when the page or route is torn down. That cancels active work, aborts searches, and removes subscriptions while the business page continues to own its own DOM.
-
-## Completion checklist
-
-- The page presents outcomes before asking for a prompt.
-- The task card is mounted in the assistant transcript; the page keeps its own controls.
-- Search results are labelled and references are revalidated on the server.
-- A row action receives its lesson through a binding rather than a text field.
-- Step actions use the existing executor or business service.
-- A failed write remains visible and recoverable.
-- Saving a note updates the row and the activity list.
-- No action id or raw argument appears in the ordinary interface.
-
-## Next step
-
-Add an agent-mode task for requests that cannot be described as a fixed sequence. Keep deterministic tasks for routine work, and let the person take over visual or manual steps instead of forcing the agent to simulate them.
-
+React, Vue 3, Vue 2.7, and vanilla share the same task definition, field derivation, and action row. Only the adapter mount changes.

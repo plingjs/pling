@@ -218,7 +218,7 @@ try {
   });
   const response = await fetch(new URL("/health", running.baseUrl));
   const health = await response.json();
-  if (!response.ok || health.service !== "pling-surface-gateway" || health.version !== "0.1.0-alpha.7") {
+  if (!response.ok || health.service !== "pling-surface-gateway" || health.version !== "0.1.0-alpha.8") {
     throw new Error("surface-gateway CLI health check failed: " + response.status + " " + JSON.stringify(health));
   }
 } finally {

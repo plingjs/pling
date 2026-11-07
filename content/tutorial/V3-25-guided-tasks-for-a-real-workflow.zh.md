@@ -15,34 +15,37 @@ status: drafted
 
 这一章用“创建课程”这一件事来拆解引导任务。页面仍然只有原来的课程表单，助手在对话框里说明当前步骤、展示只读摘要、定位真实字段，并在保存后回读课程库确认结果。
 
-## 先接住一整句话
+## 让模型接住一整句话
 
-创建课程本来需要填很多项，逐项追问会把人拖回表单问答。这个示例先让业务自己识别一句话，再把结果一次写回页面：
+创建课程本来需要填很多项，逐项追问会把人拖回表单问答。这个示例没有在页面里写意图分类器；助手直接读当前任务上下文，再把一句话里的字段写进工作记忆：
 
 ```text
 孕妇瑜伽，陈老师，2 星，介绍自动填写
 ```
 
-课程名、老师、难度和介绍会同时进入原表单。助手只需要补充真正缺少的内容，例如“可用卡还没定”；如果老师不在列表里，它会停下来问人，不会把相近的名字偷偷替换掉。缺少封面的情况更明确：助手把页面定位到封面上传区，然后把选择文件交还给人。
+模型看到的是当前 active task 的目标、约束、字段、已填值、缺口与当前阶段。它把这句话理解为 `name`、`teacherId`、`difficulty` 和 `intro` 四个值，调用一次 `pling_update_task`；页面按字段声明逐项校验，再把变化同步回原表单。助手只追问真正缺少的内容，例如“可用卡还没定”；如果老师不在列表里，它会停下来问人，不会把相近的名字偷偷替换掉。缺少封面时，助手把页面定位到上传区，然后把选择文件交还给人。
 
-`AgentInline` 提供了可选的 `beforeSend`，但它只负责确定性快路径：明确说出的字段值、明确的保存、核对、取消命令，由页面当场处理并返回 `{ handled: true, reply }`。问句、帮助请求、模糊修正、委托选择（例如“卡片你来选”“你来帮我随便填”）和普通聊天一律返回 `undefined`，交给模型结合任务工作记忆判断。疑问句不会因为“当前正等着填课程名”就被当成字段值写进表单。
+字段校验属于页面，不属于对话。`TaskField` 可以声明数值的 `min` / `max`、文本的 `minLength` / `maxLength`、`pattern`，可以给小型封闭集合一个 `values` 列表，也可以写一个使用当前工作记忆的 `validate(value, values)`。这些检查在写入任务快照之前执行：类型不对、老师不存在、难度越界或扣次格式错误都会返回失败，不会出现“写了一半”的页面状态。模型可以重试、换一种问法或请用户确认，但它无法绕过这条边界。
 
 ```ts
-async function handleBeforeSend(text: string) {
-  const result = parseCourseIntake(text, { /* 当前老师、卡片与页面草稿 */ });
-  if (shouldUseAgent(result)) return undefined;
-
-  applyIntakePatch(result.patch);
-  return {
-    handled: true,
-    reply: composeCourseIntakeReply({ draft, result, /* ... */ }),
-  };
-}
+const courseTask = {
+  id: "course.create",
+  fields: [
+    { name: "name", label: "课程名称", type: "text", minLength: 1, maxLength: 40 },
+    {
+      name: "teacherId",
+      label: "授课老师",
+      type: "lookup",
+      lookup: teacherLookup,
+      validate: (value) =>
+        teachers.some((teacher) => teacher.id === value) ? null : "请从 search_teachers 的结果中选择老师。",
+    },
+    { name: "difficulty", label: "难度", type: "number", optional: true, min: 1, max: 5 },
+  ],
+};
 ```
 
-模板里用 `:before-send="handleBeforeSend"` 绑定处理函数。它不是事件监听器；写成 `@before-send` 会注册一个不会执行函数的事件。
-
-用户随后说“难度改成 4 星”或“把课程名字改成减脂瑜伽”，解析器只改当前草稿里的对应字段，不会重新问一遍全部信息。解析不出要改哪一项时，助手会直接请用户说清楚，而不是猜一个字段写进去。
+模型不会因为“这一轮还没回答”就把用户的问题当成字段值。用户问“这个字段是什么意思”、说“先帮我看看”，或者临时改主意，都留在同一段对话里；任务状态只是工作记忆，不是必须照做的脚本。后续“难度改成 4 星”或“把课程名字改成减脂瑜伽”同样由模型理解为当前任务的修正，只更新对应字段。只有它确实无法判断指哪一项时，才会向用户确认。
 
 ## 两种进入方式，一套任务
 
@@ -65,7 +68,7 @@ pling.task.define({
   initialValues: currentTaskValues,
   state: () => ({
     snapshot: taskSnapshot.value,
-    step: step.value,
+    step: 1,
     busy: busy.value,
     error: taskError.value,
     completed: completed.value,
@@ -128,31 +131,31 @@ export const courseTask = {
 
 它不依赖 Vue，也不知道聊天窗口长什么样。任务可以只有执行步骤，也可以带一份用户可见的引导。
 
-`TaskGuideDefinition` 回答“用户看到什么”：步骤标题、说明、只读摘要、按钮文案，以及哪一步必须交还给人。
+`TaskGuideDefinition` 回答“用户看到什么”：任务标题、欢迎语、当前字段表，以及模型可以调用的界面命令。
 
 ```ts
-export const courseGuide = {
+export const courseGuide: TaskGuideDefinition = {
   taskId: "course.create",
   title: "创建课程",
+  welcome: "把课程信息一次说给我，也可以直接在页面填写，我来补缺。",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
+  fields: () => courseCreateFieldNodes(locale, draft(), teachers, skipped),
   steps: [
     {
-      id: "course.basics",
-      label: "课程信息",
-      title: "先确定课程内容",
-      description: "下面三项会写进页面里的原表单。",
-      rows: () => [
-        { label: "课程名称", value: draft.name || recommended.name },
-        { label: "难度", value: draft.difficulty || 3, format: "stars" },
-      ],
-      primary: { label: "填入推荐内容并继续", command: "apply-basics" },
-      secondary: { label: "在页面中定位", command: "focus-basics" },
+      id: "course.fill",
+      label: "创建课程",
+      title: "创建课程",
+      description: "把课程信息写进原表单，再由人确认保存。",
     },
-    // 教学与约课、课程封面、核对并保存……
   ],
 };
 ```
 
-引导里没有 `input`、`textarea` 或 `select`。它只展示摘要和命令名。真正写值、打开弹窗、定位字段，仍由页面处理。
+`steps` 只描述业务阶段，供标题和进度文案使用，不决定下一步问什么。这个案例只有一个阶段；真正的“还差哪一项”来自 `fields()` 对页面当前值的推导。引导里没有 `input`、`textarea` 或 `select`，真正写值、打开弹窗、定位字段，仍由页面处理。
 
 分开还有一个直接好处：同一个任务可以自动执行，也可以只作为对话里的操作手册。没有界面也能跑；没有执行步骤时，也可以只给助手一段 playbook。
 
@@ -194,6 +197,30 @@ export const courseGuide = {
 
 对应动作是 `pling_update_task`。它只写当前 active task、只接受声明过的字段，并拒绝 `agentWritable: false` 的页面专属字段。`TaskField.recommended` 只是在用户明确委托时给模型的推荐值，不是自动写入；`agentWritable: false` 的封面仍由用户在页面上传。工作记忆更新后，Vue 页面订阅 `TaskRunSnapshot`，把变化同步回原表单并高亮字段。真正的业务写入仍由 `create_course`、执行器、确认和回读完成。
 
+### 页面保留最后一下
+
+模型能感知、解释、追问和修正，但页面仍然掌握三个不可让渡的动作：定位、核对与保存。
+
+- `pling_focus_field` 只把某个已声明字段滚进视野并高亮，不写值；
+- `pling_review_task` 打开页面自己的只读核对；
+- `pling_propose_save` 只打开确认，不执行业务写入；
+- `pling_cancel_task` 结束引导，已经写进页面的值不会自动回滚。
+
+这些工具不是框架的隐藏默认值。引导必须在 `guide.agent` 里显式声明 `review` / `proposeSave` / `cancel` 命令，模型才会看到对应工具；没有声明就不出现，也不会产生“点了没反应”的空动作。这样业务可以决定自己的保存路径：有的先弹确认，有的要求二次校验，有的根本不允许在任务里保存。
+
+```ts
+guide: {
+  taskId: "course.create",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
+}
+```
+
+`proposeSave` 对应的页面命令由页面自己处理，例如打开原有确认弹窗、重新读取表单、执行 `create_course` 和回读。模型只能说“我准备保存了，请在页面确认”，不能在用户没有确认时宣称已经完成。
+
 ## 不再手写第二套聊天界面
 
 旧写法需要页面在聊天消息流里手动挂载 `AgentTaskGuide`，再自己维护标题、消息区和样式。这样很容易出现一个案例一种外观，业务页面也会被助手 UI 绑住。
@@ -207,13 +234,18 @@ export const courseGuide = {
     :title="createCopy.assistantTitle"
     :placeholder="page.assistant.placeholder"
     task-placement="none"
+    guide-placement="end"
     :debug="{ maxCalls: 8 }"
     model-settings="readonly"
-  />
+  >
+    <template #guide>
+      <AgentGuideActions :items="guideActions" @command="onGuideCommand" />
+    </template>
+  </AgentInline>
 </aside>
 ```
 
-`AgentInline` 订阅任务目录，但这里用 `task-placement="none"` 关掉了内置任务卡。不是任务层不重要，而是“创建课程”本身就是一张连续填写的表单：顶部再放一条字段轨道，会让聊天变成第二套操作路径。用户只需要一个叙事入口，下一步动作直接出现在对话末尾。
+`AgentInline` 订阅任务目录，但这里用 `task-placement="none"` 关掉了内置任务卡，并用 `guide-placement="end"` 把 `#guide` 插槽放到最新消息之后。不是任务层不重要，而是“创建课程”本身就是一张连续填写的表单：顶部再放一条字段轨道，会让聊天变成第二套操作路径。用户只需要一个叙事入口，下一步动作直接出现在对话末尾；`AgentGuideActions` 只发出页面已声明的命令，不写字段，也不调用业务动作。
 
 任务定义仍然负责字段、顺序、命令和结果判据，只是把展示权交还给业务。`task-placement` 有三个值：默认的 `inline` 把内置引导放进对话流，`pinned` 把它固定在聊天标题下方，`none` 则完全隐藏。需要常驻步骤条的产品可以选前两种；像这个案例一样，页面和聊天各自只做一件事时，`none` 更干净。
 
@@ -270,71 +302,38 @@ const items: GuideActionItem[] = [
 - 用户点“采用”后，值才写进原控件，状态变成 `current`；
 - 用户直接在页面里改，下一次引导读到的是页面新值。
 
-任务行用 `status`、`badge`、`note` 和 `action` 表达这件事：
+字段表由页面当前值推导，不需要 `status` / `badge` 行模板，也不需要步骤计数器：
 
 ```ts
-const row: TaskGuideRow = filled
-  ? {
-      label: "课程名称",
-      value: draft.name,
-      status: "current",
-      badge: "已填入",
-      action: { label: "定位", command: "focus-name" },
-    }
-  : {
-      label: "课程名称",
-      value: recommended.name,
-      status: "suggested",
-      badge: "建议",
-      note: "来自示例课程模板，尚未写入页面",
-      action: { label: "采用", command: "apply-name" },
-    };
-```
-
-`action.command` 不进入第二套执行通道。它和步骤按钮一样，最终都交给页面的 `onCommand`。
-
-建议不符合实际时，用户不需要先“拒绝”：直接在页面里改就行。引导读到的是页面新值，后续“采用”也不会覆盖用户已经输入的内容。
-
-按钮不会打开新的输入框。它把值写进页面上已经存在的课程名称、难度和课程介绍控件，然后滚动到对应字段，并在表单上打出蓝色标记。用户看到的是“填这里”，不是聊天里的一句“已定位”。
-
-```ts
-async function onCommand(command: TaskGuideCommand) {
-  switch (command.action.command) {
-    case "apply-basics":
-      applyBasics();
-      await focusFields(["name", "difficulty", "intro"]);
-      break;
-    case "focus-teaching":
-      await focusFields(["teacher", "cards", "note"]);
-      break;
-    case "save-course":
-      await saveCourse();
-      break;
-    case "cancel-task":
-      pling.task.deactivate();
-      break;
-    default:
-      if (command.action.command.startsWith("apply-")) {
-        applyField(command.action.command.slice("apply-".length));
-      } else if (command.action.command.startsWith("focus-")) {
-        await focusFields([command.action.command.slice("focus-".length)]);
-      }
-  }
-}
-```
-
-步骤也不该由按钮手动 `step.value++`。页面已经有这些字段，直接按表单状态推导：
-
-```ts
-const step = computed(() => {
-  if (!draft.name.trim()) return 1;
-  if (!draft.teacherId || !draft.cards.trim()) return 2;
-  if (!draft.cover) return 3;
-  return 4;
+const guideField = computed(() => {
+  const gaps = courseCreateFieldNodes(locale, draft, teachers, skipped.value);
+  return gaps.find((field) => field.required && !field.filled && !field.skipped)
+    ?? gaps.find((field) => !field.filled && !field.skipped);
 });
 ```
 
-这样用户在页面里改值、助手通过 `pling_start_task` 带入值，或者用户点“采用”，都会走到同一个步骤判断。不要按输入框数量拆步骤：十个框不等于十个步骤。按业务决策分组，一般三到五组就够；字段级的差异交给任务行表达。
+`guideActions` 只根据这个缺口生成短动作：定位当前字段、使用推荐值、跳过可选项；必填项齐了才出现“核对”。十个输入框不等于十个步骤，字段级差异由字段表表达。
+
+建议不符合实际时，用户不需要先“拒绝”：直接在页面里改就行。引导读到的是页面新值，后续“采用”也不会覆盖用户已经输入的内容。
+
+按钮不会打开新的输入框。它把值写进页面上已经存在的控件，然后滚动到对应字段，并在表单上打出蓝色标记。用户看到的是“填这里”，不是聊天里的一句“已定位”。
+
+页面只处理显式命令，不解析自然语言：
+
+```ts
+function onGuideCommand(command: string): void {
+  if (command === "save-course") void saveCourse();
+  else if (command === "resume-editing") resumeEditing();
+  else if (command === "pick-cover") void pickCover();
+  else if (command === "locate-field") locateField(guideField.value);
+  else if (command === "use-suggestion") useSuggestion(guideField.value);
+  else if (command === "skip-field") skipField(guideField.value);
+  else if (command === "start-review") startReview();
+  else if (command === "focus-save") focusSave();
+}
+```
+
+判断“用户想创建课程还是想先问功能”属于模型的工作；页面只负责执行“定位课程名称”“采用这个推荐”这类明确命令。这样用户中途问问题、改主意或暂停，都不会被页面误当成下一步。
 
 当助手带着字段值开启任务时，页面也需要把这些值同步回原表单。这个案例在 `onActivate` 里做一次：
 
@@ -355,18 +354,19 @@ function applyTaskRunValues(task: ActiveGuidedTask): void {
 
 ## 取消，以及在页面之间活下来
 
-如果使用内置任务卡，右上角有“取消任务”。它只发出一个普通命令：
+任务菜单和模型都可以发出“取消任务”。它只是一个普通命令：
 
 ```ts
 const guide: TaskGuideDefinition = {
   taskId: "course.create",
   title: "创建课程",
   cancel: { label: "取消任务", command: "cancel-task" },
-  steps: courseSteps,
+  agent: { cancel: "cancel-task" },
+  // ...
 };
 ```
 
-页面收到 `cancel-task` 后调用 `pling.task.deactivate()`。引导消失，控制器里的运行被取消，不会留下一个“看起来还在，其实已经结束”的面板。这个案例把入口放在助手的任务菜单里，底层仍是同一条命令。
+页面收到 `cancel-task` 后调用 `pling.task.deactivate()`。引导消失，控制器里的运行被取消，不会留下一个“看起来还在，其实已经结束”的面板。取消不会回滚已经写入表单的值，因为页面才是用户正在编辑的事实来源。
 
 如果任务会关闭弹窗、跳到详情页，或者中间短暂离开原作用域，登记时加 `keepActive`：
 
@@ -386,11 +386,11 @@ pling.task.define({
 
 ## 人工接力要明确停下来
 
-上传封面要读取本地文件，不适合由助手代选。第三步因此不显示“继续”，而是展示一条人工接力说明，并把用户带到原页面的封面上传区域。
+上传封面要读取本地文件，不适合由助手代选。封面是必填项，引导不会伪造一个布尔值，而是把用户带到原页面的上传区域；操作行此时只保留“上传封面”，不提供“继续”。
 
-用户选完图片后，任务才进入核对步骤。这个停顿不是失败，而是任务计划的一部分。没有它，流程看上去更快，但用户会在最后一步才发现自己漏了一项必须亲自完成的操作。
+用户选完图片后，页面从文件输入和原表单重新读取全部字段，才出现“核对”。这个停顿不是失败，而是任务边界的一部分。没有它，流程看上去更快，但用户会在最后一步才发现自己漏了一项必须亲自完成的操作。
 
-核对步骤从页面重新读取名称、老师、卡片、封面、扣卡次数和金额。只有这些值都有效，保存按钮才真正执行 `create_course`。
+核对读取名称、老师、卡片、封面、扣卡次数和金额。只有这些值都有效，操作行才会出现“确认保存”；点击后才执行 `create_course`。
 
 ## 保存后从页面确认
 
@@ -400,8 +400,8 @@ pling.task.define({
 const result = await controller.run();
 if (result.status === "done" && courses.value[0]?.id === newCourseId.value) {
   modalOpen.value = false;
-  step.value = 4;
-  return;
+  reviewOpen.value = false;
+  return true;
 }
 ```
 
@@ -420,7 +420,8 @@ if (result.status === "done" && courses.value[0]?.id === newCourseId.value) {
 - 输入“帮我改一下”这类没有指向的修正，助手应先问清楚要改哪一项。
 - 输入“瑜伽进阶2星 老师随意，月卡”，老师取推荐值，课程名保持“瑜伽进阶”，不出现“进阶老师”这种误判。
 - 没有选择封面就保存时，任务停在封面并给出明确提示。
-- 完成封面后保存，新课程出现在课程列表第一位。
+- 完成封面后保存，新课程出现在课程列表第一位；扣卡次数显示为 `1`，不是 `1.0`。
+- 再点“再做一次”创建第二门课，第一门课仍在课程库中；消息变多后聊天记录仍可上下滚动。
 - 聊天和页面操作过程中没有控制台错误。
 
 ## 接入另一个页面
@@ -435,4 +436,4 @@ if (result.status === "done" && courses.value[0]?.id === newCourseId.value) {
 
 当任务需要由用户主动选择，或者只能在某个详情页、某一行记录上启动时，把 `route`、`scope` 或 `requiresRecord` 写清楚。不要用页面上的临时状态去猜——任务目录会根据这些声明判断当前是否可用。
 
-React、Vue 2 和原生 JS 版本沿用同一套任务定义和展示定义，只替换适配器的挂载方式。这个案例先完成 Vue 3，确认交互方向后再逐端补齐。
+React 19、React 16.3、Vue 2.7 和原生 JS 版本沿用同一套任务定义、字段推导和操作行，只替换适配器的挂载方式。五个版本都已经提供同样的创建课程流程、人工确认和回读验证。

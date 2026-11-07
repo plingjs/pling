@@ -1017,7 +1017,7 @@ return <button ref={addRef}>添加</button>;`, "tsx"),
         p("collapsible", "boolean", "Shows the collapse control used by the dock shell.", "显示浮窗外壳使用的收起按钮。", { defaultValue: "false" }),
         p("debug", "boolean | AgentTraceOptions", "Enables the read-only request inspector.", "开启只读请求诊断器。", { defaultValue: "false" }),
         p("modelSettings", "ModelSettingsSetting", "Model settings entry in Activity.", "“运行”中的模型设置入口。", { defaultValue: "off" }),
-        p("beforeSend", "AgentBeforeSendHandler", "Optional local responder. Return `{ handled: true, reply }` to update page state and answer without calling the model. Use it for deterministic intake, corrections, and confirmation steps.", "可选的本地响应器。返回 `{ handled: true, reply }` 时直接更新页面状态并回复，不调用模型。适合确定性的信息录入、修正与确认步骤。"),
+        p("beforeSend", "AgentBeforeSendHandler", "Optional escape hatch for a page that can answer without the model. Return `{ handled: true, reply }` to update page state and reply immediately. Prefer model-driven task tools for natural-language intake and corrections; reserve this hook for narrow, deterministic commands whose meaning is unambiguous.", "可选的本地响应逃生口：页面无需模型即可回答时，返回 `{ handled: true, reply }` 直接更新页面状态并回复。自然语言录入与修正应优先交给模型驱动的任务工具；这个钩子只用于含义明确、范围很窄的确定性命令。"),
         p("#task", "slot", "Overrides the task presentation above the transcript. Built-in Vue surfaces render the active guide here by default.", "覆盖对话上方的任务展示。Vue 内置界面默认在这里渲染 active 引导。"),
         p("#guide", "slot", "Guidance content for the next-step prompt and its actions. Placement follows `guidePlacement`.", "下一步提示与操作的引导内容，位置由 `guidePlacement` 决定。"),
         p("#nav-actions", "slot", "Header toolbar content rendered before the built-in clear and collapse controls. Use it for page-scoped actions such as the current task menu.", "标题栏工具栏内容，渲染在内置的清空与收起按钮之前。适合放当前任务菜单等页面级操作。"),
@@ -1641,6 +1641,10 @@ const off = catalog.define({
       all: [
         p("actionId", "readonly string", "The actual model action id bound by this catalog. Read it instead of assuming pling_start_task when several runtimes share a registry.", "当前目录实际绑定的模型动作 id。多个运行时共享注册表时，应读取它而不是假定一定是 `pling_start_task`。"),
         p("updateActionId", "readonly string", "The actual model action id for updating the active task's working memory. It accepts only declared, agent-writable fields.", "更新当前任务工作记忆的实际模型动作 id。它只接受任务声明过且允许 Agent 写入的字段。"),
+        p("focusActionId", "readonly string", "The actual model action id that points at a declared guide field. It never writes a value and is unavailable when the active guide has no fields.", "指向已声明引导字段的实际模型动作 id。它不写入值；active 引导没有字段时不可用。"),
+        p("reviewActionId", "readonly string", "The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command.", "打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。"),
+        p("proposeSaveActionId", "readonly string", "The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command.", "打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。"),
+        p("cancelActionId", "readonly string", "The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command.", "结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。"),
         p("define(registration)", "() => void", "Adds a task registration and returns an unregister function.", "登记任务并返回注销函数。"),
         p("get(id)", "GuidedTaskRegistration | undefined", "Returns one registration even when its route or scope is currently unavailable.", "返回一个登记项，即使它当前因路由或作用域不匹配而不可用。"),
         p("list()", "readonly GuidedTaskRegistration[]", "Returns every registration owned by this catalog.", "返回该目录登记的全部任务。"),
@@ -1772,6 +1776,7 @@ if (active?.guide) {
         p("cancel", "TaskGuideAction", "Optional header action that lets the person leave the task. The renderer emits the command; the page decides how to end the run.", "可选的标题栏离开任务操作。渲染器只发出命令，由页面决定如何结束任务。"),
         p("stepSubtitle", "string", "Subtitle template supporting {step} and {total}.", "步骤副标题模板，支持 `{step}` 与 `{total}`。"),
         p("avatar", "string", "Short avatar text or initials used by the built-in renderer.", "内置渲染器使用的短头像文字或首字母。"),
+        p("agent", "{ focusField?, review?, proposeSave?, cancel? }", "Page-owned commands the model may trigger. `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; each tool is unavailable when its command is omitted. `focusField(field)` overrides the default `focus-<field>` command while `pling_focus_field` stays limited to declared guide fields. None of these commands performs a business write; `proposeSave` opens the confirmation surface only.", "模型可以触发的页面命令。声明 `review` 才会启用 `pling_review_task`，声明 `proposeSave` 才会启用 `pling_propose_save`，声明 `cancel` 才会启用 `pling_cancel_task`；省略时对应工具不可用。`focusField(field)` 可以覆盖默认的 `focus-<field>` 命令，但 `pling_focus_field` 仍只作用于引导声明的字段。这些命令都不执行业务写入；`proposeSave` 只打开确认界面。"),
         p("labels", "TaskGuideLabels", "Overrides for running, completed, current, done, pending, skipped, and error labels.", "覆盖运行中、已完成、当前、完成、未开始、已跳过与错误文案。"),
         p("fields", "TaskGuideFields", "Compact field list resolved from page state or the latest snapshot. The built-in renderer uses it for the horizontal progress rail; skip it for a full step card.", "由页面状态或最新快照解析的紧凑字段列表。内置渲染器用它显示横向进度轨道；省略时显示完整步骤卡。"),
         p("steps", "readonly TaskGuideStep[]", "Ordered human-facing steps. At least one is required by the contract.", "面向人的有序步骤。契约要求至少一项。", { required: true }),
@@ -1788,6 +1793,11 @@ if (active?.guide) {
   title: "新建课程",
   welcome: "我会陪你确认课程信息，并填入右侧表单。",
   stepSubtitle: "第 {step} 步，共 {total} 步",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
   steps: courseSteps,
   done: {
     title: "课程已创建",
@@ -2119,6 +2129,12 @@ if (active?.guide) {
         p("values", "readonly TaskChoice[]", "Small closed choice set for select fields.", "`select` 字段使用的小型封闭选项集。"),
         p("recommended", "TaskValue", "A suggestion the model may use only when the person explicitly delegates this choice. It is not written automatically.", "仅在用户明确委托这一项选择时，模型可以使用的建议值。它不会被自动写入。"),
         p("lookup", "TaskLookup", "Async search for a large collection. UI and agent tooling should share this function.", "大集合的异步搜索。界面与 Agent 工具应共用这一函数。"),
+        p("min", "number", "Minimum for a numeric field. Enforced before a model-proposed value reaches the task snapshot.", "数值字段的最小值。模型建议的值写入任务快照之前会先校验。"),
+        p("max", "number", "Maximum for a numeric field. Enforced before a model-proposed value reaches the task snapshot.", "数值字段的最大值。模型建议的值写入任务快照之前会先校验。"),
+        p("minLength", "number", "Minimum length for a text value. Counted on the trimmed string.", "文本值的最小长度，按去除首尾空白后的字符数计算。"),
+        p("maxLength", "number", "Maximum length for a text value. Counted on the trimmed string.", "文本值的最大长度，按去除首尾空白后的字符数计算。"),
+        p("pattern", "string", "Regular expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\\\\d*$`.", "不带分隔符的正则表达式源码，用于校验文本值。需要整值匹配时请写锚点，例如 `^[1-9]\\\\d*$`。"),
+        p("validate", "(value, values) => string | null | undefined", "Business-level check run before a model-proposed value is written. Return a short human-readable reason to reject it, or nothing when valid. This validates a value; it must not classify intent or trigger side effects.", "模型建议的值写入之前执行的业务校验。返回简短的、可直接展示给用户的拒绝原因；通过时返回空。它只校验值，不应做意图分类或产生副作用。"),
         p("searchAction", "string", "Action id exposed to the model for this lookup. Defaults to `search_<name>`; reuse one id when several tasks share a search implementation.", "为该查找暴露给模型的动作 id。默认 `search_<name>`；多个任务共用同一搜索实现时应复用同一个 id。"),
         p("minChars", "number", "Minimum query length before lookup runs. Values below one are clamped to one.", "触发搜索所需的最少字符数。小于 1 的值会按 1 处理。", { defaultValue: "1" }),
         p("agentWritable", "boolean", "Whether the model may write this field through the task update action. Set false for page-owned values such as an upload, signature, or one-time code.", "模型是否可以通过任务更新动作写入该字段。上传、签名、验证码等页面专属值设为 `false`。", { defaultValue: "true" }),
@@ -2139,6 +2155,29 @@ if (active?.guide) {
     label: row.name,
     description: row.phoneMasked,
   }))),
+};`,
+        ),
+        ex(
+          "Reject an impossible value before it reaches the page",
+          "在值写进页面之前拒绝非法值",
+          `const difficulty: TaskField = {
+  name: "difficulty",
+  label: "难度",
+  type: "number",
+  optional: true,
+  min: 1,
+  max: 5,
+};
+
+const teacher: TaskField = {
+  name: "teacherId",
+  label: "授课老师",
+  type: "lookup",
+  lookup: searchTeachers,
+  validate: (value) =>
+    teachers.some((item) => item.id === value)
+      ? null
+      : "请从搜索结果中选择老师。",
 };`,
         ),
       ],

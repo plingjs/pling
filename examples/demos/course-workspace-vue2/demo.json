@@ -4,8 +4,8 @@
   "titleZh": "冰草约课 · 课程管理后台（Vue 2.7）",
   "eyebrow": "Vue 2.7 · Guided workflow",
   "eyebrowZh": "Vue 2.7 · 引导式业务",
-  "summary": "The Bingcao Studio course back office built with Vue 2.7 render functions, Pling directives, and a shared task card inside a fused assistant sidebar, proving the workflow does not require Vue 3.",
-  "summaryZh": "用 Vue 2.7 渲染函数实现的冰草约课课程管理后台，通过 Pling 指令和融合侧栏中的共享任务卡完成同一套业务流程。",
+  "summary": "The Bingcao Studio course back office built with Vue 2.7 render functions, Pling directives, and the same agent-first task guide inside a fused assistant sidebar, proving the workflow does not require Vue 3.",
+  "summaryZh": "用 Vue 2.7 渲染函数实现的冰草约课课程管理后台，通过 Pling 指令和融合侧栏中的同一套 agent-first 引导完成业务流程，不需要升级到 Vue 3。",
   "url": "/demos/course-workspace-vue2/",
   "open": "src/CourseWorkspace.ts",
   "files": [
@@ -32,17 +32,17 @@
     "title": "The same task contract on Vue 2.7",
     "titleZh": "同一份任务契约也能跑在 Vue 2.7 上",
     "intro": [
-      "Vue 2.7 has the Composition API but not Vue 3's template/runtime stack. This example uses a render function, the Vue 2 adapter, and the shared DOM task card.",
+      "Vue 2.7 has the Composition API but not Vue 3's template/runtime stack. This example uses a render function, the Vue 2 adapter, and the shared DOM task view.",
       "The interesting part is what does not change: student lookup, required-field blocking, scheduling conflicts, and activity evidence remain the same."
     ],
     "introZh": [
-      "Vue 2.7 有组合式 API，但没有 Vue 3 的模板与运行时栈。这个示例使用渲染函数、Vue 2 适配器和共享 DOM 任务卡。",
+      "Vue 2.7 有组合式 API，但没有 Vue 3 的模板与运行时栈。这个示例使用渲染函数、Vue 2 适配器和共享 DOM 任务视图。",
       "真正重要的是哪些东西没有变：学员查找、必填阻断、排课冲突和操作证据都保持一致。"
     ],
     "steps": [
       { "title": "Install the Vue 2 plugin", "titleZh": "安装 Vue 2 插件", "body": "The entry creates one runtime and registers the Vue 2.7 plugin before mounting the page.", "bodyZh": "入口创建一个运行时，并在挂载页面前注册 Vue 2.7 插件。", "file": "src/main.ts", "match": "Vue.use(pling.plugin)", "lines": 8 },
       { "title": "Declare through render functions", "titleZh": "用渲染函数声明能力", "body": "The render tree applies Pling's scope and record directives explicitly. The declarations describe business regions, not DOM selectors for the agent to guess.", "bodyZh": "渲染树显式应用 Pling 的范围与记录指令。声明描述的是业务区域，而不是让 Agent 猜 DOM 选择器。", "file": "src/CourseWorkspace.ts", "match": "directives: [{ name: \"scope\"", "lines": 10 },
-      { "title": "Reuse the DOM task card", "titleZh": "复用 DOM 任务卡", "body": "Vue 2.7 mounts the same @plingjs/vanilla card as the standalone example and passes it to the dock, so task progress and failures do not need a second implementation.", "bodyZh": "Vue 2.7 挂载的是与独立示例相同的 @plingjs/vanilla 任务卡，并把它交给 Dock，因此任务进度与失败处理不需要第二套实现。", "file": "src/CourseWorkspace.ts", "match": "createTaskCard(taskRuntime.controller", "lines": 20 },
+      { "title": "Reuse the DOM task view", "titleZh": "复用 DOM 任务视图", "body": "Vue 2.7 mounts the same shared task view as the standalone example and passes it to the dock, so agent understanding, page validation, task progress, and failures do not need a second implementation.", "bodyZh": "Vue 2.7 挂载的是与独立示例相同的共享任务视图，并把它交给 Dock，因此模型理解、页面校验、任务进度与失败处理都不需要第二套实现。", "file": "src/CourseWorkspace.ts", "match": "createTaskCard(taskRuntime.controller", "lines": 20 },
       { "title": "Keep the shared dock", "titleZh": "复用共享助手入口", "body": "pling.dock opens the same Activity and Debug surfaces as the other adapters.", "bodyZh": "pling.dock 打开与其他适配器相同的最近操作与调试界面。", "file": "src/CourseWorkspace.ts", "match": "pling.dock({", "lines": 10 }
     ],
     "note": "Try the duplicate-name lookup and then schedule a conflicting slot. Both should fail or resume exactly as they do in Vue 3.",

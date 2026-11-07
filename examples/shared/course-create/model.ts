@@ -52,7 +52,7 @@ const RECOMMENDED = {
     cards: "月卡",
     note: "请提前 10 分钟到店；开课前 2 小时内不可取消。",
     price: "200",
-    deduct: "1.0",
+    deduct: "1",
   },
   en: {
     name: "Yoga foundations",
@@ -61,7 +61,7 @@ const RECOMMENDED = {
     cards: "Monthly card",
     note: "Please arrive 10 minutes early. Cancellations are not accepted within 2 hours of the class.",
     price: "200",
-    deduct: "1.0",
+    deduct: "1",
   },
 } as const;
 
@@ -103,7 +103,7 @@ export function emptyCourseDraft(): CourseDraft {
     intro: "",
     note: "",
     cover: false,
-    deduct: "1.0",
+    deduct: "1",
     price: "",
   };
 }
@@ -247,7 +247,7 @@ export function createCourseFromDraft(
     teacherId: teacher.id,
     cards,
     rating: (4.6 + difficulty * 0.08).toFixed(1),
-    deduct: draft.deduct.trim() || "1.0",
+    deduct: draft.deduct.trim() || "1",
     price: draft.price.trim() || "200",
     difficulty,
     status: "published",

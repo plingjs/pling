@@ -107,6 +107,7 @@ export function registerCourseActions(host: CourseActionHost, service: CourseSer
       examples: zh ? ["新建普拉提进阶，林琳老师，月卡，180 元"] : ["Create Pilates foundations with Lin Lin, monthly card, ¥180"],
       successHint: zh ? "新课程出现在课程库首位" : "The new course appears at the top of the catalogue",
       kind: "write",
+      modelVisible: false,
       params: {
         type: "object",
         properties: {
@@ -273,7 +274,32 @@ export function createCourseTaskRuntime(options: CourseTaskRuntimeOptions): Cour
   const controller = createTaskController({
     invoke: (action, args) => executor.execute(action, JSON.stringify(args)),
   });
-  const guide = options.form
+  let guide: CourseGuideController | null = null;
+  const currentCourseValues = (): TaskValues => {
+    if (!options.form) return {};
+    const value = options.form.read();
+    return {
+      name: value.name.trim(),
+      teacherId: value.teacherId,
+      cards: value.cards,
+      difficulty: value.difficulty || undefined,
+      price: value.price || undefined,
+      deduct: value.deduct || undefined,
+      intro: value.intro,
+      note: value.note,
+      cover: value.cover ? true : undefined,
+    };
+  };
+  const restartCourse = (): void => {
+    setMode("guide");
+    if (options.catalog) {
+      options.catalog.activate("course.create", { startedBy: "page" });
+    } else {
+      controller.start("course.create", currentCourseValues());
+      guide?.open();
+    }
+  };
+  guide = options.form
     ? createCourseGuide({
         controller,
         form: options.form,
@@ -281,6 +307,8 @@ export function createCourseTaskRuntime(options: CourseTaskRuntimeOptions): Cour
         locale,
         onActivate: () => setMode("guide"),
         onComplete: () => options.onComplete?.(),
+        onRestart: restartCourse,
+        onCancel: () => options.catalog?.deactivate(),
       })
     : null;
 
@@ -300,23 +328,14 @@ export function createCourseTaskRuntime(options: CourseTaskRuntimeOptions): Cour
             controller,
             ...(definition.id === "course.create" && options.form
               ? {
-                  initialValues: () => {
-                    const value = options.form!.read();
-                    return {
-                      name: value.name.trim(),
-                      teacherId: value.teacherId,
-                      cards: value.cards,
-                      difficulty: value.difficulty || undefined,
-                      price: value.price || undefined,
-                      deduct: value.deduct || undefined,
-                      intro: value.intro,
-                      note: value.note,
-                    };
-                  },
+                  guide: guide?.definition,
+                  initialValues: currentCourseValues,
                   onActivate: () => {
                     setMode("guide");
                     guide?.open();
                   },
+                  onCommand: (command) => guide?.command(command),
+                  state: () => guide?.state() ?? {},
                 }
               : {}),
           })
@@ -348,8 +367,12 @@ export function createCourseTaskRuntime(options: CourseTaskRuntimeOptions): Cour
   const openTask = (taskId: string, values: TaskValues = {}): CourseTaskLaunch | null => {
     if (taskId === "course.create" && guide) {
       setMode("guide");
-      guide.open();
-      options.catalog?.activate("course.create", { values, startedBy: "page" });
+      if (options.catalog) {
+        options.catalog.activate("course.create", { values, startedBy: "page" });
+      } else {
+        controller.start("course.create", { ...currentCourseValues(), ...values });
+        guide.open();
+      }
       return null;
     }
     setMode("task");

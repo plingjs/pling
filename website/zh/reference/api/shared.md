@@ -16,9 +16,9 @@ locale: zh
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.7` |
+| `@plingjs/core` | — | `0.1.0-alpha.8` |
 
-当前包版本为 `0.1.0-alpha.7`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.8`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -1406,6 +1406,10 @@ interface TaskCatalog {
 | --- | --- | --- | --- | --- |
 | `actionId` | `readonly string` | 否 | — | 当前目录实际绑定的模型动作 id。多个运行时共享注册表时，应读取它而不是假定一定是 `pling_start_task`。 |
 | `updateActionId` | `readonly string` | 否 | — | 更新当前任务工作记忆的实际模型动作 id。它只接受任务声明过且允许 Agent 写入的字段。 |
+| `focusActionId` | `readonly string` | 否 | — | 指向已声明引导字段的实际模型动作 id。它不写入值；active 引导没有字段时不可用。 |
+| `reviewActionId` | `readonly string` | 否 | — | 打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。 |
+| `proposeSaveActionId` | `readonly string` | 否 | — | 打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。 |
+| `cancelActionId` | `readonly string` | 否 | — | 结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。 |
 | `define(registration)` | `() => void` | 否 | — | 登记任务并返回注销函数。 |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | 否 | — | 返回一个登记项，即使它当前因路由或作用域不匹配而不可用。 |
 | `list()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回该目录登记的全部任务。 |
@@ -1642,6 +1646,7 @@ interface TaskGuideDefinition {
 | `cancel` | `TaskGuideAction` | 否 | — | 可选的标题栏离开任务操作。渲染器只发出命令，由页面决定如何结束任务。 |
 | `stepSubtitle` | `string` | 否 | — | 步骤副标题模板，支持 `{step}` 与 `{total}`。 |
 | `avatar` | `string` | 否 | — | 内置渲染器使用的短头像文字或首字母。 |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | 否 | — | 模型可以触发的页面命令。声明 `review` 才会启用 `pling_review_task`，声明 `proposeSave` 才会启用 `pling_propose_save`，声明 `cancel` 才会启用 `pling_cancel_task`；省略时对应工具不可用。`focusField(field)` 可以覆盖默认的 `focus-<field>` 命令，但 `pling_focus_field` 仍只作用于引导声明的字段。这些命令都不执行业务写入；`proposeSave` 只打开确认界面。 |
 | `labels` | `TaskGuideLabels` | 否 | — | 覆盖运行中、已完成、当前、完成、未开始、已跳过与错误文案。 |
 | `fields` | `TaskGuideFields` | 否 | — | 由页面状态或最新快照解析的紧凑字段列表。内置渲染器用它显示横向进度轨道；省略时显示完整步骤卡。 |
 | `steps` | `readonly TaskGuideStep[]` | 是 | — | 面向人的有序步骤。契约要求至少一项。 |
@@ -1655,6 +1660,11 @@ const guide: TaskGuideDefinition = {
   title: "新建课程",
   welcome: "我会陪你确认课程信息，并填入右侧表单。",
   stepSubtitle: "第 {step} 步，共 {total} 步",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
   steps: courseSteps,
   done: {
     title: "课程已创建",
@@ -2280,6 +2290,12 @@ interface TaskField {
 | `values` | `readonly TaskChoice[]` | 否 | — | `select` 字段使用的小型封闭选项集。 |
 | `recommended` | `TaskValue` | 否 | — | 仅在用户明确委托这一项选择时，模型可以使用的建议值。它不会被自动写入。 |
 | `lookup` | `TaskLookup` | 否 | — | 大集合的异步搜索。界面与 Agent 工具应共用这一函数。 |
+| `min` | `number` | 否 | — | 数值字段的最小值。模型建议的值写入任务快照之前会先校验。 |
+| `max` | `number` | 否 | — | 数值字段的最大值。模型建议的值写入任务快照之前会先校验。 |
+| `minLength` | `number` | 否 | — | 文本值的最小长度，按去除首尾空白后的字符数计算。 |
+| `maxLength` | `number` | 否 | — | 文本值的最大长度，按去除首尾空白后的字符数计算。 |
+| `pattern` | `string` | 否 | — | 不带分隔符的正则表达式源码，用于校验文本值。需要整值匹配时请写锚点，例如 `^[1-9]\\d*$`。 |
+| `validate` | `(value, values) => string \| null \| undefined` | 否 | — | 模型建议的值写入之前执行的业务校验。返回简短的、可直接展示给用户的拒绝原因；通过时返回空。它只校验值，不应做意图分类或产生副作用。 |
 | `searchAction` | `string` | 否 | — | 为该查找暴露给模型的动作 id。默认 `search_<name>`；多个任务共用同一搜索实现时应复用同一个 id。 |
 | `minChars` | `number` | 否 | `1` | 触发搜索所需的最少字符数。小于 1 的值会按 1 处理。 |
 | `agentWritable` | `boolean` | 否 | `true` | 模型是否可以通过任务更新动作写入该字段。上传、签名、验证码等页面专属值设为 `false`。 |
@@ -2297,6 +2313,30 @@ const studentField: TaskField = {
     label: row.name,
     description: row.phoneMasked,
   }))),
+};
+```
+
+**示例 2 · 在值写进页面之前拒绝非法值**
+
+```ts
+const difficulty: TaskField = {
+  name: "difficulty",
+  label: "难度",
+  type: "number",
+  optional: true,
+  min: 1,
+  max: 5,
+};
+
+const teacher: TaskField = {
+  name: "teacherId",
+  label: "授课老师",
+  type: "lookup",
+  lookup: searchTeachers,
+  validate: (value) =>
+    teachers.some((item) => item.id === value)
+      ? null
+      : "请从搜索结果中选择老师。",
 };
 ```
 
@@ -3600,10 +3640,10 @@ const config = resolveAgentConfig({
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | 项目 | 值 |
 | --- | --- |

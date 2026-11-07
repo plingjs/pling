@@ -9,159 +9,151 @@ status: drafted
 
 # Guided tasks for a real workflow
 
-A Vue 2.7 application can expose the same guided tasks as its Vue 3 counterpart. The business page keeps the options API and the controls staff already use. The shared task controller collects the decisions that cannot be inferred from the page, while the existing service still validates and performs each write.
+Vue 2.7 can provide the same guided workflow as Vue 3, React, and vanilla JavaScript without rewriting the application in Vue 3. The business page keeps its existing form, service, and validation. Vue 2.7 owns component lifecycle and rendering; the task definition, field derivation, executor, and action row come from the shared `examples/shared/course-workspace/`.
 
-The course back office uses four tasks that can start from the card catalogue, plus one task that starts from a schedule row. The row-level task is the important difference: the selected lesson is page context, not a value the user should type.
+This chapter keeps the course back office. Opening the page opens the existing **Create course** form. The assistant does not duplicate those fields; it understands a normal sentence, writes the changes back into the original form, and stops where a person must decide.
 
-## Start with outcomes, not action ids
+## Read one course description, not a field-by-field quiz
 
-Show the stable outcomes for the current role. In the course back office, a staff member sees “Create a course”, “Find a member's card”, “Create a teacher”, and “Schedule a lesson”. The fifth outcome, “Write a lesson note”, belongs beside a lesson because it needs a lesson first.
+Creating a course normally requires many fields. A field-by-field interrogation would push the person back into form filling, so this example does not put natural-language regex or a keyword table in the page. A person can simply say:
 
-Task titles, field labels, and examples should use the language of the desk. Action ids and parameter schemas remain implementation details for the debug view.
+```text
+Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card
+```
 
-## Mount the shared card from Vue 2
+The model receives the active task's `objective`, `constraints`, field list, current values, gaps, and guide stage. It reads the sentence as `name`, `teacherId`, `difficulty`, `intro`, and `cards`, then calls `pling_update_task` once. The page subscribes to `TaskRunSnapshot` and mirrors the values into the original form.
 
-The DOM card is independent of Vue's renderer. Vue 2 owns the component lifecycle; the controller and card are created after mount and released in `beforeDestroy`. The card is passed into the assistant dock's `task` option, so it appears in the conversation instead of taking over a separate region of the page.
+If the teacher is not in the list, the assistant stops and lists candidates. If the cover is missing, it locates the upload control and leaves file selection to the person. A mid-task question, a change of mind, or a pause remains ordinary conversation. Task state is working memory, not a script that must run to the next step.
 
-```vue
-<script>
-import { createTaskController } from "@plingjs/agent";
-import { createTaskCard, registerTaskLookupActions } from "@plingjs/vanilla";
-import { courseApi } from "./course-api";
+Field validation belongs to the page. A `TaskField` supports `min` / `max`, `minLength` / `maxLength`, `pattern`, a closed `values` set, and a business `validate(value, values)` callback. The model can write only declared fields through `pling_update_task`; a wrong type, an unknown teacher, or an out-of-range difficulty fails without leaving a half-applied form.
 
-export default {
-  name: "CourseTasks",
-  data() {
-    return { card: null, dock: null, stopLookups: null };
-  },
-  mounted() {
-    this.tasks = createTaskController({
-      invoke: (action, args) => courseApi.invoke(action, args),
+## A task is a goal, constraints, and working memory
+
+`TaskDefinition` describes **what must be true**, not what to ask next. The course field list serves both the model and the page's gap calculation:
+
+```ts
+const courseTask: TaskDefinition = {
+  id: "course.create",
+  title: "Create a course",
+  objective: "Help the person create a publishable course instead of walking a fixed field sequence.",
+  constraints: [
+    "The name, teacher, eligible cards, and cover are completion conditions; difficulty, intro, notes, deduction, and price are optional.",
+    "The cover must be uploaded by the person; the assistant must not fake it.",
+    "Every write still goes through the create_course action, executor, and read-back verification.",
+  ],
+  successCriteria: ["The new course appears first in the catalogue", "The catalogue is read back after the write"],
+  fields: [
+    { name: "name", label: "Course name", minLength: 1, maxLength: 40 },
+    { name: "teacherId", label: "Teacher", type: "lookup", searchAction: "search_teachers" },
+    { name: "cards", label: "Eligible cards", type: "select", values: cardChoices },
+    { name: "cover", label: "Course cover", type: "boolean", agentWritable: false },
+  ],
+  steps: [{ id: "course.save", label: "Write to the catalogue and read it back", action: "create_course", args: (values) => values }],
+};
+```
+
+`steps` describes one deterministic business write. It is not a conversation script. Which fields to collect first, when to ask, and when to answer a question belongs to the model and the task's working memory.
+
+## Vue 2.7 only mounts the shared runtime
+
+This example uses the Composition API available in Vue 2.7 and a render function. `onMounted` creates the shared task runtime, and `Vue.nextTick` ensures the dialog scope is mounted before the task activates:
+
+```ts
+import { Vue, onBeforeUnmount, onMounted } from "./vue2-runtime";
+import { createTaskCard } from "@plingjs/vanilla";
+import {
+  createCourseTaskRuntime,
+  createCourseTaskView,
+} from "../../../shared/course-workspace/runtime";
+
+onMounted(() => {
+  void Vue.nextTick(() => {
+    taskRuntime = createCourseTaskRuntime({
+      registry: pling.registry,
+      ask: (prompt) => pling.ask(prompt),
+      catalog: pling.task,
+      service,
+      locale,
+      form: courseForm,
+      onComplete: () => { version.value += 1; },
     });
-    this.tasks.register({
-      id: "student.cards",
-      title: "Find a member's card",
-      fields: [{
-        name: "studentRef",
-        label: "Student",
-        type: "lookup",
-        searchAction: "search_students",
-        lookup: (query) => courseApi.searchStudents(query),
-      }],
-      steps: [{ label: "Read the cards", action: "get_student_cards" }],
+
+    taskCard = createTaskCard(taskRuntime.controller, {
+      locale: zh ? "zh-CN" : "en-US",
+      title: copy.value.taskPanelTitle,
+      onPrompt: (prompt) => void pling.ask(prompt),
     });
-    this.stopLookups = registerTaskLookupActions(
-      this.$pling,
-      this.tasks.list(),
-    );
-    this.card = createTaskCard(this.tasks, {
-      locale: "en-US",
-      catalog: false,
-    });
-    this.dock = this.$pling.dock({
+
+    taskView = createCourseTaskView(taskCard, taskRuntime);
+    dock = pling.dock({
+      title: "Pling assistant",
       layout: "sidebar",
       sidebarMode: "fused",
       defaultOpen: true,
-      task: this.card.element,
+      task: taskView.element,
+      mount: root.querySelector<HTMLElement>("#dock-mount"),
     });
-  },
-  beforeDestroy() {
-    this.stopLookups?.();
-    this.card?.destroy();
-    this.dock?.destroy();
-  },
-};
-</script>
-```
-
-The controller does not make the Vue instance reactive, and it does not copy the action registry. It publishes snapshots; the card subscribes to that one run. Vue 2 remains responsible for rendering the page and passing in the application service.
-
-## Bind a row to its task
-
-The note task declares `requiresRecord: true`. The definition has only the note field, and its step reads the lesson id from the binding supplied by the page.
-
-```ts
-this.tasks.register({
-  id: "lesson.note",
-  title: "Write a lesson note",
-  requiresRecord: true,
-  fields: [{ name: "note", label: "Note", type: "textarea" }],
-  steps: [{
-    label: "Save the lesson note",
-    action: "update_lesson_note",
-    args: (values, binding) => ({
-      lessonId: binding.record?.id,
-      note: values.note,
-    }),
-  }],
+  });
 });
 
-openNote(lesson) {
-  this.dock.open();
-  this.card.open("lesson.note", {}, {
-    record: {
-      id: lesson.id,
-      label: `${lesson.course} · ${lesson.date} ${lesson.time}`,
-    },
-  });
-}
+onBeforeUnmount(() => {
+  taskRuntime?.destroy();
+  taskView?.destroy();
+  taskCard?.destroy();
+  dock?.destroy();
+});
 ```
 
-Without a non-empty record id, `start()` rejects the run instead of executing with an empty lesson id. Generic task lists also show this task as an entry point that must be opened from a record, not as a card that can run by itself. The form asks only for the note, and the task header shows the bound lesson.
+`course-form.ts` remains the only business input surface. When the person clicks **Auto-fill**, the page writes the recommendation into the real control. When they edit the form directly, the next guide pass reads the new page value. Chat never grows a second course form.
 
-## Use lookups instead of raw ids
+## The page executes explicit commands only
 
-People know a student's name or phone number, not `studentId`. A lookup should return labelled choices; when two students share a name, include enough masked information to distinguish them.
+The page does not parse what the person said. It executes declared UI commands. The course guide exposes a small set:
 
-```ts
-const search = (query) =>
-  courseApi.searchStudents(query).then((students) =>
-    students.map((student) => ({
-      value: student.ref,
-      label: student.name,
-      description: student.maskedPhone,
-    })),
-  );
-```
+- `focus-*` scrolls to and highlights a real field;
+- `use-suggestion` / `apply-*` writes a recommendation into the existing control;
+- `skip-field` skips an optional value;
+- `review-task` opens the read-only review;
+- `propose-save` opens confirmation without writing;
+- `cancel-task` ends the guide.
 
-The selected `ref` is still not authorization. The server resolves it again and checks the current shop, session, and permission before reading cards or writing a lesson. A missing, stale, or cross-shop reference must fail visibly.
+The model-facing tools are `pling_focus_field`, `pling_review_task`, `pling_propose_save`, and `pling_cancel_task`. They pass through the same permission, audit, and availability checks as any action. A command that the guide does not declare in `guide.agent` never reaches the model.
 
-`registerTaskLookupActions` exposes the same lookup as a narrow read action for the assistant. It does not expose a general table query, and it does not bypass the write action's own approval path.
+## Saving needs a human confirmation
 
-## Keep execution in the business boundary
+The final step is not the model declaring success. It is a real write from the page:
 
-The task bridge may call an existing function action or the application service. Do not put a second model loop, a second permission check, or a direct `fetch` inside the Vue 2 component.
+1. While required fields are missing, the action row offers locate, auto-fill, or skip; **Confirm save** is absent.
+2. While the cover is missing, only **Upload cover** remains, pointing at the real file input.
+3. When the person clicks **Confirm save**, the page re-reads every field and calls `controller.run()`.
+4. `create_course` is registered with `modelVisible: false`, so the model cannot bypass confirmation.
+5. After the write, the catalogue is checked; the new course must be first before the task is complete.
 
-After a write, read the result back or use the action's expectation. A failed required step stops the run and stays visible; an optional step may be marked skipped. The run must not turn a server failure or cancellation into success.
+After the first course, **Do it again** keeps the first course in the catalogue and starts the second through the same task. Once the transcript overflows, it still scrolls up and down.
 
-## Verify in a real Vue 2.7 build
+## Check it in the browser
 
-Open the [Vue 2.7 course back office](/demos/course-workspace-vue2/) and check the following:
+Open the [Vue 2.7 course back office](/demos/course-workspace-vue2/?lang=en) and verify:
 
-The course-creation demo follows the business page more closely: it opens the existing “Create a course” form, and the assistant column only shows a four-step guide. Step one writes recommended values into the original form; step two selects the teacher and eligible cards; step three pauses while the user chooses a cover in the page; step four reads the page again and reviews it. The chat never duplicates the course fields. `examples/shared/course-workspace/course-guide.ts` owns the guide, while `course-form.ts` remains the only source of business input. Next actions mount the same compact row from `@plingjs/dom` in Vue 2.7, React, and plain DOM.
+- The create-course form opens on entry; the assistant shows only a compact action row, not a separate task panel.
+- Entering “Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card” writes the values into the form and resolves Chen to Chen Jing.
+- Asking an unrelated question mid-task gets an answer; it is not treated as the course name.
+- Saying “change the difficulty to 4 stars” updates only that value.
+- An unknown teacher stops the assistant and lists available teachers; it is not silently replaced.
+- Saving without a cover is blocked; after uploading one, **Confirm save** appears.
+- Confirming puts the new course first and renders the deduction as `1`.
+- Creating a second course keeps the first one, and the transcript remains scrollable.
 
-Those four stages are the page's own presentation, not a script imposed on the task layer. `course.create` also declares `objective`, `constraints`, and `successCriteria`, and registers the same controller in the task catalogue with `pling.task.define`. The model can answer “What can you do?”, accept a correction such as “rename the course to Fat-burn yoga”, or call `pling_update_task` with only the delegated field when the user says “You pick the cards”. The page subscribes to `TaskRunSnapshot`, writes the change back to the original form, and re-derives the current stage. The actual save still goes through `create_course`, the executor, and a read-back.
+## The Vue 2.7 boundary
 
-- The assistant conversation shows business task cards without requiring a prompt.
-- Searching a duplicate name shows both candidates and their distinguishing details.
-- “Write a lesson note” opens from a schedule row and displays that lesson in the task header.
-- Starting a task with no selected student keeps the run action unavailable.
-- A successful schedule shows a human result and completed steps.
-- A server rejection keeps the failed step and its message on screen.
-- Saving a note updates the row and the activity list, with no lesson id in the form.
-- Leaving the component destroys the card and aborts pending lookup work.
+Vue 2.7 is the last Vue 2 release with the Composition API, so this example can reuse the task model and DOM action row from the Vue 3 chapter. Vue 2.6 and earlier do not have that API; do not install `@plingjs/vue2` and expect the same lifecycle bridge. Treat the page as vanilla JavaScript with `@plingjs/vanilla`. The task definition and `course-form.ts` do not need to be rewritten.
 
-Run the page with Vue 2.7, not Vue 3 compatibility mode. The shared card should use the same snapshots, messages, and failure behavior as the Vue 3 chapter.
+## Minimum integration order
 
-## Completion checklist
+1. Declare fields, validation, actions, and read-back evidence with `TaskDefinition`.
+2. Declare welcome copy, the field list, and `agent` commands with `TaskGuideDefinition`; `steps` names business stages, not a per-field script.
+3. Register the task with `pling.task.define()` or the shared runtime, declaring `route`, `scope`, and `autoStart`.
+4. Implement explicit page commands: locate, use a suggestion, skip, review, confirm save, cancel.
+5. Read business data back before showing completion.
 
-- The controller is created after the component mounts and released when it is destroyed.
-- The card catalogue contains four stable tasks; the row-level note task is opened with a binding.
-- Task fields use lookup or labelled choices rather than raw ids.
-- Steps call the existing business boundary.
-- A failed or cancelled run is not shown as success.
-- The same task definition remains valid without Vue 2.
-
-## Next step
-
-When the role has several stable tasks, move their definitions into the application's own task module and keep Vue focused on layout and business state. For free-form requests, add an agent-mode task with a prompt template rather than inventing a deterministic path.
+Vue 2.7, Vue 3, React 19, React 16.3, and vanilla share the same task definition, field derivation, and action row. Only the adapter mount changes.

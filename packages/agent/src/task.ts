@@ -73,6 +73,25 @@ export interface TaskField {
   recommended?: TaskValue;
   /** 大集合的搜索选择器；UI 与 Agent 应共用同一份搜索实现。 */
   lookup?: TaskLookup;
+  /** Minimum for a numeric field. Enforced before an Agent value reaches the run. */
+  min?: number;
+  /** Maximum for a numeric field. Enforced before an Agent value reaches the run. */
+  max?: number;
+  /** Minimum length for a text field. Enforced before an Agent value reaches the run. */
+  minLength?: number;
+  /** Maximum length for a text field. Enforced before an Agent value reaches the run. */
+  maxLength?: number;
+  /** Optional regular expression for a text field, as a string without delimiters. */
+  pattern?: string;
+  /**
+   * Business-level check run before an Agent value is written to working memory.
+   *
+   * Return a short human-readable reason to reject the value, or nothing when
+   * it is valid. This is not an intent parser: it validates a value the model
+   * already proposed. Page code remains responsible for the same invariants on
+   * direct user input.
+   */
+  validate?: (value: TaskValue, values: TaskValues) => string | null | undefined;
   /**
    * 由 `lookup` 自动暴露给 Agent 的只读搜索动作 id。
    *

@@ -4,7 +4,7 @@
   "page": "react",
   "route": "/reference/api/react",
   "package": "@plingjs/react",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "compatibility": "The Hooks API on this page requires React 16.8+. React 16.3–16.7 use `@plingjs/react/legacy`, a class/render-prop entry documented in the [React adapter reference](/reference/react-adapter#react-163-167-legacy-entry).",
@@ -3715,6 +3715,38 @@
               "descriptionZh": "更新当前任务工作记忆的实际模型动作 id。它只接受任务声明过且允许 Agent 写入的字段。"
             },
             {
+              "name": "focusActionId",
+              "type": "readonly string",
+              "required": false,
+              "defaultValue": "",
+              "description": "The actual model action id that points at a declared guide field. It never writes a value and is unavailable when the active guide has no fields.",
+              "descriptionZh": "指向已声明引导字段的实际模型动作 id。它不写入值；active 引导没有字段时不可用。"
+            },
+            {
+              "name": "reviewActionId",
+              "type": "readonly string",
+              "required": false,
+              "defaultValue": "",
+              "description": "The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command.",
+              "descriptionZh": "打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。"
+            },
+            {
+              "name": "proposeSaveActionId",
+              "type": "readonly string",
+              "required": false,
+              "defaultValue": "",
+              "description": "The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command.",
+              "descriptionZh": "打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。"
+            },
+            {
+              "name": "cancelActionId",
+              "type": "readonly string",
+              "required": false,
+              "defaultValue": "",
+              "description": "The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command.",
+              "descriptionZh": "结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。"
+            },
+            {
               "name": "define(registration)",
               "type": "() => void",
               "required": false,
@@ -4191,6 +4223,14 @@
               "descriptionZh": "内置渲染器使用的短头像文字或首字母。"
             },
             {
+              "name": "agent",
+              "type": "{ focusField?, review?, proposeSave?, cancel? }",
+              "required": false,
+              "defaultValue": "",
+              "description": "Page-owned commands the model may trigger. `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; each tool is unavailable when its command is omitted. `focusField(field)` overrides the default `focus-<field>` command while `pling_focus_field` stays limited to declared guide fields. None of these commands performs a business write; `proposeSave` opens the confirmation surface only.",
+              "descriptionZh": "模型可以触发的页面命令。声明 `review` 才会启用 `pling_review_task`，声明 `proposeSave` 才会启用 `pling_propose_save`，声明 `cancel` 才会启用 `pling_cancel_task`；省略时对应工具不可用。`focusField(field)` 可以覆盖默认的 `focus-<field>` 命令，但 `pling_focus_field` 仍只作用于引导声明的字段。这些命令都不执行业务写入；`proposeSave` 只打开确认界面。"
+            },
+            {
               "name": "labels",
               "type": "TaskGuideLabels",
               "required": false,
@@ -4230,7 +4270,7 @@
             {
               "title": "Describe the same task to a person",
               "titleZh": "把同一个任务讲给人听",
-              "code": "const guide: TaskGuideDefinition = {\n  taskId: \"course.create\",\n  title: \"新建课程\",\n  welcome: \"我会陪你确认课程信息，并填入右侧表单。\",\n  stepSubtitle: \"第 {step} 步，共 {total} 步\",\n  steps: courseSteps,\n  done: {\n    title: \"课程已创建\",\n    description: \"列表里的第一条就是新课程。\",\n  },\n};",
+              "code": "const guide: TaskGuideDefinition = {\n  taskId: \"course.create\",\n  title: \"新建课程\",\n  welcome: \"我会陪你确认课程信息，并填入右侧表单。\",\n  stepSubtitle: \"第 {step} 步，共 {total} 步\",\n  agent: {\n    review: \"review-task\",\n    proposeSave: \"propose-save\",\n    cancel: \"cancel-task\",\n  },\n  steps: courseSteps,\n  done: {\n    title: \"课程已创建\",\n    description: \"列表里的第一条就是新课程。\",\n  },\n};",
               "lang": "ts"
             }
           ],
@@ -5241,6 +5281,54 @@
               "descriptionZh": "大集合的异步搜索。界面与 Agent 工具应共用这一函数。"
             },
             {
+              "name": "min",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Minimum for a numeric field. Enforced before a model-proposed value reaches the task snapshot.",
+              "descriptionZh": "数值字段的最小值。模型建议的值写入任务快照之前会先校验。"
+            },
+            {
+              "name": "max",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Maximum for a numeric field. Enforced before a model-proposed value reaches the task snapshot.",
+              "descriptionZh": "数值字段的最大值。模型建议的值写入任务快照之前会先校验。"
+            },
+            {
+              "name": "minLength",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Minimum length for a text value. Counted on the trimmed string.",
+              "descriptionZh": "文本值的最小长度，按去除首尾空白后的字符数计算。"
+            },
+            {
+              "name": "maxLength",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Maximum length for a text value. Counted on the trimmed string.",
+              "descriptionZh": "文本值的最大长度，按去除首尾空白后的字符数计算。"
+            },
+            {
+              "name": "pattern",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Regular expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\\\\d*$`.",
+              "descriptionZh": "不带分隔符的正则表达式源码，用于校验文本值。需要整值匹配时请写锚点，例如 `^[1-9]\\\\d*$`。"
+            },
+            {
+              "name": "validate",
+              "type": "(value, values) => string | null | undefined",
+              "required": false,
+              "defaultValue": "",
+              "description": "Business-level check run before a model-proposed value is written. Return a short human-readable reason to reject it, or nothing when valid. This validates a value; it must not classify intent or trigger side effects.",
+              "descriptionZh": "模型建议的值写入之前执行的业务校验。返回简短的、可直接展示给用户的拒绝原因；通过时返回空。它只校验值，不应做意图分类或产生副作用。"
+            },
+            {
               "name": "searchAction",
               "type": "string",
               "required": false,
@@ -5273,6 +5361,12 @@
               "title": "Distinguish two students with the same name",
               "titleZh": "区分同名学员",
               "code": "const studentField: TaskField = {\n  name: \"studentRef\",\n  label: \"学员\",\n  type: \"lookup\",\n  minChars: 2,\n  lookup: async (query) => api.searchStudents(query).then((rows) => rows.map((row) => ({\n    value: row.id,\n    label: row.name,\n    description: row.phoneMasked,\n  }))),\n};",
+              "lang": "ts"
+            },
+            {
+              "title": "Reject an impossible value before it reaches the page",
+              "titleZh": "在值写进页面之前拒绝非法值",
+              "code": "const difficulty: TaskField = {\n  name: \"difficulty\",\n  label: \"难度\",\n  type: \"number\",\n  optional: true,\n  min: 1,\n  max: 5,\n};\n\nconst teacher: TaskField = {\n  name: \"teacherId\",\n  label: \"授课老师\",\n  type: \"lookup\",\n  lookup: searchTeachers,\n  validate: (value) =>\n    teachers.some((item) => item.id === value)\n      ? null\n      : \"请从搜索结果中选择老师。\",\n};",
               "lang": "ts"
             }
           ],

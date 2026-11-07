@@ -12,7 +12,7 @@ locale: zh
 
 参数表是这里的重点。遇到某个选项时，先查它在当前框架页中的类型、必填性、默认值与适用场景；需要字段级语义或错误码时，再进入对应参考页。
 
-共 **5** 个 API 页面，覆盖 **10** 类能力；当前版本 `0.1.0-alpha.7`，稳定性为 **preview**。
+共 **5** 个 API 页面，覆盖 **10** 类能力；当前版本 `0.1.0-alpha.8`，稳定性为 **preview**。
 
 ## 按框架查阅
 
@@ -33,10 +33,10 @@ locale: zh
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | 项目 | 值 |
 | --- | --- |

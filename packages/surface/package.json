@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/surface",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "private": false,
   "type": "module",
   "description": "Pling Agent Surface protocol core: project page capabilities, context, and invocation contracts to external agents.",

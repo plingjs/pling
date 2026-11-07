@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { composeCourseIntakeReply, parseCourseIntake, shouldUseAgent } from "./intake";
+import { composeCourseIntakeReply, parseCourseIntake, shouldUseAgent } from "./legacy-intake";
 import {
   courseCardOptions,
   courseTeachers,

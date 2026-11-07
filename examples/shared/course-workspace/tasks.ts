@@ -17,12 +17,28 @@ export function createTaskDefinitions(service: CourseService, locale: Locale): T
   const teacherField: TaskField = {
     name: "teacherId",
     label: copy.teacher,
-    type: "select",
-    values: service.teachers.map((teacher) => ({
-      value: teacher.id,
-      label: teacher.name,
-      description: teacher.subject,
-    })),
+    type: "lookup",
+    searchAction: "search_teachers",
+    minChars: 1,
+    lookup: (query) => {
+      const needle = query.trim().toLowerCase().replace(/\s*(老师|教師|教师|teacher)$/i, "").trim();
+      return service.teachers
+        .filter(
+          (teacher) =>
+            !needle || teacher.name.toLowerCase().includes(needle) || teacher.subject.toLowerCase().includes(needle),
+        )
+        .map((teacher) => ({
+          value: teacher.id,
+          label: teacher.name,
+          description: teacher.subject,
+        }));
+    },
+    validate: (value) =>
+      service.teachers.some((teacher) => teacher.id === value)
+        ? null
+        : locale === "zh"
+          ? "请从 search_teachers 的结果中选择老师。"
+          : "Choose a teacher from the search_teachers results.",
   };
 
   const cardChoices = locale === "zh"
@@ -68,6 +84,8 @@ export function createTaskDefinitions(service: CourseService, locale: Locale): T
           name: "name",
           label: copy.courseName,
           placeholder: copy.courseNamePlaceholder,
+          minLength: 1,
+          maxLength: 40,
           recommended: locale === "zh" ? "瑜伽基础" : "Yoga foundations",
         },
         { ...teacherField, recommended: service.teachers[0]?.id ?? "" },
@@ -75,7 +93,6 @@ export function createTaskDefinitions(service: CourseService, locale: Locale): T
           name: "cards",
           label: copy.courseCards,
           type: "select",
-          defaultValue: cardChoices[0]?.value ?? "",
           values: cardChoices,
           recommended: cardChoices[0]?.value ?? "",
         },
@@ -92,34 +109,40 @@ export function createTaskDefinitions(service: CourseService, locale: Locale): T
           name: "difficulty",
           label: copy.difficulty,
           type: "number",
-          defaultValue: 3,
+          optional: true,
+          min: 1,
+          max: 5,
           recommended: 3,
         },
         {
           name: "price",
           label: copy.coursePrice,
-          type: "number",
-          defaultValue: 200,
-          recommended: 200,
+          type: "text",
+          optional: true,
+          pattern: "^\\d+(?:\\.\\d+)?$",
+          recommended: "200",
         },
         {
           name: "deduct",
           label: copy.courseDeduct,
-          type: "number",
-          defaultValue: 1,
-          recommended: 1,
+          type: "text",
+          optional: true,
+          pattern: "^[1-9]\\d*$",
+          recommended: "1",
         },
         {
           name: "intro",
           label: copy.courseIntro,
           type: "textarea",
           optional: true,
+          maxLength: 200,
         },
         {
           name: "note",
           label: copy.courseNote,
           type: "textarea",
           optional: true,
+          maxLength: 200,
         },
       ],
       steps: [
@@ -131,9 +154,9 @@ export function createTaskDefinitions(service: CourseService, locale: Locale): T
             name: values.name,
             teacherId: values.teacherId,
             cards: values.cards,
-            difficulty: values.difficulty,
-            price: values.price,
-            deduct: values.deduct,
+            difficulty: values.difficulty ?? 3,
+            price: values.price || "200",
+            deduct: values.deduct || "1",
             intro: values.intro,
             note: values.note,
           }),

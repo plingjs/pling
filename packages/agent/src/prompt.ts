@@ -378,7 +378,18 @@ function renderActiveTask(catalog: TaskCatalog): string {
     const recommended = hasTaskValue(field.recommended)
       ? `; recommended: ${renderTaskValue(field.recommended)}`
       : "";
-    return `- ${field.name} (${field.label}, ${required}, ${writable}): ${current}${choices}${recommended}${lookup}`;
+    const hints = [
+      field.help ? `help: ${renderTaskValue(field.help, 120)}` : "",
+      field.min !== undefined || field.max !== undefined
+        ? `range: ${field.min ?? "…"}–${field.max ?? "…"}`
+        : "",
+      field.minLength !== undefined || field.maxLength !== undefined
+        ? `length: ${field.minLength ?? 0}–${field.maxLength ?? "…"}`
+        : "",
+      field.pattern ? `pattern: /${field.pattern}/` : "",
+    ].filter(Boolean);
+    const hintText = hints.length ? `; ${hints.join("; ")}` : "";
+    return `- ${field.name} (${field.label}, ${field.type ?? "text"}, ${required}, ${writable}): ${current}${choices}${recommended}${lookup}${hintText}`;
   });
   const missing = fields
     .filter((field) => !field.optional && !hasTaskValue(values[field.name]))
@@ -397,6 +408,23 @@ function renderActiveTask(catalog: TaskCatalog): string {
     .join(" / ");
   const status = snapshot?.status ?? "active";
   const done = status === "done";
+  const controlLines = [
+    ...(fields.length
+      ? [`\`${catalog.focusActionId}\` points the person at one declared field. It never writes a value.`]
+      : []),
+    ...(active.guide?.agent?.review
+      ? [`\`${catalog.reviewActionId}\` opens the page's read-only review. Do not claim that it saved anything.`]
+      : []),
+    ...(active.guide?.agent?.proposeSave
+      ? [
+          `\`${catalog.proposeSaveActionId}\` opens the page's confirmation step. It never writes; a save is complete only after the person confirms in the page. Never claim success from the proposal alone.`,
+          `If the person says not to save yet, do not call \`${catalog.proposeSaveActionId}\`; answer and keep the task open.`,
+        ]
+      : []),
+    ...(active.guide?.agent?.cancel || active.guide?.cancel
+      ? [`\`${catalog.cancelActionId}\` ends the task guide without undoing values already written to the page.`]
+      : []),
+  ];
 
   const lines = [
     `\n\n### Active guided task: ${active.id} (${status})`,
@@ -424,6 +452,9 @@ function renderActiveTask(catalog: TaskCatalog): string {
       `If the user delegates a choice, use a declared recommendation or allowed value and say what you chose; do not invent data. A single-field delegation is actionable even when other required fields are still empty: update the delegated field, then mention the remaining gaps instead of refusing the whole turn.`,
       `After a write, summarise only what changed and the next real gap. Do not repeat a fixed field sequence.`,
     ].join("\n"),
+    ...(controlLines.length
+      ? [[`Page-owned control tools:`, ...controlLines.map((line) => `- ${line}`)].join("\n")]
+      : []),
     ...(done
       ? ["This run is complete. Treat it as a receipt, not as a field-collection step. Do not keep asking for more fields; offer the next valid action or let the user start a new run."]
       : []),
@@ -464,6 +495,22 @@ export function renderTaskContext(catalog: TaskCatalog | undefined, maxTasks = 1
     return `- ${task.id}${active}: ${task.title}${description}${examples}${fields}${constraints}${success}${steps}`;
   });
   const activeTask = renderActiveTask(catalog);
+  const active = catalog.active();
+  const activeRegistration = active ? catalog.get(active.id) : undefined;
+  const controlTools = active && activeRegistration?.onCommand
+    ? [
+        active.definition.fields?.length || active.guide?.fields ? "point at a field" : "",
+        active.guide?.agent?.review ? "show a review" : "",
+        active.guide?.agent?.proposeSave ? "propose a save" : "",
+        active.guide?.agent?.cancel || active.guide?.cancel ? "cancel" : "",
+      ].filter(Boolean)
+    : [];
+  const controlHint = controlTools.length
+    ? ` Use the available task control tools to ${controlTools.join(", ")}.` +
+      (active?.guide?.agent?.proposeSave
+        ? " A save proposal is not a write; the person must confirm it in the page."
+        : "")
+    : "";
   return (
     `\n\n## Guided tasks available on this page (${tasks.length})\n` +
     `These are developer-defined tasks for the current page and user context. They are the only tasks you may open. ` +
@@ -474,6 +521,7 @@ export function renderTaskContext(catalog: TaskCatalog | undefined, maxTasks = 1
     `If the task is already active and you later learn more field values, call \`${catalog.updateActionId}\` with only the changed values. ` +
     `While its guide is active, do not call the task's own write action directly; the page guide remains the single visible path.\n` +
     `Treat an active task as goal + constraints + working memory, not a script. Answer the user's actual question first. The user may supply one value, correct a value, ask what to do, ask you to do it, choose to do it themselves, pause, or branch. Do not force the next missing field, do not repeat a value that is already present, and never turn an instruction sentence into a text field.` +
+    controlHint +
     activeTask
   );
 }

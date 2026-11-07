@@ -3,6 +3,22 @@
 Pling 使用[语义化版本](https://semver.org/lang/zh-CN/)。`0.x` 阶段 API 仍可能调整，
 每次影响接入方式的变更都会记录在这里，并同步到 `website/releases/index.md` 的版本策略。
 
+## [0.1.0-alpha.8] — 2026-11-08
+
+- 任务层改为 agent-first：模型通过 `pling_update_task` 理解整段描述并写入工作记忆，
+  页面只负责字段校验、定位、确认和真实业务写入；不再依赖页面侧自然语言正则或
+  `beforeSend` 意图分类器。
+- 新增 `TaskField` 的 `min` / `max` / `minLength` / `maxLength` / `pattern` /
+  `validate(value, values)` 值级与业务级校验；失败时整次更新不落地，避免半截表单。
+- 新增模型可调用的页面控制工具 `pling_focus_field`、`pling_review_task`、
+  `pling_propose_save`、`pling_cancel_task`；它们只在 `guide.agent` 显式声明时出现，
+  且不拥有第二条业务执行路径。
+- 课程管理案例同步到 Vue 3、React 19、React 16.3、Vue 2.7 与原生 JS：一句话写回原表单、
+  人工上传封面、只读核对、确认保存、课程库回读与重复创建均一致；修正可选价格/扣卡、
+  文件重选、Vue 3 重复创建重置课程库等缺陷。
+- 重写 V3-25、R-25、J-15、V2-09、C-15、REF-15 与 `docs/TASK-01.md`，同步 API 索引、
+  机器可读文档和案例 README，说明任务层与固定脚本的边界。
+
 ## [0.1.0-alpha.7] — 2026-11-07
 
 - 修复 `0.1.0-alpha.6` 的发布元数据错误：11 个包的 `workspace:*` 依赖未被改写，

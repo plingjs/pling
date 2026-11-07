@@ -2323,7 +2323,7 @@ The action names still belong to the existing registry or business service. The 
 
 A guided task is not a field-by-field questionnaire. When the user says “pregnancy yoga, Chen, 2 stars, write the intro”, the page should write every explicit value at once, then ask only for what is missing, conflicting, or must be done by a person. Prompting for one field at a time makes the assistant feel like a chat-shaped form and is slower than using the page directly. If the user says “you choose the card”, the model may use a declared `recommended` value for that one field even while other required fields are empty; the recommendation is a suggestion, not an automatic write.
 
-This deterministic intake can run before the model through `AgentInline`'s `beforeSend`. Return `{ handled: true, reply }` when a business field matched and update the original form; return `undefined` when nothing matched so ordinary conversation still reaches the model. A follow-up such as “change the difficulty to 4 stars” is a correction to the current task, not a new creation request. Only ask for clarification when the target field is genuinely unclear.
+Field values do not need a page-side intent classifier first. The model receives the active task's fields, current values, and gaps, then calls `pling_update_task` with the values it understood from the whole sentence. The page only checks that each value belongs to a declared field, matches its type, and satisfies its business constraints. A failed check writes no partial value; the model can retry or ask the person. A follow-up such as “change the difficulty to 4 stars” is likewise a correction to the current task, not a new creation request. The model decides what was meant using working memory; the page does not maintain a parallel set of regular expressions or keywords.
 
 ## Resolve references before they become IDs
 
@@ -2408,7 +2408,7 @@ The same task can be described to an external agent through Surface `tasks`. Tha
 
 The [course back office](/demos/course-workspace/) puts these ideas on one page: course creation, duplicate-name lookup, a teacher-creation form, a slot-conflict failure, a bound lesson-note task, and a catalogue and schedule that update while the card runs. Read the [source and integration notes](/examples/course-workspace) after trying the five tasks.
 
-The course-creation demo follows the business page more closely: it opens the existing “Create a course” form, and the built-in assistant shows the active task guide automatically. A person can describe the whole course in one sentence; the page writes every recognised field at once and asks only for what is still missing. An unknown teacher, an invalid difficulty, or a cover that must be uploaded by hand is located on the original form. The fixed area keeps only the task title, current stage, and a horizontal field rail. Required and optional fields are labelled separately; filled fields show a check, and clicking a node brings the real control into view. Once the values are complete, the conversation shows a read-only review and a confirm action, then reads the result back from the catalogue. `examples/shared/course-create/intake.ts` owns deterministic intake, `examples/shared/course-create/guide.ts` owns the guide, and `CourseWorkspace.vue` remains the only source of business input.
+The course-creation demo follows the business page more closely: it opens the existing “Create a course” form, and the assistant carries the task in chat. A person can describe the whole course in one sentence; the model understands the fields and calls `pling_update_task`, the page validates them and writes the accepted values into the original form, and the assistant asks only for what is still missing. An unknown teacher, an invalid difficulty, or a cover that must be uploaded by hand is located on the original form. This example deliberately sets `task-placement="none"` to hide the built-in task card and field rail: the course form is already continuous, so a second rail above the conversation would create a parallel path to the same job. Field gaps, suggestions, locating, and review actions live in the action row at the end of the conversation. Once the values are complete, the conversation shows a read-only review and a confirm action, then reads the result back from the catalogue. `examples/shared/course-create/guide.ts` owns the guide copy, field state, and page commands; `CourseWorkspace.vue` remains the only source of business input. `legacy-intake.ts` is a historical snapshot of the earlier deterministic parser and is no longer imported by the live demo.
 
 ## Verification checklist
 
@@ -6109,34 +6109,37 @@ Creating a course is a good example. An employee knows they need a new course, b
 
 This chapter narrows the page to one job. The original course form remains the only input surface. The assistant explains the current step, shows read-only summaries, locates real fields, and reads the catalogue back after saving.
 
-## Start from one sentence
+## Let the model read the whole sentence
 
-Creating a course used to invite a field-by-field interrogation. This example lets the business parse one instruction and write the result into the page at once:
+Creating a course used to invite a field-by-field interrogation. This example does not put an intent classifier in the page; the assistant reads the active task context and writes the field values from one sentence into working memory:
 
 ```text
 Pregnancy yoga, Chen, 2 stars, write the intro
 ```
 
-The course name, teacher, difficulty, and introduction land in the original form together. The assistant only asks for what is actually missing, such as “Eligible cards have not been selected.” If the teacher is not in the list, it stops and asks instead of silently choosing a similar name. A cover is an explicit human handoff: the assistant locates the upload field and leaves file selection to the person.
+The model receives the active task's objective, constraints, fields, current values, gaps, and guide stage. It reads the sentence as four values — `name`, `teacherId`, `difficulty`, and `intro` — and calls `pling_update_task` once. The page validates every declared field before the values reach the form. The assistant asks only for what is actually missing, such as “Eligible cards have not been selected.” If the teacher is not in the list, it stops and asks instead of silently choosing a similar name. A cover is an explicit human handoff: the assistant locates the upload field and leaves file selection to the person.
 
-`AgentInline` supports an optional `beforeSend`, but it owns only the deterministic fast path: explicit field values and explicit save, review, or cancel commands are handled immediately and return `{ handled: true, reply }`. Questions, help requests, vague corrections, delegated choices such as “choose the card for me”, and ordinary chat return `undefined` so the model can decide with the active task's working memory. A question must never become a field value just because the page is waiting for the course name.
+Value validation belongs to the page, not to the conversation. A `TaskField` can declare `min` / `max` for numbers, `minLength` / `maxLength` and `pattern` for text, a small closed `values` list, and a business check with `validate(value, values)` over the current working memory. These checks run before a model value is written to the task snapshot: a wrong type, an unknown teacher, an out-of-range difficulty, or a malformed deduction count fails without leaving a half-applied form. The model may retry, rephrase, or ask the person, but it cannot bypass that boundary.
 
 ```ts
-async function handleBeforeSend(text: string) {
-  const result = parseCourseIntake(text, { /* teachers, cards, current draft */ });
-  if (shouldUseAgent(result)) return undefined;
-
-  applyIntakePatch(result.patch);
-  return {
-    handled: true,
-    reply: composeCourseIntakeReply({ draft, result, /* ... */ }),
-  };
-}
+const courseTask = {
+  id: "course.create",
+  fields: [
+    { name: "name", label: "Course name", type: "text", minLength: 1, maxLength: 40 },
+    {
+      name: "teacherId",
+      label: "Teacher",
+      type: "lookup",
+      lookup: teacherLookup,
+      validate: (value) =>
+        teachers.some((teacher) => teacher.id === value) ? null : "Choose a teacher from the search_teachers results.",
+    },
+    { name: "difficulty", label: "Difficulty", type: "number", optional: true, min: 1, max: 5 },
+  ],
+};
 ```
 
-Bind it as a prop with `:before-send="handleBeforeSend"`. It is not an event listener; `@before-send` registers a listener and will not run the function as the intake hook.
-
-Follow-ups such as “change the difficulty to 4 stars” or “rename the course to Fat burn yoga” update only the matching field in the current draft. When the parser cannot tell which field is meant, the assistant asks instead of guessing.
+The model does not turn a question into a field value just because the conversation has not moved on. Asking what a field means, asking to look first, changing one's mind, or pausing all stay in the same conversation; the task state is working memory, not a script. Follow-ups such as “change the difficulty to 4 stars” or “rename the course to Fat burn yoga” are likewise corrections to the current task, and only update the matching field. The assistant asks only when it genuinely cannot tell which field is meant.
 
 ## Two ways in, one task
 
@@ -6159,7 +6162,7 @@ pling.task.define({
   initialValues: currentTaskValues,
   state: () => ({
     snapshot: taskSnapshot.value,
-    step: step.value,
+    step: 1,
     busy: busy.value,
     error: taskError.value,
     completed: completed.value,
@@ -6222,31 +6225,31 @@ export const courseTask = {
 
 It has no Vue dependency and does not know what the chat looks like. A task may be executable only, or carry a user-facing guide.
 
-`TaskGuideDefinition` answers **what the user sees**: step titles, descriptions, read-only rows, button labels, and the point where control returns to a person.
+`TaskGuideDefinition` answers **what the user sees**: the task title, welcome copy, current field list, and the page commands the model may invoke.
 
 ```ts
-export const courseGuide = {
+export const courseGuide: TaskGuideDefinition = {
   taskId: "course.create",
   title: "Create a course",
+  welcome: "Tell me the course details in one sentence, or fill the form directly; I will fill the gaps.",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
+  fields: () => courseCreateFieldNodes(locale, draft(), teachers, skipped),
   steps: [
     {
-      id: "course.basics",
-      label: "Course details",
-      title: "Decide what the course is",
-      description: "These three values will be written into the original form.",
-      rows: () => [
-        { label: "Course name", value: draft.name || recommended.name },
-        { label: "Difficulty", value: draft.difficulty || 3, format: "stars" },
-      ],
-      primary: { label: "Fill recommended values", command: "apply-basics" },
-      secondary: { label: "Locate on page", command: "focus-basics" },
+      id: "course.fill",
+      label: "Create a course",
+      title: "Create a course",
+      description: "Write the course values into the original form, then let the person confirm the save.",
     },
-    // Teaching and booking, cover, review and save...
   ],
 };
 ```
 
-The guide contains no `input`, `textarea`, or `select`. It only renders summaries and business command names. Writing values, opening dialogs, and focusing fields still belong to the page.
+`steps` describes a coarse business stage for the title and progress copy; it does not decide what to ask next. This example has one stage. The actual “what is still missing” answer comes from `fields()` reading the page. The guide contains no `input`, `textarea`, or `select`; writing values, opening dialogs, and focusing fields still belong to the page.
 
 The split also lets the same task run headlessly or act as a conversation-only playbook. A task can have no guide; a guide can exist without executable steps.
 
@@ -6288,6 +6291,30 @@ The model writes working memory through one narrow action:
 
 That action is `pling_update_task`. It only writes the active task, accepts only declared fields, and rejects page-only fields marked `agentWritable: false`. `TaskField.recommended` is a suggestion the model may use when the person explicitly delegates a choice, not an automatic write. The cover remains a page-owned upload. After working memory changes, the Vue page subscribes to `TaskRunSnapshot`, writes the values back into the original form, and highlights the changed fields. The real business write still goes through `create_course`, the executor, confirmation, and read-back verification.
 
+### The page keeps the final step
+
+The model can perceive, explain, ask, and correct, but the page keeps three actions it never delegates: locating, reviewing, and saving.
+
+- `pling_focus_field` scrolls a declared field into view and highlights it; it never writes a value.
+- `pling_review_task` opens the page's own read-only review.
+- `pling_propose_save` opens the confirmation step; it never performs the business write.
+- `pling_cancel_task` ends the guide, and values already written to the page are not rolled back automatically.
+
+These tools are not hidden framework defaults. A guide must explicitly declare `review` / `proposeSave` / `cancel` under `guide.agent` before the model can see the matching tool. When a command is missing, the tool is not advertised and no no-op action appears. This lets each product own its save path: some show a confirmation, some require a second verification, and some do not allow saving from the task at all.
+
+```ts
+guide: {
+  taskId: "course.create",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
+}
+```
+
+The page handles the `proposeSave` command itself: opening its existing confirmation, re-reading the form, calling `create_course`, and reading the catalogue back. The model may say that it is ready to save and ask the person to confirm, but it must not claim success before that confirmation.
+
 ## Do not build a second chat UI
 
 The older integration asked the page to mount `AgentTaskGuide` inside the transcript and maintain its own header, message list, and styling. That leads to a different assistant appearance in every example and couples business pages to chat chrome.
@@ -6301,13 +6328,18 @@ Now the page keeps only the business form and the task registration. The assista
     :title="createCopy.assistantTitle"
     :placeholder="page.assistant.placeholder"
     task-placement="none"
+    guide-placement="end"
     :debug="{ maxCalls: 8 }"
     model-settings="readonly"
-  />
+  >
+    <template #guide>
+      <AgentGuideActions :items="guideActions" @command="onGuideCommand" />
+    </template>
+  </AgentInline>
 </aside>
 ```
 
-`AgentInline` subscribes to the task catalog, but this example turns the built-in card off with `task-placement="none"`. The task layer still matters; the problem is duplication. Creating a course is already a continuous form. A second field rail above the conversation would give the user two parallel paths to the same job. The chat should carry the narrative, and the next action should appear at the end of that narrative.
+`AgentInline` subscribes to the task catalog, but this example turns the built-in card off with `task-placement="none"` and puts the `#guide` slot after the latest message with `guide-placement="end"`. The task layer still matters; the problem is duplication. Creating a course is already a continuous form. A second field rail above the conversation would give the user two parallel paths to the same job. The chat should carry the narrative, and the next action should appear at the end of that narrative. `AgentGuideActions` only emits commands declared by the page; it does not write a field or call a business action.
 
 The task definition still owns fields, order, commands, and success evidence. It only gives presentation control back to the page. `task-placement` accepts three values: the default `inline` places the guide in the transcript, `pinned` keeps it under the chat header, and `none` hides it. Use the first two when a persistent step rail genuinely helps. Use `none` when the page and the conversation already have clear, separate jobs.
 
@@ -6364,71 +6396,38 @@ The first version of the guide showed recommended content as if it were already 
 - choosing “Use” writes the value into the existing control and changes the state to `current`;
 - if the user edits the form directly, the next guide pass reads the new page value.
 
-A task row expresses this with `status`, `badge`, `note`, and `action`:
+The field list is derived from the page's current values. There is no `status` / `badge` row template and no step counter:
 
 ```ts
-const row: TaskGuideRow = filled
-  ? {
-      label: "Course name",
-      value: draft.name,
-      status: "current",
-      badge: "In page",
-      action: { label: "Locate", command: "focus-name" },
-    }
-  : {
-      label: "Course name",
-      value: recommended.name,
-      status: "suggested",
-      badge: "Suggested",
-      note: "From the demo template; not written to the page",
-      action: { label: "Use", command: "apply-name" },
-    };
-```
-
-`action.command` does not open a second execution path. Like a step button, it ends up in the page's `onCommand`.
-
-If a suggestion is wrong, the user does not have to reject it first. They can type directly into the page. The guide reads the new page value, and a later “Use” action does not overwrite what the user already entered.
-
-The button does not open another input. It writes values into the existing course-name, difficulty, and introduction controls, then scrolls to the field and marks it on the form. The user sees “fill here”, not a chat message claiming that a field was located.
-
-```ts
-async function onCommand(command: TaskGuideCommand) {
-  switch (command.action.command) {
-    case "apply-basics":
-      applyBasics();
-      await focusFields(["name", "difficulty", "intro"]);
-      break;
-    case "focus-teaching":
-      await focusFields(["teacher", "cards", "note"]);
-      break;
-    case "save-course":
-      await saveCourse();
-      break;
-    case "cancel-task":
-      pling.task.deactivate();
-      break;
-    default:
-      if (command.action.command.startsWith("apply-")) {
-        applyField(command.action.command.slice("apply-".length));
-      } else if (command.action.command.startsWith("focus-")) {
-        await focusFields([command.action.command.slice("focus-".length)]);
-      }
-  }
-}
-```
-
-Steps should not depend on a button incrementing `step.value`. The page already has the fields, so derive the step from their state:
-
-```ts
-const step = computed(() => {
-  if (!draft.name.trim()) return 1;
-  if (!draft.teacherId || !draft.cards.trim()) return 2;
-  if (!draft.cover) return 3;
-  return 4;
+const guideField = computed(() => {
+  const gaps = courseCreateFieldNodes(locale, draft, teachers, skipped.value);
+  return gaps.find((field) => field.required && !field.filled && !field.skipped)
+    ?? gaps.find((field) => !field.filled && !field.skipped);
 });
 ```
 
-Editing the page, starting the task through `pling_start_task`, and choosing a row action all go through the same decision. Do not turn ten inputs into ten steps. Group steps by business decision, usually three to five groups, and use task rows for field-level differences.
+The action row uses that gap to offer a short action: locate the current field, use a suggestion, or skip an optional value. A review action appears only when every required field is present. Ten inputs do not become ten steps; field-level differences stay in the field list.
+
+If a suggestion is wrong, the user does not have to reject it first. They can type directly into the page. The guide reads the new page value, and a later “Use” action does not overwrite what the user already entered.
+
+The button does not open another input. It writes values into the existing controls, scrolls to the field, and marks it on the form. The user sees “fill here”, not a chat message claiming that a field was located.
+
+The page handles explicit commands only; it does not parse natural language:
+
+```ts
+function onGuideCommand(command: string): void {
+  if (command === "save-course") void saveCourse();
+  else if (command === "resume-editing") resumeEditing();
+  else if (command === "pick-cover") void pickCover();
+  else if (command === "locate-field") locateField(guideField.value);
+  else if (command === "use-suggestion") useSuggestion(guideField.value);
+  else if (command === "skip-field") skipField(guideField.value);
+  else if (command === "start-review") startReview();
+  else if (command === "focus-save") focusSave();
+}
+```
+
+Deciding whether the user wants to create a course or first ask a question is the model's job. The page only executes explicit commands such as “locate the course name” or “use this suggestion”. A mid-task question, correction, or pause therefore cannot be mistaken for the next step.
 
 When the assistant opens the task with field values, the page also has to sync them back into the original form. This example does that in `onActivate`:
 
@@ -6449,18 +6448,19 @@ The page remains the source of truth. If the user edits the form by hand, the ne
 
 ## Cancel, and survive a context change
 
-The guide header can offer a cancel command:
+The task menu and the model can both emit a cancel command:
 
 ```ts
 const guide: TaskGuideDefinition = {
   taskId: "course.create",
   title: "Create a course",
   cancel: { label: "Cancel task", command: "cancel-task" },
-  steps: courseSteps,
+  agent: { cancel: "cancel-task" },
+  // ...
 };
 ```
 
-The page calls `pling.task.deactivate()` when it receives `cancel-task`. The guide disappears and the controller run is cancelled, so no panel is left looking active after the run has ended. This example exposes the same command from the assistant task menu.
+The page calls `pling.task.deactivate()` when it receives `cancel-task`. The guide disappears and the controller run is cancelled, so no panel is left looking active after the run has ended. Cancelling does not roll back values already written into the form, because the page is the source of truth the user is editing.
 
 If a task closes a modal, moves to a detail page, or briefly leaves the scope that opened it, register it with `keepActive`:
 
@@ -6480,11 +6480,11 @@ pling.task.define({
 
 ## Make human handoff explicit
 
-Choosing a cover reads a local file, so the assistant should not pick it. The third step has no “continue” button. It shows a handoff explanation and points to the real upload control.
+Choosing a cover reads a local file, so the assistant should not pick it. The cover is required, so the guide never invents a boolean value; it points to the real upload control and the action row keeps only “Upload cover”, with no “continue”.
 
-The task enters review only after the user selects an image. This pause is part of the plan, not a failure. Without it the flow looks faster, but the user discovers the missing required action at the very end.
+The task enters review only after the page re-reads every value from the file input and the original form. This pause is part of the boundary, not a failure. Without it the flow looks faster, but the user discovers the missing required action at the very end.
 
-The review step reads the current name, teacher, cards, cover, deduction, and price from the page. Only when those values are valid does the save button run `create_course`.
+The review reads the current name, teacher, cards, cover, deduction, and price from the page. Only when those values are valid does the action row offer “Confirm save”; clicking it runs `create_course`.
 
 ## Verify from the page
 
@@ -6494,8 +6494,8 @@ A successful action result is not the same as a completed business operation. Af
 const result = await controller.run();
 if (result.status === "done" && courses.value[0]?.id === newCourseId.value) {
   modalOpen.value = false;
-  step.value = 4;
-  return;
+  reviewOpen.value = false;
+  return true;
 }
 ```
 
@@ -6514,7 +6514,8 @@ Open the [Vue 3 create-course example](/demos/course-workspace-vue3/?lang=en) an
 - An unclear correction such as “change it for me” asks which field to change.
 - Entering “advanced yoga, 2 stars, any teacher, monthly card” uses the recommended teacher and keeps the course name “advanced yoga”.
 - Saving without a cover stops on the cover step with a clear message.
-- After selecting a cover, saving puts the new course first.
+- After selecting a cover, saving puts the new course first; the deduction renders as `1`, not `1.0`.
+- Choosing “Do it again” creates a second course while the first one stays in the catalogue, and the transcript still scrolls up and down once it overflows.
 - There are no console errors during chat or page interaction.
 
 ## Add it to another page
@@ -6529,7 +6530,7 @@ Do not copy the UI. Follow this order:
 
 When a task should be selected by a person, or only start from a detail page or row, declare `route`, `scope`, or `requiresRecord`. Do not infer availability from ad-hoc page state; the catalog evaluates these declarations.
 
-React, Vue 2, and vanilla versions can reuse the same task and guide definitions, replacing only the adapter mount. This chapter completes Vue 3 first; the other adapters follow after the interaction direction is settled.
+React 19, React 16.3, Vue 2.7, and vanilla reuse the same task definition, field derivation, and action row, replacing only the adapter mount. All five versions now provide the same create-course flow, human confirmation, and read-back verification.
 
 ---
 
@@ -11265,124 +11266,137 @@ The tests render the page on the server, verify that the assistant shell is abse
 
 Canonical: https://plingjs.dev/react/guided-tasks-for-a-real-workflow
 
-React applications often expose a rich table but still begin the assistant with an empty composer. Guided tasks reverse the order: the page first offers the outcomes available to this role, then collects only the choices the person must make.
+React applications often expose a rich back-office page while the assistant still starts with an empty composer. Guided tasks reverse that order: the page states what this role can accomplish, then the assistant collects missing information from a normal sentence, explains the next step, and takes the person to the real field.
 
-This chapter uses the same course management back office as the Vue path. React owns rendering and state; the shared task controller owns field collection and step order; the existing action or business service performs each step.
+This chapter keeps the course back office. React owns rendering and the Hook or class lifecycle; the task definition, field derivation, executor, and guide action row come from `examples/shared/course-workspace/`. Neither React version copies the business rules.
 
-## Put task cards in the conversation
+## The page stays; the assistant carries the task
 
-The task catalog belongs in the assistant conversation, not in a second utility app. Show a small set of stable outcomes, not every possible API. In the course management back office, “Create a course”, “Find a member's card”, “Create a teacher”, “Schedule a lesson”, and the row-level “Write a lesson note” cover most daily work. A generic composer remains available for requests that do not fit.
+Creating a course is still the original form. The assistant panel contains no second set of inputs, only a compact action row:
 
-The task card should state the result and its example in ordinary language. Avoid showing action ids or parameter schemas; those are implementation details.
+```text
+Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card
+```
 
-## Create the controller outside render
+The model reads that as `name`, `teacherId`, `difficulty`, `intro`, and `cards`, then calls `pling_update_task` to update task working memory. The page subscribes to `TaskRunSnapshot` and writes the values into the original form. If the person edits the page directly, the next guide pass reads the new page value.
 
-The controller can live for the mounted workspace. The bridge calls the application service that already validates the reference, shop scope, and permission.
+Field validation belongs to the page, not the conversation. A `TaskField` can declare `min` / `max`, `minLength` / `maxLength`, `pattern`, a closed `values` set, and a business `validate(value, values)` callback. The model can write only declared fields through `pling_update_task`; it cannot bypass validation or invent a cover that a person must upload.
+
+## React only mounts the shared runtime
+
+React 19 uses Hooks; React 16.3 uses classes and render props. Both mount the same `createCourseTaskRuntime`:
 
 ```tsx
-import { useRef } from "react";
-import { AgentDock, AgentTaskCard, usePling } from "@plingjs/react";
-import type { AgentDockHandle, AgentTaskCardHandle } from "@plingjs/react";
-import { createTaskController, type TaskController } from "@plingjs/agent";
-
-export function CourseWorkspace() {
-  const pling = usePling();
-  const dock = useRef<AgentDockHandle>(null);
-  const card = useRef<AgentTaskCardHandle>(null);
-  const tasks: TaskController = createTaskController({
-    invoke: (action, args) => courseApi.invoke(action, args),
+React.useEffect(() => {
+  taskRuntime.current = createCourseTaskRuntime({
+    registry: pling.registry,
+    ask: (prompt) => pling.ask(prompt),
+    catalog: pling.task,
+    service,
+    locale,
+    form: courseForm,
+    onComplete: () => setRevision((value) => value + 1),
   });
 
-  tasks.register({
-    id: "student.cards",
-    title: "Find a member's card",
-    fields: [
-      {
-        name: "studentRef",
-        label: "Student",
-        type: "lookup",
-        lookup: (query) => courseApi.searchStudents(query),
-      },
-    ],
-    steps: [
-      { label: "Read the student", action: "get_student" },
-      { label: "Read the cards", action: "get_student_cards" },
-    ],
+  taskCard.current = createTaskCard(taskRuntime.current.controller, {
+    locale: locale === "zh" ? "zh-CN" : "en-US",
+    title: COPY[locale].taskPanelTitle,
+    onPrompt: (prompt) => void pling.ask(prompt),
   });
 
-  return (
-    <AgentDock
-      ref={dock}
-      layout="sidebar"
-      sidebarMode="fused"
-      defaultOpen
-      task={<AgentTaskCard ref={card} controller={tasks} onPrompt={pling.ask} />}
-    />
-  );
-}
+  taskView.current = createCourseTaskView(taskCard.current, taskRuntime.current);
+  taskHost.current?.replaceChildren(taskView.current.element);
+
+  return () => {
+    taskRuntime.current?.destroy();
+    taskView.current?.destroy();
+    taskCard.current?.destroy();
+    courseForm.destroy();
+  };
+}, [pling, service, locale, courseForm]);
 ```
 
-`AgentTaskCard` owns only the mount lifecycle. The fields, lookup, confirmation, and run state machine remain in the shared task controller, so the legacy entry can render the same DOM card without pretending Hooks exist. The dock uses a fused sidebar column, which keeps the page and the conversation visible together.
+The component tree gains one task slot:
 
-Open the [React 19 course back office](/demos/course-workspace-react/) to see course creation, the task definitions, duplicate-name lookup, and conflict failure running against the same business service. The React page only changes how the back office is rendered. On React 16.3, the [legacy back office](/demos/course-workspace-react16/) reaches the same outcomes through class components and render props.
+```tsx
+<AgentDock
+  title="Pling assistant"
+  placeholder="Tell the assistant what to do, or continue this task…"
+  layout="sidebar"
+  sidebarMode="fused"
+  defaultOpen
+  debug={{ maxCalls: 8 }}
+  task={<div ref={taskHost} />}
+/>
+```
 
-The course-creation demo follows the business page more closely: it opens the existing “Create a course” form, and the assistant column only shows a four-step guide. Step one writes recommended values into the original form; step two selects the teacher and eligible cards; step three pauses while the user chooses a cover in the page; step four reads the page again and reviews it. The chat never duplicates the course fields. `examples/shared/course-workspace/course-guide.ts` owns the guide, while `course-form.ts` remains the only source of business input. Next actions use the shared compact row from `@plingjs/dom`: the button keeps a short verb, a long recommendation becomes a one-line preview, and the full value stays in the conversation, `title`, and `aria-label` so the recommendation cannot stretch the button.
+`course-form.ts` remains the only business input surface. `course-guide.ts` owns locate, auto-fill, review, and cancel commands. React components contain no natural-language regex and do not decide which field to ask for next.
 
-Those four stages are the page's own presentation, not a script imposed on the task layer. `course.create` also declares `objective`, `constraints`, and `successCriteria`, and registers the same controller in the task catalogue with `pling.task.define`. The model can answer “What can you do?”, accept a correction such as “rename the course to Fat-burn yoga”, or call `pling_update_task` with only the delegated field when the user says “You pick the cards”. The page subscribes to `TaskRunSnapshot`, writes the change back to the original form, and re-derives the current stage. The actual save still goes through `create_course`, the executor, and a read-back.
+## A task is not a script
 
-The note task is opened from a schedule row, not from the four-card list. React reveals the dock first, then passes the selected lesson to the card as a binding, so the form never asks for an id:
+The course task declares a goal, constraints, success criteria, and a field list:
 
 ```ts
-dock.current?.open();
-card.current?.open("lesson.note", {}, {
-  record: { id: lesson.id, label: `${lesson.course} · ${lesson.date} ${lesson.time}` },
-});
+const courseTask: TaskDefinition = {
+  id: "course.create",
+  title: "Create a course",
+  objective: "Help the person create a publishable course instead of walking a fixed field sequence.",
+  constraints: [
+    "The name, teacher, eligible cards, and cover are completion conditions; difficulty, intro, notes, deduction, and price are optional.",
+    "The cover must be uploaded by the person; the assistant must not fake it.",
+  ],
+  successCriteria: ["The new course appears first in the catalogue", "The catalogue is read back after the write"],
+  fields: [
+    { name: "name", label: "Course name", minLength: 1, maxLength: 40 },
+    { name: "teacherId", label: "Teacher", type: "lookup", searchAction: "search_teachers" },
+    { name: "cards", label: "Eligible cards", type: "select", values: cardChoices },
+    { name: "cover", label: "Course cover", type: "boolean", agentWritable: false },
+  ],
+  steps: [{ id: "course.save", label: "Write to the catalogue", action: "create_course", args: (values) => values }],
+};
 ```
 
-The definition sets `requiresRecord: true`, and its only field is the note text. If the binding is missing, the controller refuses to start instead of running against an empty id.
+The model may answer questions, accept corrections, pause, or open a review when the information is sufficient. It cannot turn “the course name is still missing” into a whole sentence inside the name field, and it cannot bypass the permission and read-back checks around `create_course`.
 
-## Resolve people and records with labelled choices
+## The page keeps the final move
 
-A lookup result should contain a stable reference and a human label. When names collide, the description must tell them apart. A phone suffix, membership number, or recent course is more useful than a database id. The selected value never becomes authorization on its own.
+The guide declares the commands the model may call:
 
 ```ts
-const choices = students.map((student) => ({
-  value: student.ref,
-  label: student.name,
-  description: `${student.maskedPhone} · ${student.recentCourse}`,
-}));
+const guide: TaskGuideDefinition = {
+  taskId: "course.create",
+  title: "Create a course",
+  welcome: "Describe the course in one go, or fill the page yourself; I will close the gaps.",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
+  fields: () => courseCreateFieldNodes(locale, draft, teachers, skipped),
+  steps: [{ id: "course.fill", label: "Create a course", title: "Create a course", description: "Write into the original form and let a person confirm the save." }],
+};
 ```
 
-The server resolves the submitted reference again and checks that it belongs to the current shop. A stale reference, a reference from another tenant, or a missing record must produce a visible failure.
+- `pling_focus_field` locates and highlights; it never writes a value.
+- `pling_review_task` opens a read-only review.
+- `pling_propose_save` opens confirmation; it does not execute the write.
+- `pling_cancel_task` ends the guide without rolling back values already written to the form.
 
-Lookup fields can also be exposed as read actions. `registerTaskLookupActions(controller.list())` lets the assistant search by a name and receive the same labelled candidates as the UI. The model still cannot write until the subsequent action passes the existing scope and approval checks.
+While required fields are missing, **Confirm save** is absent. While the cover is missing, only **Upload cover** remains. After confirmation, the page re-reads every field, runs `create_course`, and checks that the first catalogue entry is the new course.
 
-## Keep execution on the existing path
+## Two React versions
 
-The task controller does not call `fetch`, click a DOM node, or approve a write. It sends an action name and arguments through `invoke`. That bridge can call the registry executor, an API-backed function action, or the Surface gateway.
+Open the [React 19 course back office](/demos/course-workspace-react/?lang=en) and the [React 16.3 course back office](/demos/course-workspace-react16/?lang=en). They should behave identically:
 
-Read-only lookups may use a compact API. Writes should use the application service that already owns validation, idempotency, notifications, and audit. After a write, verify the result through the existing expectation or a read-after-write step.
+- The create-course form opens on entry; chat shows only the compact action row, not a separate task panel.
+- Entering “Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card” writes the values at once and resolves Chen to Chen Jing.
+- Asking an unrelated question mid-task gets an answer; the question is not treated as the course name.
+- “Change the difficulty to 4 stars” updates only the difficulty.
+- An unknown teacher stops the assistant and lists candidates instead of silently replacing the name.
+- Saving without a cover is blocked; after upload, confirmation puts the new course first and renders the deduction as `1`.
+- Creating a second course keeps the first one, and the transcript remains scrollable.
 
-## Review the run in React
-
-`AgentTaskCard` destroys the DOM card when the component unmounts, cancelling subscriptions and in-flight lookups. The task controller remains scoped to the workspace, so a new page can register a new set of tasks without inheriting the previous run.
-
-Test the duplicate-name case, empty required fields, an unavailable time, a failed write, and cancellation. The UI should never turn a failed or cancelled run into a success message.
-
-## Completion checklist
-
-- A person can start work without writing a prompt.
-- The component does not duplicate execution or permission logic.
-- Lookup choices distinguish duplicate names.
-- A row-level note task shows the bound lesson and asks only for the note.
-- The task card is destroyed with the workspace.
-- A write is verified after execution.
-- Saving a note updates the row and the activity list.
-- The same task definition can be rendered by a different adapter.
-
-## Next step
-
-Move from one task to a family only when each task has a distinct, stable outcome. For free-form requests, register an agent-mode task with a prompt template; for manual steps, pause and return control instead of simulating the person.
+React 16.3 has no Hooks, but its business result, task definition, and guide commands are identical to React 19. Only the class lifecycle and render-prop mounting differ.
 
 ---
 
@@ -13049,127 +13063,163 @@ Return to the [Vanilla and jQuery overview](/vanilla/) or read the [Agent Surfac
 
 Canonical: https://plingjs.dev/vanilla/guided-tasks-for-a-real-workflow
 
-A vanilla page does not need a framework to offer guided work. It needs a stable task definition, a conversation surface, and a bridge to the application's existing service. A task card then handles fields, lookup choices, progress, and errors without introducing a second execution path.
+A vanilla page does not need a framework to offer guided work. It needs a stable business boundary, an assistant entry point, and a thin adapter that writes task working memory back into the existing form. The course back office keeps its original form, actions, and validation; the assistant understands the person, updates working memory, and explains what happens next.
 
-## Put the card in the assistant conversation
+## Create a course from one sentence, not a field-by-field quiz
 
-Use `createTaskCard()` when the task belongs to the assistant conversation. The business page remains interactive, and the original controls stay in place. The card is an additional entrance for the decisions and steps that are hard to discover from the page alone.
+The demo opens the existing **Create course** form on entry. A person can simply say:
 
-For a course desk, start with four titled outcomes in the card catalogue: create a course, find a member's card, create a teacher, and schedule a lesson. Keep each definition local to the page or import it from the application's own task module. A fifth outcome, writing a lesson note, lives on each schedule row because it needs a selected lesson.
+```text
+Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card
+```
 
-## Bridge task steps to the business service
+The model reads that as `name`, `teacherId`, `difficulty`, `intro`, and `cards`, then calls `pling_update_task` once. `runtime.ts` subscribes to `TaskRunSnapshot` and writes the changes back into the original form. The page contains no natural-language regex and never treats the whole sentence as a course name.
 
-The controller receives one `invoke` function. That function decides whether a step reaches the action executor, a read-only API, or the application service. The card never receives direct access to the model or the network.
+An unknown teacher makes the assistant stop and ask. The cover must be uploaded by the person. Cards, difficulty, and the intro can arrive in one sentence or be edited directly in the page. A mid-task question, a change of mind, or a pause remains ordinary conversation.
+
+## A task is a goal, constraints, and working memory
+
+`TaskDefinition` describes **what must be true**, not what to ask next. The course field list serves both the model and the page's gap calculation:
 
 ```ts
-import { createTaskController } from "@plingjs/agent";
-import { createTaskCard } from "@plingjs/vanilla";
-import { courseApi } from "./course-api";
-
-const tasks = createTaskController({
-  invoke: (action, args) => courseApi.invoke(action, args),
-});
-
-tasks.register({
-  id: "student.cards",
-  title: "Find a member's card",
+const courseTask: TaskDefinition = {
+  id: "course.create",
+  title: "Create a course",
+  objective: "Help the person create a publishable course instead of walking a fixed field sequence.",
+  constraints: [
+    "The name, teacher, eligible cards, and cover are completion conditions; difficulty, intro, notes, deduction, and price are optional.",
+    "The cover must be uploaded by the person; the assistant must not fake it.",
+    "Every write still goes through the create_course action, executor, and read-back verification.",
+  ],
+  successCriteria: ["The new course appears first in the catalogue", "The catalogue is read back after the write"],
   fields: [
+    { name: "name", label: "Course name", minLength: 1, maxLength: 40 },
     {
-      name: "studentRef",
-      label: "Student",
+      name: "teacherId",
+      label: "Teacher",
       type: "lookup",
-      lookup: (query) => courseApi.searchStudents(query),
+      searchAction: "search_teachers",
+      validate: (value) => teachers.some((teacher) => teacher.id === value) ? null : "Choose a teacher from the search results.",
     },
+    { name: "cards", label: "Eligible cards", type: "select", values: cardChoices },
+    { name: "cover", label: "Course cover", type: "boolean", agentWritable: false },
+    { name: "difficulty", label: "Difficulty", type: "number", optional: true, min: 1, max: 5 },
   ],
   steps: [
-    { label: "Read the student", action: "get_student" },
-    { label: "Read the cards", action: "get_student_cards" },
+    {
+      id: "course.save",
+      label: "Write to the catalogue and read it back",
+      action: "create_course",
+      args: (values) => values,
+    },
   ],
+};
+```
+
+Fields support `min` / `max`, `minLength` / `maxLength`, `pattern`, closed `values` sets, and a business `validate(value, values)` callback. These checks run before a value enters the task snapshot; the model can retry or rephrase, but it cannot bypass page validation.
+
+`steps` only describes one deterministic business write. It is not a conversation script. Course creation has one `create_course` step; which fields to collect first, when to ask, and when to answer a question belongs to the model and the task's working memory.
+
+## The page executes explicit commands only
+
+The page does not parse what the person said. It executes declared UI commands. The shared runtime connects the task catalog, controller, and guide:
+
+```ts
+taskRuntime = createCourseTaskRuntime({
+  registry: pling.registry,
+  ask: (prompt) => pling.ask(prompt),
+  catalog: pling.task,
+  service,
+  locale,
+  form: courseForm,
+  onComplete: () => render(),
+});
+```
+
+`createCourseTaskRuntime` registers `course.create`, `teacher.create`, and `course.schedule`, then creates the course guide. The guide exposes a small set of commands:
+
+- `focus-*` scrolls to and highlights a real field;
+- `use-suggestion` / `apply-*` writes a recommendation into the existing control;
+- `skip-field` skips an optional value;
+- `start-review` / `review-task` opens the read-only review;
+- `propose-save` opens confirmation without writing;
+- `cancel-task` ends the guide.
+
+The model-facing tools are `pling_focus_field`, `pling_review_task`, `pling_propose_save`, and `pling_cancel_task`. They pass through the same permission, audit, and availability checks as any action. A command that the guide does not declare in `guide.agent` never reaches the model.
+
+## Mount it in the vanilla assistant
+
+The vanilla entry only connects the existing page, the task runtime, and the assistant dock:
+
+```ts
+import { createTaskCard } from "@plingjs/vanilla";
+import {
+  createCourseTaskRuntime,
+  createCourseTaskView,
+} from "../../../shared/course-workspace/runtime";
+
+taskRuntime = createCourseTaskRuntime({
+  registry: pling.registry,
+  ask: (prompt) => pling.ask(prompt),
+  catalog: pling.task,
+  service,
+  locale,
+  form: courseForm,
 });
 
-const card = createTaskCard(tasks, { locale: "en-US", catalog: false });
-pling.dock({
+taskCard = createTaskCard(taskRuntime.controller, {
+  locale: locale === "zh" ? "zh-CN" : "en-US",
+  title: copy.taskPanelTitle,
+  onPrompt: (prompt) => void pling.ask(prompt),
+});
+
+const taskView = createCourseTaskView(taskCard, taskRuntime);
+dock = pling.dock({
+  title: "Pling assistant",
   layout: "sidebar",
   sidebarMode: "fused",
   defaultOpen: true,
-  task: card.element,
+  task: taskView.element,
+  mount: document.querySelector("#dock-mount")!,
 });
 ```
 
-The same `invoke` boundary lets an application replace a DOM-backed action with an API-backed function action later. The task id and user-facing copy stay the same.
+`course-form.ts` remains the only business input surface. When the person clicks **Auto-fill**, the page writes the recommendation into the real control. When they edit the form directly, the next guide pass reads the new page value. Chat never grows a second course form.
 
-The [course back office](/demos/course-workspace/) is the runnable version of this chapter. It includes all five tasks, a rejected slot, and a course catalogue and schedule that update through the normal page renderer.
+## Saving needs a human confirmation
 
-The course-creation demo follows the business page more closely: it opens the existing “Create a course” form, and the assistant column only shows a four-step guide. Step one writes recommended values into the original form; step two selects the teacher and eligible cards; step three pauses while the user chooses a cover in the page; step four reads the page again and reviews it. The chat never duplicates the course fields. `examples/shared/course-workspace/course-guide.ts` owns the guide, while `course-form.ts` remains the only source of business input. Next actions use the shared compact row from `@plingjs/dom`; a long recommendation stays a one-line preview instead of stretching the button.
+The final step is not the model declaring success. It is a real write from the page:
 
-Those four stages are the page's own presentation, not a script imposed on the task layer. `course.create` also declares `objective`, `constraints`, and `successCriteria`, and registers the same controller in the task catalogue with `pling.task.define`. The model can answer “What can you do?”, accept a correction such as “rename the course to Fat-burn yoga”, or call `pling_update_task` with only the delegated field when the user says “You pick the cards”. The page subscribes to `TaskRunSnapshot`, writes the change back to the original form, and re-derives the current stage. The actual save still goes through `create_course`, the executor, and a read-back.
+1. While required fields are missing, the action row offers locate, auto-fill, or skip; **Confirm save** is absent.
+2. While the cover is missing, only **Upload cover** remains, pointing at the real file input.
+3. When the person clicks **Confirm save**, the page re-reads every field and calls `controller.run()`.
+4. `create_course` is registered with `modelVisible: false`, so the model cannot bypass confirmation.
+5. After the write, the catalogue is checked; the new course must be first before the task is complete.
 
-The note task uses a record binding instead of a hidden id field:
+After the first course, **Do it again** keeps the first course in the catalogue and starts the second through the same task. Once the transcript overflows, it still scrolls up and down.
 
-```ts
-tasks.register({
-  id: "lesson.note",
-  title: "Write a lesson note",
-  requiresRecord: true,
-  fields: [{ name: "note", label: "Note", type: "textarea" }],
-  steps: [{
-    label: "Save the note",
-    action: "update_lesson_note",
-    args: (values, binding) => ({ lessonId: binding.record?.id, note: values.note }),
-  }],
-});
+## Check it in the browser
 
-dock.open();
-card.open("lesson.note", {}, {
-  record: { id: lesson.id, label: `${lesson.course} · ${lesson.date} ${lesson.time}` },
-});
-```
+Open the [vanilla course back office](/demos/course-workspace/?lang=en) and verify:
 
-The definition refuses to start without a bound record. The form asks only for the note, and the controller shows the bound course in the task header.
+- The create-course form opens on entry; the assistant shows only a compact action row, not a separate task panel.
+- Entering “Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card” writes the values into the form and resolves Chen to Chen Jing.
+- Asking an unrelated question mid-task gets an answer; it is not treated as the course name.
+- Saying “change the difficulty to 4 stars” updates only that value.
+- An unknown teacher stops the assistant and lists available teachers; it is not silently replaced.
+- Saving without a cover is blocked; after uploading one, **Confirm save** appears.
+- Confirming puts the new course first and renders the deduction as `1`.
+- Creating a second course keeps the first one, and the transcript remains scrollable.
 
-## Keep lookup results safe and readable
+## Minimum integration order
 
-Searching returns choices with a stable reference and a human label. If two students share a name, show a masked phone number or another useful distinction. The reference is resolved again on the server, including shop and session scope, before a write.
+1. Declare fields, validation, actions, and read-back evidence with `TaskDefinition`.
+2. Declare welcome copy, the field list, and `agent` commands with `TaskGuideDefinition`; `steps` names business stages, not a per-field script.
+3. Register the task with `pling.task.define()` or the shared runtime, declaring `route`, `scope`, and `autoStart`.
+4. Implement explicit page commands: locate, use a suggestion, skip, review, confirm save, cancel.
+5. Read business data back before showing completion.
 
-```ts
-const lookup = (query: string) =>
-  courseApi.searchStudents(query).then((students) =>
-    students.map((student) => ({
-      value: student.ref,
-      label: student.name,
-      description: student.maskedPhone,
-    })),
-  );
-```
-
-Do not expose the reference as an editable text field. If no result matches, say so; do not invent a record or fall back to the first row silently.
-
-## Make the run observable
-
-While a task runs, show the current step and its reason. When a write finishes, read it back or use a declared expectation. A failure should keep the selected input and the failed step visible so the person can retry or change the choice.
-
-The card emits `pling-task-prompt` for agent-mode tasks and `pling-task-complete` when a deterministic task ends. A vanilla host can route the prompt to `pling.ask()` and refresh its own views from the complete event.
-
-## Test the page without a model
-
-Guided tasks are deterministic, so most checks need no model call. Test an empty field, a duplicate lookup, a successful write, a server rejection, and cancellation. Use the same task definition in the browser and in the unit test; the controller is framework-independent.
-
-Destroy the card when the page or route is torn down. That cancels active work, aborts searches, and removes subscriptions while the business page continues to own its own DOM.
-
-## Completion checklist
-
-- The page presents outcomes before asking for a prompt.
-- The task card is mounted in the assistant transcript; the page keeps its own controls.
-- Search results are labelled and references are revalidated on the server.
-- A row action receives its lesson through a binding rather than a text field.
-- Step actions use the existing executor or business service.
-- A failed write remains visible and recoverable.
-- Saving a note updates the row and the activity list.
-- No action id or raw argument appears in the ordinary interface.
-
-## Next step
-
-Add an agent-mode task for requests that cannot be described as a fixed sequence. Keep deterministic tasks for routine work, and let the person take over visual or manual steps instead of forcing the agent to simulate them.
+React, Vue 3, Vue 2.7, and vanilla share the same task definition, field derivation, and action row. Only the adapter mount changes.
 
 ---
 
@@ -14167,162 +14217,154 @@ See [Records and dialogs](/vue2/records-and-dialogs) for the Vue 2.7 endpoint an
 
 Canonical: https://plingjs.dev/vue2/guided-tasks-for-a-real-workflow
 
-A Vue 2.7 application can expose the same guided tasks as its Vue 3 counterpart. The business page keeps the options API and the controls staff already use. The shared task controller collects the decisions that cannot be inferred from the page, while the existing service still validates and performs each write.
+Vue 2.7 can provide the same guided workflow as Vue 3, React, and vanilla JavaScript without rewriting the application in Vue 3. The business page keeps its existing form, service, and validation. Vue 2.7 owns component lifecycle and rendering; the task definition, field derivation, executor, and action row come from the shared `examples/shared/course-workspace/`.
 
-The course back office uses four tasks that can start from the card catalogue, plus one task that starts from a schedule row. The row-level task is the important difference: the selected lesson is page context, not a value the user should type.
+This chapter keeps the course back office. Opening the page opens the existing **Create course** form. The assistant does not duplicate those fields; it understands a normal sentence, writes the changes back into the original form, and stops where a person must decide.
 
-## Start with outcomes, not action ids
+## Read one course description, not a field-by-field quiz
 
-Show the stable outcomes for the current role. In the course back office, a staff member sees “Create a course”, “Find a member's card”, “Create a teacher”, and “Schedule a lesson”. The fifth outcome, “Write a lesson note”, belongs beside a lesson because it needs a lesson first.
+Creating a course normally requires many fields. A field-by-field interrogation would push the person back into form filling, so this example does not put natural-language regex or a keyword table in the page. A person can simply say:
 
-Task titles, field labels, and examples should use the language of the desk. Action ids and parameter schemas remain implementation details for the debug view.
+```text
+Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card
+```
 
-## Mount the shared card from Vue 2
+The model receives the active task's `objective`, `constraints`, field list, current values, gaps, and guide stage. It reads the sentence as `name`, `teacherId`, `difficulty`, `intro`, and `cards`, then calls `pling_update_task` once. The page subscribes to `TaskRunSnapshot` and mirrors the values into the original form.
 
-The DOM card is independent of Vue's renderer. Vue 2 owns the component lifecycle; the controller and card are created after mount and released in `beforeDestroy`. The card is passed into the assistant dock's `task` option, so it appears in the conversation instead of taking over a separate region of the page.
+If the teacher is not in the list, the assistant stops and lists candidates. If the cover is missing, it locates the upload control and leaves file selection to the person. A mid-task question, a change of mind, or a pause remains ordinary conversation. Task state is working memory, not a script that must run to the next step.
 
-```vue
-<script>
-import { createTaskController } from "@plingjs/agent";
-import { createTaskCard, registerTaskLookupActions } from "@plingjs/vanilla";
-import { courseApi } from "./course-api";
+Field validation belongs to the page. A `TaskField` supports `min` / `max`, `minLength` / `maxLength`, `pattern`, a closed `values` set, and a business `validate(value, values)` callback. The model can write only declared fields through `pling_update_task`; a wrong type, an unknown teacher, or an out-of-range difficulty fails without leaving a half-applied form.
 
-export default {
-  name: "CourseTasks",
-  data() {
-    return { card: null, dock: null, stopLookups: null };
-  },
-  mounted() {
-    this.tasks = createTaskController({
-      invoke: (action, args) => courseApi.invoke(action, args),
+## A task is a goal, constraints, and working memory
+
+`TaskDefinition` describes **what must be true**, not what to ask next. The course field list serves both the model and the page's gap calculation:
+
+```ts
+const courseTask: TaskDefinition = {
+  id: "course.create",
+  title: "Create a course",
+  objective: "Help the person create a publishable course instead of walking a fixed field sequence.",
+  constraints: [
+    "The name, teacher, eligible cards, and cover are completion conditions; difficulty, intro, notes, deduction, and price are optional.",
+    "The cover must be uploaded by the person; the assistant must not fake it.",
+    "Every write still goes through the create_course action, executor, and read-back verification.",
+  ],
+  successCriteria: ["The new course appears first in the catalogue", "The catalogue is read back after the write"],
+  fields: [
+    { name: "name", label: "Course name", minLength: 1, maxLength: 40 },
+    { name: "teacherId", label: "Teacher", type: "lookup", searchAction: "search_teachers" },
+    { name: "cards", label: "Eligible cards", type: "select", values: cardChoices },
+    { name: "cover", label: "Course cover", type: "boolean", agentWritable: false },
+  ],
+  steps: [{ id: "course.save", label: "Write to the catalogue and read it back", action: "create_course", args: (values) => values }],
+};
+```
+
+`steps` describes one deterministic business write. It is not a conversation script. Which fields to collect first, when to ask, and when to answer a question belongs to the model and the task's working memory.
+
+## Vue 2.7 only mounts the shared runtime
+
+This example uses the Composition API available in Vue 2.7 and a render function. `onMounted` creates the shared task runtime, and `Vue.nextTick` ensures the dialog scope is mounted before the task activates:
+
+```ts
+import { Vue, onBeforeUnmount, onMounted } from "./vue2-runtime";
+import { createTaskCard } from "@plingjs/vanilla";
+import {
+  createCourseTaskRuntime,
+  createCourseTaskView,
+} from "../../../shared/course-workspace/runtime";
+
+onMounted(() => {
+  void Vue.nextTick(() => {
+    taskRuntime = createCourseTaskRuntime({
+      registry: pling.registry,
+      ask: (prompt) => pling.ask(prompt),
+      catalog: pling.task,
+      service,
+      locale,
+      form: courseForm,
+      onComplete: () => { version.value += 1; },
     });
-    this.tasks.register({
-      id: "student.cards",
-      title: "Find a member's card",
-      fields: [{
-        name: "studentRef",
-        label: "Student",
-        type: "lookup",
-        searchAction: "search_students",
-        lookup: (query) => courseApi.searchStudents(query),
-      }],
-      steps: [{ label: "Read the cards", action: "get_student_cards" }],
+
+    taskCard = createTaskCard(taskRuntime.controller, {
+      locale: zh ? "zh-CN" : "en-US",
+      title: copy.value.taskPanelTitle,
+      onPrompt: (prompt) => void pling.ask(prompt),
     });
-    this.stopLookups = registerTaskLookupActions(
-      this.$pling,
-      this.tasks.list(),
-    );
-    this.card = createTaskCard(this.tasks, {
-      locale: "en-US",
-      catalog: false,
-    });
-    this.dock = this.$pling.dock({
+
+    taskView = createCourseTaskView(taskCard, taskRuntime);
+    dock = pling.dock({
+      title: "Pling assistant",
       layout: "sidebar",
       sidebarMode: "fused",
       defaultOpen: true,
-      task: this.card.element,
+      task: taskView.element,
+      mount: root.querySelector<HTMLElement>("#dock-mount"),
     });
-  },
-  beforeDestroy() {
-    this.stopLookups?.();
-    this.card?.destroy();
-    this.dock?.destroy();
-  },
-};
-</script>
-```
-
-The controller does not make the Vue instance reactive, and it does not copy the action registry. It publishes snapshots; the card subscribes to that one run. Vue 2 remains responsible for rendering the page and passing in the application service.
-
-## Bind a row to its task
-
-The note task declares `requiresRecord: true`. The definition has only the note field, and its step reads the lesson id from the binding supplied by the page.
-
-```ts
-this.tasks.register({
-  id: "lesson.note",
-  title: "Write a lesson note",
-  requiresRecord: true,
-  fields: [{ name: "note", label: "Note", type: "textarea" }],
-  steps: [{
-    label: "Save the lesson note",
-    action: "update_lesson_note",
-    args: (values, binding) => ({
-      lessonId: binding.record?.id,
-      note: values.note,
-    }),
-  }],
+  });
 });
 
-openNote(lesson) {
-  this.dock.open();
-  this.card.open("lesson.note", {}, {
-    record: {
-      id: lesson.id,
-      label: `${lesson.course} · ${lesson.date} ${lesson.time}`,
-    },
-  });
-}
+onBeforeUnmount(() => {
+  taskRuntime?.destroy();
+  taskView?.destroy();
+  taskCard?.destroy();
+  dock?.destroy();
+});
 ```
 
-Without a non-empty record id, `start()` rejects the run instead of executing with an empty lesson id. Generic task lists also show this task as an entry point that must be opened from a record, not as a card that can run by itself. The form asks only for the note, and the task header shows the bound lesson.
+`course-form.ts` remains the only business input surface. When the person clicks **Auto-fill**, the page writes the recommendation into the real control. When they edit the form directly, the next guide pass reads the new page value. Chat never grows a second course form.
 
-## Use lookups instead of raw ids
+## The page executes explicit commands only
 
-People know a student's name or phone number, not `studentId`. A lookup should return labelled choices; when two students share a name, include enough masked information to distinguish them.
+The page does not parse what the person said. It executes declared UI commands. The course guide exposes a small set:
 
-```ts
-const search = (query) =>
-  courseApi.searchStudents(query).then((students) =>
-    students.map((student) => ({
-      value: student.ref,
-      label: student.name,
-      description: student.maskedPhone,
-    })),
-  );
-```
+- `focus-*` scrolls to and highlights a real field;
+- `use-suggestion` / `apply-*` writes a recommendation into the existing control;
+- `skip-field` skips an optional value;
+- `review-task` opens the read-only review;
+- `propose-save` opens confirmation without writing;
+- `cancel-task` ends the guide.
 
-The selected `ref` is still not authorization. The server resolves it again and checks the current shop, session, and permission before reading cards or writing a lesson. A missing, stale, or cross-shop reference must fail visibly.
+The model-facing tools are `pling_focus_field`, `pling_review_task`, `pling_propose_save`, and `pling_cancel_task`. They pass through the same permission, audit, and availability checks as any action. A command that the guide does not declare in `guide.agent` never reaches the model.
 
-`registerTaskLookupActions` exposes the same lookup as a narrow read action for the assistant. It does not expose a general table query, and it does not bypass the write action's own approval path.
+## Saving needs a human confirmation
 
-## Keep execution in the business boundary
+The final step is not the model declaring success. It is a real write from the page:
 
-The task bridge may call an existing function action or the application service. Do not put a second model loop, a second permission check, or a direct `fetch` inside the Vue 2 component.
+1. While required fields are missing, the action row offers locate, auto-fill, or skip; **Confirm save** is absent.
+2. While the cover is missing, only **Upload cover** remains, pointing at the real file input.
+3. When the person clicks **Confirm save**, the page re-reads every field and calls `controller.run()`.
+4. `create_course` is registered with `modelVisible: false`, so the model cannot bypass confirmation.
+5. After the write, the catalogue is checked; the new course must be first before the task is complete.
 
-After a write, read the result back or use the action's expectation. A failed required step stops the run and stays visible; an optional step may be marked skipped. The run must not turn a server failure or cancellation into success.
+After the first course, **Do it again** keeps the first course in the catalogue and starts the second through the same task. Once the transcript overflows, it still scrolls up and down.
 
-## Verify in a real Vue 2.7 build
+## Check it in the browser
 
-Open the [Vue 2.7 course back office](/demos/course-workspace-vue2/) and check the following:
+Open the [Vue 2.7 course back office](/demos/course-workspace-vue2/?lang=en) and verify:
 
-The course-creation demo follows the business page more closely: it opens the existing “Create a course” form, and the assistant column only shows a four-step guide. Step one writes recommended values into the original form; step two selects the teacher and eligible cards; step three pauses while the user chooses a cover in the page; step four reads the page again and reviews it. The chat never duplicates the course fields. `examples/shared/course-workspace/course-guide.ts` owns the guide, while `course-form.ts` remains the only source of business input. Next actions mount the same compact row from `@plingjs/dom` in Vue 2.7, React, and plain DOM.
+- The create-course form opens on entry; the assistant shows only a compact action row, not a separate task panel.
+- Entering “Pregnancy yoga, Chen, 2 stars, auto-fill the intro, monthly card” writes the values into the form and resolves Chen to Chen Jing.
+- Asking an unrelated question mid-task gets an answer; it is not treated as the course name.
+- Saying “change the difficulty to 4 stars” updates only that value.
+- An unknown teacher stops the assistant and lists available teachers; it is not silently replaced.
+- Saving without a cover is blocked; after uploading one, **Confirm save** appears.
+- Confirming puts the new course first and renders the deduction as `1`.
+- Creating a second course keeps the first one, and the transcript remains scrollable.
 
-Those four stages are the page's own presentation, not a script imposed on the task layer. `course.create` also declares `objective`, `constraints`, and `successCriteria`, and registers the same controller in the task catalogue with `pling.task.define`. The model can answer “What can you do?”, accept a correction such as “rename the course to Fat-burn yoga”, or call `pling_update_task` with only the delegated field when the user says “You pick the cards”. The page subscribes to `TaskRunSnapshot`, writes the change back to the original form, and re-derives the current stage. The actual save still goes through `create_course`, the executor, and a read-back.
+## The Vue 2.7 boundary
 
-- The assistant conversation shows business task cards without requiring a prompt.
-- Searching a duplicate name shows both candidates and their distinguishing details.
-- “Write a lesson note” opens from a schedule row and displays that lesson in the task header.
-- Starting a task with no selected student keeps the run action unavailable.
-- A successful schedule shows a human result and completed steps.
-- A server rejection keeps the failed step and its message on screen.
-- Saving a note updates the row and the activity list, with no lesson id in the form.
-- Leaving the component destroys the card and aborts pending lookup work.
+Vue 2.7 is the last Vue 2 release with the Composition API, so this example can reuse the task model and DOM action row from the Vue 3 chapter. Vue 2.6 and earlier do not have that API; do not install `@plingjs/vue2` and expect the same lifecycle bridge. Treat the page as vanilla JavaScript with `@plingjs/vanilla`. The task definition and `course-form.ts` do not need to be rewritten.
 
-Run the page with Vue 2.7, not Vue 3 compatibility mode. The shared card should use the same snapshots, messages, and failure behavior as the Vue 3 chapter.
+## Minimum integration order
 
-## Completion checklist
+1. Declare fields, validation, actions, and read-back evidence with `TaskDefinition`.
+2. Declare welcome copy, the field list, and `agent` commands with `TaskGuideDefinition`; `steps` names business stages, not a per-field script.
+3. Register the task with `pling.task.define()` or the shared runtime, declaring `route`, `scope`, and `autoStart`.
+4. Implement explicit page commands: locate, use a suggestion, skip, review, confirm save, cancel.
+5. Read business data back before showing completion.
 
-- The controller is created after the component mounts and released when it is destroyed.
-- The card catalogue contains four stable tasks; the row-level note task is opened with a binding.
-- Task fields use lookup or labelled choices rather than raw ids.
-- Steps call the existing business boundary.
-- A failed or cancelled run is not shown as success.
-- The same task definition remains valid without Vue 2.
-
-## Next step
-
-When the role has several stable tasks, move their definitions into the application's own task module and keep Vue focused on layout and business state. For free-form requests, add an agent-mode task with a prompt template rather than inventing a deterministic path.
+Vue 2.7, Vue 3, React 19, React 16.3, and vanilla share the same task definition, field derivation, and action row. Only the adapter mount changes.
 
 ---
 
@@ -20083,7 +20125,7 @@ The legacy entry exposes feedback, guide targets, and task entrances through its
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/react` `0.1.0-alpha.7` |
+| Applies to | `@plingjs/react` `0.1.0-alpha.8` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | React 16.8+ for the Hooks entry; React 16.3+ for the legacy entry; browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
 | Peer dependencies | `react >=16.3` |
@@ -20343,7 +20385,7 @@ Attach Pling after the element exists. If a plugin replaces the DOM node afterwa
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vanilla` `0.1.0-alpha.7` |
+| Applies to | `@plingjs/vanilla` `0.1.0-alpha.8` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for builds |
 | Peer dependencies | None; jQuery is optional |
@@ -21221,6 +21263,10 @@ Fields are user decisions, not database columns. Omit server facts such as the c
 | `values` | `readonly TaskChoice[]` | No | Small closed choice set |
 | `recommended` | `TaskValue` | No | Suggestion used only when the person explicitly delegates this choice |
 | `lookup` | `TaskLookup` | No | Async search for a large collection |
+| `min` / `max` | `number` | No | Numeric bounds. Enforced before a model-proposed value reaches the task snapshot. |
+| `minLength` / `maxLength` | `number` | No | Text-length bounds, counted on the trimmed string. |
+| `pattern` | `string` | No | Regular-expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\d*$`. |
+| `validate` | `(value, values) => string \| null \| undefined` | No | Business-level check run before the value is written. Return a short human-readable reason to reject it, or nothing when valid. It validates a value; it must not classify intent or trigger side effects. |
 | `searchAction` | `string` | No | Action id exposed for this lookup; defaults to `search_<name>` |
 | `minChars` | `number` | No | Minimum query length; defaults to 1 and is never lower |
 | `agentWritable` | `boolean` | No | Set to `false` for page-owned values such as an upload or one-time code; defaults to `true` |
@@ -21236,8 +21282,14 @@ const studentField: TaskField = {
   searchAction: "search_students",
   recommended: "student_li_na",
   lookup: async (query, { signal }) => api.searchStudents(query, { signal }),
+  validate: (value) =>
+    students.some((student) => student.id === value)
+      ? null
+      : "Choose a student from the search results.",
 };
 ```
+
+These checks run before `pling_update_task` writes anything, so the page does not need a parallel natural-language parser. If one submitted value has the wrong type, exceeds a bound, fails a length or pattern check, or returns a reason from `validate`, the whole update is rejected and no half-applied form is left behind. `validate` sees the candidate values for this submission, but it still cannot bypass the field allowlist, `agentWritable`, permissions, confirmation, or the business executor.
 
 ## TaskStep
 
@@ -21354,6 +21406,17 @@ const catalog = createTaskCatalog({
 Vue 3 exposes the same catalog as `pling.task`, combined with the task controller. A page therefore usually calls `pling.task.define()`, `pling.task.active()`, and `pling.task.command()` directly.
 
 The catalog exposes `actionId` and `updateActionId`. The first is the actual bound id for `pling_start_task`; the second is the actual bound id for `pling_update_task`. Read both properties instead of assuming the default ids when multiple runtimes share one registry.
+
+When the active guide declares page-control commands, the catalog also exposes `focusActionId`, `reviewActionId`, `proposeSaveActionId`, and `cancelActionId`. They map to four narrow actions and never create a second execution path:
+
+| Property | Model action | Effect | Available when |
+| --- | --- | --- | --- |
+| `focusActionId` | `pling_focus_field` | Scrolls a declared guide field into view and highlights it; never writes | The active guide has fields |
+| `reviewActionId` | `pling_review_task` | Opens the page's read-only review; does not save | `guide.agent.review` declares a command |
+| `proposeSaveActionId` | `pling_propose_save` | Opens the page's confirmation surface only; does not perform the business write | `guide.agent.proposeSave` declares a command |
+| `cancelActionId` | `pling_cancel_task` | Ends the guide without rolling back values already written to the page | `guide.agent.cancel` or `guide.cancel` declares a command |
+
+When a command is missing, the model does not see the tool; a call returns `ACTION_UNAVAILABLE` instead of invoking an empty page action. The real save still goes through the page button, executor, confirmation, and read-back.
 
 ### define(registration)
 
@@ -21489,6 +21552,7 @@ The action exists only while the catalog has at least one task. A page with no g
 | `cancel` | `TaskGuideAction` | No | Header action for leaving the task; the renderer emits the command and the page decides whether to end the run |
 | `stepSubtitle` | `string` | No | Step subtitle supporting `{step}` and `{total}` |
 | `avatar` | `string` | No | Short avatar text for the built-in renderer |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | Page-control commands the model may trigger. Declaring `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; omitting a command makes its tool unavailable. `focusField(field)` overrides the default `focus-<field>` while `pling_focus_field` remains limited to declared guide fields. None of these commands performs a business write |
 | `labels` | `TaskGuideLabels` | No | Overrides the running, completed, current, pending, and error labels |
 | `fields` | `TaskGuideFields` | No | Switches to a compact horizontal field rail; the full step card is not rendered |
 | `steps` | `readonly TaskGuideStep[]` | Yes | Ordered human-facing steps |
@@ -21795,8 +21859,8 @@ Unknown task ids, unknown field names, duplicate definitions, a missing bound re
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.7` |
-| Introduced | `0.1.0-alpha.7` |
+| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.8` |
+| Introduced | `0.1.0-alpha.6` |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for the task controller |
 | Peer dependencies | None |
 | Stability | Experimental; snapshots may gain fields without changing existing meaning |
@@ -22952,7 +23016,7 @@ Choose the framework you are integrating. Each page contains only that framework
 
 The parameter tables are the main contract here. Look up a field's type, required status, default, and applicable scenario on the current framework page; follow the linked reference only when you need field-level semantics or error codes.
 
-There are **5** API pages covering **10** capability groups; the current version is `0.1.0-alpha.7` with **preview** stability.
+There are **5** API pages covering **10** capability groups; the current version is `0.1.0-alpha.8` with **preview** stability.
 
 ## Choose by framework
 
@@ -22973,10 +23037,10 @@ Runtime, page continuity, testing, and diagnostic APIs share one implementation:
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | Item | Value |
 | --- | --- |
@@ -23013,9 +23077,9 @@ This page lists only `@plingjs/vue` entry points, plus the shared-package types 
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.7` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.8` |
 
-The current package version is `0.1.0-alpha.7`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.8`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -24528,7 +24592,7 @@ Embeds the conversation in a business column instead of a floating surface.
 | `collapsible` | `boolean` | No | `false` | Shows the collapse control used by the dock shell. |
 | `debug` | `boolean \| AgentTraceOptions` | No | `false` | Enables the read-only request inspector. |
 | `modelSettings` | `ModelSettingsSetting` | No | `off` | Model settings entry in Activity. |
-| `beforeSend` | `AgentBeforeSendHandler` | No | — | Optional local responder. Return `{ handled: true, reply }` to update page state and answer without calling the model. Use it for deterministic intake, corrections, and confirmation steps. |
+| `beforeSend` | `AgentBeforeSendHandler` | No | — | Optional escape hatch for a page that can answer without the model. Return `{ handled: true, reply }` to update page state and reply immediately. Prefer model-driven task tools for natural-language intake and corrections; reserve this hook for narrow, deterministic commands whose meaning is unambiguous. |
 | `#task` | `slot` | No | — | Overrides the task presentation above the transcript. Built-in Vue surfaces render the active guide here by default. |
 | `#guide` | `slot` | No | — | Guidance content for the next-step prompt and its actions. Placement follows `guidePlacement`. |
 | `#nav-actions` | `slot` | No | — | Header toolbar content rendered before the built-in clear and collapse controls. Use it for page-scoped actions such as the current task menu. |
@@ -25296,6 +25360,10 @@ interface TaskCatalog {
 | --- | --- | --- | --- | --- |
 | `actionId` | `readonly string` | No | — | The actual model action id bound by this catalog. Read it instead of assuming pling_start_task when several runtimes share a registry. |
 | `updateActionId` | `readonly string` | No | — | The actual model action id for updating the active task's working memory. It accepts only declared, agent-writable fields. |
+| `focusActionId` | `readonly string` | No | — | The actual model action id that points at a declared guide field. It never writes a value and is unavailable when the active guide has no fields. |
+| `reviewActionId` | `readonly string` | No | — | The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command. |
+| `proposeSaveActionId` | `readonly string` | No | — | The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command. |
+| `cancelActionId` | `readonly string` | No | — | The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command. |
 | `define(registration)` | `() => void` | No | — | Adds a task registration and returns an unregister function. |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | No | — | Returns one registration even when its route or scope is currently unavailable. |
 | `list()` | `readonly GuidedTaskRegistration[]` | No | — | Returns every registration owned by this catalog. |
@@ -25532,6 +25600,7 @@ interface TaskGuideDefinition {
 | `cancel` | `TaskGuideAction` | No | — | Optional header action that lets the person leave the task. The renderer emits the command; the page decides how to end the run. |
 | `stepSubtitle` | `string` | No | — | Subtitle template supporting {step} and {total}. |
 | `avatar` | `string` | No | — | Short avatar text or initials used by the built-in renderer. |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | — | Page-owned commands the model may trigger. `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; each tool is unavailable when its command is omitted. `focusField(field)` overrides the default `focus-<field>` command while `pling_focus_field` stays limited to declared guide fields. None of these commands performs a business write; `proposeSave` opens the confirmation surface only. |
 | `labels` | `TaskGuideLabels` | No | — | Overrides for running, completed, current, done, pending, skipped, and error labels. |
 | `fields` | `TaskGuideFields` | No | — | Compact field list resolved from page state or the latest snapshot. The built-in renderer uses it for the horizontal progress rail; skip it for a full step card. |
 | `steps` | `readonly TaskGuideStep[]` | Yes | — | Ordered human-facing steps. At least one is required by the contract. |
@@ -25545,6 +25614,11 @@ const guide: TaskGuideDefinition = {
   title: "新建课程",
   welcome: "我会陪你确认课程信息，并填入右侧表单。",
   stepSubtitle: "第 {step} 步，共 {total} 步",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
   steps: courseSteps,
   done: {
     title: "课程已创建",
@@ -26170,6 +26244,12 @@ interface TaskField {
 | `values` | `readonly TaskChoice[]` | No | — | Small closed choice set for select fields. |
 | `recommended` | `TaskValue` | No | — | A suggestion the model may use only when the person explicitly delegates this choice. It is not written automatically. |
 | `lookup` | `TaskLookup` | No | — | Async search for a large collection. UI and agent tooling should share this function. |
+| `min` | `number` | No | — | Minimum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `max` | `number` | No | — | Maximum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `minLength` | `number` | No | — | Minimum length for a text value. Counted on the trimmed string. |
+| `maxLength` | `number` | No | — | Maximum length for a text value. Counted on the trimmed string. |
+| `pattern` | `string` | No | — | Regular expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\\d*$`. |
+| `validate` | `(value, values) => string \| null \| undefined` | No | — | Business-level check run before a model-proposed value is written. Return a short human-readable reason to reject it, or nothing when valid. This validates a value; it must not classify intent or trigger side effects. |
 | `searchAction` | `string` | No | — | Action id exposed to the model for this lookup. Defaults to `search_<name>`; reuse one id when several tasks share a search implementation. |
 | `minChars` | `number` | No | `1` | Minimum query length before lookup runs. Values below one are clamped to one. |
 | `agentWritable` | `boolean` | No | `true` | Whether the model may write this field through the task update action. Set false for page-owned values such as an upload, signature, or one-time code. |
@@ -26187,6 +26267,30 @@ const studentField: TaskField = {
     label: row.name,
     description: row.phoneMasked,
   }))),
+};
+```
+
+**Example 2 · Reject an impossible value before it reaches the page**
+
+```ts
+const difficulty: TaskField = {
+  name: "difficulty",
+  label: "难度",
+  type: "number",
+  optional: true,
+  min: 1,
+  max: 5,
+};
+
+const teacher: TaskField = {
+  name: "teacherId",
+  label: "授课老师",
+  type: "lookup",
+  lookup: searchTeachers,
+  validate: (value) =>
+    teachers.some((item) => item.id === value)
+      ? null
+      : "请从搜索结果中选择老师。",
 };
 ```
 
@@ -27071,10 +27175,10 @@ interface GuideActionItem {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | Item | Value |
 | --- | --- |
@@ -27100,11 +27204,11 @@ This page lists only `@plingjs/react` entry points, plus the shared-package type
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.7` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.8` |
 
 The Hooks API on this page requires React 16.8+. React 16.3–16.7 use `@plingjs/react/legacy`, a class/render-prop entry documented in the [React adapter reference](/reference/react-adapter#react-163-167-legacy-entry).
 
-The current package version is `0.1.0-alpha.7`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.8`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -29152,6 +29256,10 @@ interface TaskCatalog {
 | --- | --- | --- | --- | --- |
 | `actionId` | `readonly string` | No | — | The actual model action id bound by this catalog. Read it instead of assuming pling_start_task when several runtimes share a registry. |
 | `updateActionId` | `readonly string` | No | — | The actual model action id for updating the active task's working memory. It accepts only declared, agent-writable fields. |
+| `focusActionId` | `readonly string` | No | — | The actual model action id that points at a declared guide field. It never writes a value and is unavailable when the active guide has no fields. |
+| `reviewActionId` | `readonly string` | No | — | The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command. |
+| `proposeSaveActionId` | `readonly string` | No | — | The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command. |
+| `cancelActionId` | `readonly string` | No | — | The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command. |
 | `define(registration)` | `() => void` | No | — | Adds a task registration and returns an unregister function. |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | No | — | Returns one registration even when its route or scope is currently unavailable. |
 | `list()` | `readonly GuidedTaskRegistration[]` | No | — | Returns every registration owned by this catalog. |
@@ -29388,6 +29496,7 @@ interface TaskGuideDefinition {
 | `cancel` | `TaskGuideAction` | No | — | Optional header action that lets the person leave the task. The renderer emits the command; the page decides how to end the run. |
 | `stepSubtitle` | `string` | No | — | Subtitle template supporting {step} and {total}. |
 | `avatar` | `string` | No | — | Short avatar text or initials used by the built-in renderer. |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | — | Page-owned commands the model may trigger. `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; each tool is unavailable when its command is omitted. `focusField(field)` overrides the default `focus-<field>` command while `pling_focus_field` stays limited to declared guide fields. None of these commands performs a business write; `proposeSave` opens the confirmation surface only. |
 | `labels` | `TaskGuideLabels` | No | — | Overrides for running, completed, current, done, pending, skipped, and error labels. |
 | `fields` | `TaskGuideFields` | No | — | Compact field list resolved from page state or the latest snapshot. The built-in renderer uses it for the horizontal progress rail; skip it for a full step card. |
 | `steps` | `readonly TaskGuideStep[]` | Yes | — | Ordered human-facing steps. At least one is required by the contract. |
@@ -29401,6 +29510,11 @@ const guide: TaskGuideDefinition = {
   title: "新建课程",
   welcome: "我会陪你确认课程信息，并填入右侧表单。",
   stepSubtitle: "第 {step} 步，共 {total} 步",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
   steps: courseSteps,
   done: {
     title: "课程已创建",
@@ -30026,6 +30140,12 @@ interface TaskField {
 | `values` | `readonly TaskChoice[]` | No | — | Small closed choice set for select fields. |
 | `recommended` | `TaskValue` | No | — | A suggestion the model may use only when the person explicitly delegates this choice. It is not written automatically. |
 | `lookup` | `TaskLookup` | No | — | Async search for a large collection. UI and agent tooling should share this function. |
+| `min` | `number` | No | — | Minimum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `max` | `number` | No | — | Maximum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `minLength` | `number` | No | — | Minimum length for a text value. Counted on the trimmed string. |
+| `maxLength` | `number` | No | — | Maximum length for a text value. Counted on the trimmed string. |
+| `pattern` | `string` | No | — | Regular expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\\d*$`. |
+| `validate` | `(value, values) => string \| null \| undefined` | No | — | Business-level check run before a model-proposed value is written. Return a short human-readable reason to reject it, or nothing when valid. This validates a value; it must not classify intent or trigger side effects. |
 | `searchAction` | `string` | No | — | Action id exposed to the model for this lookup. Defaults to `search_<name>`; reuse one id when several tasks share a search implementation. |
 | `minChars` | `number` | No | `1` | Minimum query length before lookup runs. Values below one are clamped to one. |
 | `agentWritable` | `boolean` | No | `true` | Whether the model may write this field through the task update action. Set false for page-owned values such as an upload, signature, or one-time code. |
@@ -30043,6 +30163,30 @@ const studentField: TaskField = {
     label: row.name,
     description: row.phoneMasked,
   }))),
+};
+```
+
+**Example 2 · Reject an impossible value before it reaches the page**
+
+```ts
+const difficulty: TaskField = {
+  name: "difficulty",
+  label: "难度",
+  type: "number",
+  optional: true,
+  min: 1,
+  max: 5,
+};
+
+const teacher: TaskField = {
+  name: "teacherId",
+  label: "授课老师",
+  type: "lookup",
+  lookup: searchTeachers,
+  validate: (value) =>
+    teachers.some((item) => item.id === value)
+      ? null
+      : "请从搜索结果中选择老师。",
 };
 ```
 
@@ -30916,10 +31060,10 @@ card.current?.open("lesson.note", {}, {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | Item | Value |
 | --- | --- |
@@ -30945,9 +31089,9 @@ This page lists only `@plingjs/vue2` entry points, plus the shared-package types
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.7` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.8` |
 
-The current package version is `0.1.0-alpha.7`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.8`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -32329,6 +32473,10 @@ interface TaskCatalog {
 | --- | --- | --- | --- | --- |
 | `actionId` | `readonly string` | No | — | The actual model action id bound by this catalog. Read it instead of assuming pling_start_task when several runtimes share a registry. |
 | `updateActionId` | `readonly string` | No | — | The actual model action id for updating the active task's working memory. It accepts only declared, agent-writable fields. |
+| `focusActionId` | `readonly string` | No | — | The actual model action id that points at a declared guide field. It never writes a value and is unavailable when the active guide has no fields. |
+| `reviewActionId` | `readonly string` | No | — | The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command. |
+| `proposeSaveActionId` | `readonly string` | No | — | The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command. |
+| `cancelActionId` | `readonly string` | No | — | The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command. |
 | `define(registration)` | `() => void` | No | — | Adds a task registration and returns an unregister function. |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | No | — | Returns one registration even when its route or scope is currently unavailable. |
 | `list()` | `readonly GuidedTaskRegistration[]` | No | — | Returns every registration owned by this catalog. |
@@ -32565,6 +32713,7 @@ interface TaskGuideDefinition {
 | `cancel` | `TaskGuideAction` | No | — | Optional header action that lets the person leave the task. The renderer emits the command; the page decides how to end the run. |
 | `stepSubtitle` | `string` | No | — | Subtitle template supporting {step} and {total}. |
 | `avatar` | `string` | No | — | Short avatar text or initials used by the built-in renderer. |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | — | Page-owned commands the model may trigger. `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; each tool is unavailable when its command is omitted. `focusField(field)` overrides the default `focus-<field>` command while `pling_focus_field` stays limited to declared guide fields. None of these commands performs a business write; `proposeSave` opens the confirmation surface only. |
 | `labels` | `TaskGuideLabels` | No | — | Overrides for running, completed, current, done, pending, skipped, and error labels. |
 | `fields` | `TaskGuideFields` | No | — | Compact field list resolved from page state or the latest snapshot. The built-in renderer uses it for the horizontal progress rail; skip it for a full step card. |
 | `steps` | `readonly TaskGuideStep[]` | Yes | — | Ordered human-facing steps. At least one is required by the contract. |
@@ -32578,6 +32727,11 @@ const guide: TaskGuideDefinition = {
   title: "新建课程",
   welcome: "我会陪你确认课程信息，并填入右侧表单。",
   stepSubtitle: "第 {step} 步，共 {total} 步",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
   steps: courseSteps,
   done: {
     title: "课程已创建",
@@ -33203,6 +33357,12 @@ interface TaskField {
 | `values` | `readonly TaskChoice[]` | No | — | Small closed choice set for select fields. |
 | `recommended` | `TaskValue` | No | — | A suggestion the model may use only when the person explicitly delegates this choice. It is not written automatically. |
 | `lookup` | `TaskLookup` | No | — | Async search for a large collection. UI and agent tooling should share this function. |
+| `min` | `number` | No | — | Minimum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `max` | `number` | No | — | Maximum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `minLength` | `number` | No | — | Minimum length for a text value. Counted on the trimmed string. |
+| `maxLength` | `number` | No | — | Maximum length for a text value. Counted on the trimmed string. |
+| `pattern` | `string` | No | — | Regular expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\\d*$`. |
+| `validate` | `(value, values) => string \| null \| undefined` | No | — | Business-level check run before a model-proposed value is written. Return a short human-readable reason to reject it, or nothing when valid. This validates a value; it must not classify intent or trigger side effects. |
 | `searchAction` | `string` | No | — | Action id exposed to the model for this lookup. Defaults to `search_<name>`; reuse one id when several tasks share a search implementation. |
 | `minChars` | `number` | No | `1` | Minimum query length before lookup runs. Values below one are clamped to one. |
 | `agentWritable` | `boolean` | No | `true` | Whether the model may write this field through the task update action. Set false for page-owned values such as an upload, signature, or one-time code. |
@@ -33220,6 +33380,30 @@ const studentField: TaskField = {
     label: row.name,
     description: row.phoneMasked,
   }))),
+};
+```
+
+**Example 2 · Reject an impossible value before it reaches the page**
+
+```ts
+const difficulty: TaskField = {
+  name: "difficulty",
+  label: "难度",
+  type: "number",
+  optional: true,
+  min: 1,
+  max: 5,
+};
+
+const teacher: TaskField = {
+  name: "teacherId",
+  label: "授课老师",
+  type: "lookup",
+  lookup: searchTeachers,
+  validate: (value) =>
+    teachers.some((item) => item.id === value)
+      ? null
+      : "请从搜索结果中选择老师。",
 };
 ```
 
@@ -33957,10 +34141,10 @@ interface GuideActionItem {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | Item | Value |
 | --- | --- |
@@ -33986,9 +34170,9 @@ This page lists only `@plingjs/vanilla` entry points, plus the shared-package ty
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.7` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.8` |
 
-The current package version is `0.1.0-alpha.7`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.8`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -35963,6 +36147,10 @@ interface TaskCatalog {
 | --- | --- | --- | --- | --- |
 | `actionId` | `readonly string` | No | — | The actual model action id bound by this catalog. Read it instead of assuming pling_start_task when several runtimes share a registry. |
 | `updateActionId` | `readonly string` | No | — | The actual model action id for updating the active task's working memory. It accepts only declared, agent-writable fields. |
+| `focusActionId` | `readonly string` | No | — | The actual model action id that points at a declared guide field. It never writes a value and is unavailable when the active guide has no fields. |
+| `reviewActionId` | `readonly string` | No | — | The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command. |
+| `proposeSaveActionId` | `readonly string` | No | — | The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command. |
+| `cancelActionId` | `readonly string` | No | — | The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command. |
 | `define(registration)` | `() => void` | No | — | Adds a task registration and returns an unregister function. |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | No | — | Returns one registration even when its route or scope is currently unavailable. |
 | `list()` | `readonly GuidedTaskRegistration[]` | No | — | Returns every registration owned by this catalog. |
@@ -36199,6 +36387,7 @@ interface TaskGuideDefinition {
 | `cancel` | `TaskGuideAction` | No | — | Optional header action that lets the person leave the task. The renderer emits the command; the page decides how to end the run. |
 | `stepSubtitle` | `string` | No | — | Subtitle template supporting {step} and {total}. |
 | `avatar` | `string` | No | — | Short avatar text or initials used by the built-in renderer. |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | — | Page-owned commands the model may trigger. `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; each tool is unavailable when its command is omitted. `focusField(field)` overrides the default `focus-<field>` command while `pling_focus_field` stays limited to declared guide fields. None of these commands performs a business write; `proposeSave` opens the confirmation surface only. |
 | `labels` | `TaskGuideLabels` | No | — | Overrides for running, completed, current, done, pending, skipped, and error labels. |
 | `fields` | `TaskGuideFields` | No | — | Compact field list resolved from page state or the latest snapshot. The built-in renderer uses it for the horizontal progress rail; skip it for a full step card. |
 | `steps` | `readonly TaskGuideStep[]` | Yes | — | Ordered human-facing steps. At least one is required by the contract. |
@@ -36212,6 +36401,11 @@ const guide: TaskGuideDefinition = {
   title: "新建课程",
   welcome: "我会陪你确认课程信息，并填入右侧表单。",
   stepSubtitle: "第 {step} 步，共 {total} 步",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
   steps: courseSteps,
   done: {
     title: "课程已创建",
@@ -36837,6 +37031,12 @@ interface TaskField {
 | `values` | `readonly TaskChoice[]` | No | — | Small closed choice set for select fields. |
 | `recommended` | `TaskValue` | No | — | A suggestion the model may use only when the person explicitly delegates this choice. It is not written automatically. |
 | `lookup` | `TaskLookup` | No | — | Async search for a large collection. UI and agent tooling should share this function. |
+| `min` | `number` | No | — | Minimum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `max` | `number` | No | — | Maximum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `minLength` | `number` | No | — | Minimum length for a text value. Counted on the trimmed string. |
+| `maxLength` | `number` | No | — | Maximum length for a text value. Counted on the trimmed string. |
+| `pattern` | `string` | No | — | Regular expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\\d*$`. |
+| `validate` | `(value, values) => string \| null \| undefined` | No | — | Business-level check run before a model-proposed value is written. Return a short human-readable reason to reject it, or nothing when valid. This validates a value; it must not classify intent or trigger side effects. |
 | `searchAction` | `string` | No | — | Action id exposed to the model for this lookup. Defaults to `search_<name>`; reuse one id when several tasks share a search implementation. |
 | `minChars` | `number` | No | `1` | Minimum query length before lookup runs. Values below one are clamped to one. |
 | `agentWritable` | `boolean` | No | `true` | Whether the model may write this field through the task update action. Set false for page-owned values such as an upload, signature, or one-time code. |
@@ -36854,6 +37054,30 @@ const studentField: TaskField = {
     label: row.name,
     description: row.phoneMasked,
   }))),
+};
+```
+
+**Example 2 · Reject an impossible value before it reaches the page**
+
+```ts
+const difficulty: TaskField = {
+  name: "difficulty",
+  label: "难度",
+  type: "number",
+  optional: true,
+  min: 1,
+  max: 5,
+};
+
+const teacher: TaskField = {
+  name: "teacherId",
+  label: "授课老师",
+  type: "lookup",
+  lookup: searchTeachers,
+  validate: (value) =>
+    teachers.some((item) => item.id === value)
+      ? null
+      : "请从搜索结果中选择老师。",
 };
 ```
 
@@ -38028,10 +38252,10 @@ panel.destroy();
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | Item | Value |
 | --- | --- |
@@ -38057,9 +38281,9 @@ This page covers public APIs in `@plingjs/core`, `@plingjs/agent`, `@plingjs/dom
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.7` |
+| `@plingjs/core` | — | `0.1.0-alpha.8` |
 
-The current package version is `0.1.0-alpha.7`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.8`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -39447,6 +39671,10 @@ interface TaskCatalog {
 | --- | --- | --- | --- | --- |
 | `actionId` | `readonly string` | No | — | The actual model action id bound by this catalog. Read it instead of assuming pling_start_task when several runtimes share a registry. |
 | `updateActionId` | `readonly string` | No | — | The actual model action id for updating the active task's working memory. It accepts only declared, agent-writable fields. |
+| `focusActionId` | `readonly string` | No | — | The actual model action id that points at a declared guide field. It never writes a value and is unavailable when the active guide has no fields. |
+| `reviewActionId` | `readonly string` | No | — | The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command. |
+| `proposeSaveActionId` | `readonly string` | No | — | The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command. |
+| `cancelActionId` | `readonly string` | No | — | The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command. |
 | `define(registration)` | `() => void` | No | — | Adds a task registration and returns an unregister function. |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | No | — | Returns one registration even when its route or scope is currently unavailable. |
 | `list()` | `readonly GuidedTaskRegistration[]` | No | — | Returns every registration owned by this catalog. |
@@ -39683,6 +39911,7 @@ interface TaskGuideDefinition {
 | `cancel` | `TaskGuideAction` | No | — | Optional header action that lets the person leave the task. The renderer emits the command; the page decides how to end the run. |
 | `stepSubtitle` | `string` | No | — | Subtitle template supporting {step} and {total}. |
 | `avatar` | `string` | No | — | Short avatar text or initials used by the built-in renderer. |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | — | Page-owned commands the model may trigger. `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; each tool is unavailable when its command is omitted. `focusField(field)` overrides the default `focus-<field>` command while `pling_focus_field` stays limited to declared guide fields. None of these commands performs a business write; `proposeSave` opens the confirmation surface only. |
 | `labels` | `TaskGuideLabels` | No | — | Overrides for running, completed, current, done, pending, skipped, and error labels. |
 | `fields` | `TaskGuideFields` | No | — | Compact field list resolved from page state or the latest snapshot. The built-in renderer uses it for the horizontal progress rail; skip it for a full step card. |
 | `steps` | `readonly TaskGuideStep[]` | Yes | — | Ordered human-facing steps. At least one is required by the contract. |
@@ -39696,6 +39925,11 @@ const guide: TaskGuideDefinition = {
   title: "新建课程",
   welcome: "我会陪你确认课程信息，并填入右侧表单。",
   stepSubtitle: "第 {step} 步，共 {total} 步",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
   steps: courseSteps,
   done: {
     title: "课程已创建",
@@ -40321,6 +40555,12 @@ interface TaskField {
 | `values` | `readonly TaskChoice[]` | No | — | Small closed choice set for select fields. |
 | `recommended` | `TaskValue` | No | — | A suggestion the model may use only when the person explicitly delegates this choice. It is not written automatically. |
 | `lookup` | `TaskLookup` | No | — | Async search for a large collection. UI and agent tooling should share this function. |
+| `min` | `number` | No | — | Minimum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `max` | `number` | No | — | Maximum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `minLength` | `number` | No | — | Minimum length for a text value. Counted on the trimmed string. |
+| `maxLength` | `number` | No | — | Maximum length for a text value. Counted on the trimmed string. |
+| `pattern` | `string` | No | — | Regular expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\\d*$`. |
+| `validate` | `(value, values) => string \| null \| undefined` | No | — | Business-level check run before a model-proposed value is written. Return a short human-readable reason to reject it, or nothing when valid. This validates a value; it must not classify intent or trigger side effects. |
 | `searchAction` | `string` | No | — | Action id exposed to the model for this lookup. Defaults to `search_<name>`; reuse one id when several tasks share a search implementation. |
 | `minChars` | `number` | No | `1` | Minimum query length before lookup runs. Values below one are clamped to one. |
 | `agentWritable` | `boolean` | No | `true` | Whether the model may write this field through the task update action. Set false for page-owned values such as an upload, signature, or one-time code. |
@@ -40338,6 +40578,30 @@ const studentField: TaskField = {
     label: row.name,
     description: row.phoneMasked,
   }))),
+};
+```
+
+**Example 2 · Reject an impossible value before it reaches the page**
+
+```ts
+const difficulty: TaskField = {
+  name: "difficulty",
+  label: "难度",
+  type: "number",
+  optional: true,
+  min: 1,
+  max: 5,
+};
+
+const teacher: TaskField = {
+  name: "teacherId",
+  label: "授课老师",
+  type: "lookup",
+  lookup: searchTeachers,
+  validate: (value) =>
+    teachers.some((item) => item.id === value)
+      ? null
+      : "请从搜索结果中选择老师。",
 };
 ```
 
@@ -41641,10 +41905,10 @@ const config = resolveAgentConfig({
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | Item | Value |
 | --- | --- |

@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/vanilla",
-  "version": "0.1.0-alpha.7",
+  "version": "0.1.0-alpha.8",
   "private": false,
   "type": "module",
   "description": "Pling vanilla JS adapter: declare actions, records, regions, and read-only state on DOM elements.",

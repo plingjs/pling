@@ -24,13 +24,6 @@ import {
   type CourseDraft,
 } from "../../../shared/course-create/model";
 import {
-  composeCourseIntakeReply,
-  parseCourseIntake,
-  shouldUseAgent,
-  type CourseIntakeResult,
-  type CourseIntakePatch,
-} from "../../../shared/course-create/intake";
-import {
   createCourseTaskDefinition,
   registerCourseCreateActions,
   type CourseTaskOptions,
@@ -54,7 +47,6 @@ const draft = reactive<CourseDraft>(emptyCourseDraft());
 const modalOpen = ref(true);
 const assistantOpen = ref(true);
 const taskMenuOpen = ref(false);
-const step = computed(() => stepFromDraft());
 const busy = ref(false);
 const taskError = ref("");
 const reviewOpen = ref(false);
@@ -403,41 +395,6 @@ function onFormInput(): void {
   syncTaskValues();
 }
 
-function stepFromDraft(): number {
-  const nodes = courseCreateFieldNodes(props.locale, draft, teachers, skippedFields.value);
-  const next = nodes.findIndex((field) => !field.filled && !field.skipped);
-  if (next < 0) return 4;
-  if (next <= 2) return 1;
-  if (next <= 5) return 2;
-  if (next === 6) return 3;
-  return 4;
-}
-
-function applyBasics(): void {
-  if (!draft.name.trim()) draft.name = recommended.name;
-  if (!draft.difficulty) draft.difficulty = recommended.difficulty;
-  if (!draft.intro.trim()) draft.intro = recommended.intro;
-  taskError.value = "";
-  markEdited();
-  syncTaskValues();
-  void focusFields(["name", "difficulty", "intro"], "is-guided");
-}
-
-function applyTeaching(): void {
-  if (!draft.teacherId) {
-    draft.teacherId = recommended.teacherId;
-    draft.teacherName = recommended.teacherName;
-  }
-  if (!draft.cards.trim()) draft.cards = recommended.cards;
-  if (!draft.note.trim()) draft.note = recommended.note;
-  if (!draft.deduct) draft.deduct = recommended.deduct;
-  if (!draft.price) draft.price = recommended.price;
-  taskError.value = "";
-  markEdited();
-  syncTaskValues();
-  void focusFields(["teacher", "cards", "note"], "is-guided");
-}
-
 function applyField(field: string): void {
   switch (field) {
     case "name":
@@ -472,25 +429,6 @@ function applyField(field: string): void {
   markEdited();
   syncTaskValues();
   void focusFields([field], "is-guided");
-}
-
-function locateCover(): void {
-  focusedField.value = "cover";
-  void focusFields(["cover"], "is-pointed", 3200);
-}
-
-async function pickCover(): Promise<void> {
-  focusedField.value = "cover";
-  await focusFields(["cover"], "is-pointed", 3200);
-  coverInput.value?.click();
-}
-
-function checkCover(): void {
-  if (!draft.cover) {
-    taskError.value = createCopy.value.cover.missing;
-    return;
-  }
-  taskError.value = "";
 }
 
 function handleCoverSelected(event: Event): void {
@@ -537,173 +475,23 @@ function resumeEditing(): void {
   agent.value?.say(createCopy.value.review.continueHint);
 }
 
-function applyIntakePatch(patch: CourseIntakePatch): CourseFieldNode["field"][] {
-  const changed: CourseFieldNode["field"][] = [];
-  if (patch.name !== undefined) {
-    draft.name = patch.name;
-    changed.push("name");
-  }
-  if (patch.teacherId !== undefined) {
-    draft.teacherId = patch.teacherId;
-    draft.teacherName = patch.teacherName ?? teachers.find((teacher) => teacher.id === patch.teacherId)?.name ?? "";
-    changed.push("teacher");
-  }
-  if (patch.cards !== undefined) {
-    draft.cards = patch.cards;
-    changed.push("cards");
-  }
-  if (patch.difficulty !== undefined) {
-    draft.difficulty = patch.difficulty;
-    changed.push("difficulty");
-  }
-  if (patch.intro !== undefined) {
-    draft.intro = patch.intro;
-    changed.push("intro");
-  }
-  if (patch.note !== undefined) {
-    draft.note = patch.note;
-    changed.push("note");
-  }
-  if (patch.deduct !== undefined) {
-    draft.deduct = patch.deduct;
-    changed.push("deduct");
-  }
-  if (patch.price !== undefined) {
-    draft.price = patch.price;
-    changed.push("price");
-  }
-  if (changed.length) {
-    taskError.value = "";
-    markEdited();
-    syncTaskValues();
-    void nextTick(() => flashFields(changed, "is-guided", 1800));
-  }
-  return changed;
-}
-
 function missingReply(): string {
-  const result = parseCourseIntake(props.locale === "zh" ? "还差什么？" : "What is missing?", {
-    locale: props.locale,
-    teachers,
-    recommended,
-    cardOptions,
-  });
-  return composeCourseIntakeReply({
-    locale: props.locale,
-    draft,
-    result,
-    teachers,
-    recommended,
-    cardOptions,
-  });
-}
-
-function locateNextGap(result: CourseIntakeResult): void {
-  if (requiredComplete.value) return;
   const nodes = courseCreateFieldNodes(props.locale, draft, teachers, skippedFields.value);
-  const teacherProblem = result.unknownTeacher || result.ambiguousTeachers?.length;
-  const gap = teacherProblem
-    ? nodes.find((field) => field.field === "teacher")
-    : result.invalidDifficulty
-      ? nodes.find((field) => field.field === "difficulty")
-      : nodes.find((field) => field.required && !field.filled && !field.skipped);
-  if (!gap) return;
-  focusedField.value = gap.field;
-  modalOpen.value = true;
-  void nextTick(() => flashFields([gap.field], "is-pointed", 3200));
-}
-
-async function handleBeforeSend(text: string): Promise<{ handled: boolean; reply?: string } | undefined> {
-  const result = parseCourseIntake(text, {
-    locale: props.locale,
-    teachers,
-    recommended,
-    cardOptions,
-    // A standalone “孕妇瑜伽” is a valid answer only while the page is
-    // actually asking for the course name. Questions such as “你会做什么”
-    // are still guarded by the parser's question intent.
-    expects: guideField.value?.field === "name" ? "name" : undefined,
-  });
-
-  // The page only short-circuits explicit commands and values it fully
-  // understood. Questions, help, vague corrections and delegated choices go to
-  // the model, which reads the same task state as working memory. This is the
-  // important boundary: the form is not a script pretending to be a chat.
-  if (shouldUseAgent(result)) return undefined;
-
-  if (result.wantsCancel) {
-    modalOpen.value = false;
-    pling.task.deactivate();
-    reviewOpen.value = false;
-    return { handled: true, reply: createCopy.value.cancelled };
+  const missing = nodes.filter((field) => field.required && !field.filled && !field.skipped);
+  if (!missing.length) {
+    const optional = nodes.filter((field) => !field.required && !field.filled && !field.skipped).length;
+    return createCopy.value.hint.requiredDone.replace("{count}", String(optional));
   }
-
-  if (result.wantsCreate) {
-    if (completed.value) resetDemo();
-    else openCreate();
+  const pageOnly = missing.filter((field) => field.field === "cover");
+  const fillable = missing.filter((field) => field.field !== "cover");
+  const coverHint = pageOnly.length ? (props.locale === "zh" ? "封面需要你亲自上传。" : "The cover must be uploaded by you.") : "";
+  if (!fillable.length) {
+    return props.locale === "zh" ? `现在还差：课程封面。${coverHint}` : `Still missing: the course cover. ${coverHint}`;
   }
-
-  const hasPatch = Object.keys(result.patch).length > 0;
-  const hasProblem = Boolean(
-    result.unknownTeacher ||
-    result.ambiguousTeachers?.length ||
-    result.invalidDifficulty,
-  );
-  if (!hasPatch && !hasProblem && !result.correction && !result.wantsCreate && !result.wantsReview && !result.wantsSave && !result.wantsStatus && !result.wantsHelp && !result.question) {
-    return undefined;
-  }
-
-  if (hasPatch) applyIntakePatch(result.patch);
-  await nextTick();
-
-  const composed = composeCourseIntakeReply({
-    locale: props.locale,
-    draft,
-    result,
-    teachers,
-    recommended,
-    cardOptions,
-  });
-
-  if (result.wantsSave) {
-    if (!requiredComplete.value) return { handled: true, reply: composed };
-    if (!reviewOpen.value) return { handled: true, reply: reviewSummary() };
-    const ok = await saveCourse(false);
-    return { handled: true, reply: ok ? createCopy.value.done.description : taskError.value };
-  }
-
-  if (result.wantsReview) {
-    if (!requiredComplete.value || hasProblem) return { handled: true, reply: composed };
-    reviewOpen.value = true;
-    return { handled: true, reply: reviewSummary() };
-  }
-
-  if (result.correction && !hasPatch && !hasProblem) {
-    return { handled: true, reply: composed };
-  }
-
-  if (hasProblem) {
-    locateNextGap(result);
-    return { handled: true, reply: composed };
-  }
-
-  if (requiredComplete.value) {
-    reviewOpen.value = true;
-    return { handled: true, reply: reviewSummary() };
-  }
-
-  if (result.wantsCreate && !hasPatch) {
-    await nextTick();
-    locateNextGap(result);
-    return { handled: true, reply: createCopy.value.chatEmpty };
-  }
-
-  if (hasPatch || hasProblem || result.wantsStatus) locateNextGap(result);
-
-  return {
-    handled: true,
-    reply: composed,
-  };
+  const labels = fillable.map((field) => field.label).join(props.locale === "zh" ? "、" : ", ");
+  return props.locale === "zh"
+    ? `现在还差：${labels}。可以直接在页面填写，也可以告诉我。${coverHint}`
+    : `Still missing: ${labels}. Fill them in on the page or tell me. ${coverHint}`.trim();
 }
 
 function openCreate(): void {
@@ -778,7 +566,6 @@ function viewNewCourse(): void {
 function resetDemo(): void {
   clearTimeout(highlightTimer);
   Object.assign(draft, emptyCourseDraft());
-  courses.value = initialCourses(props.locale);
   modalOpen.value = true;
   focusedField.value = "";
   skippedFields.value = [];
@@ -788,41 +575,26 @@ function resetDemo(): void {
   newCourseId.value = "";
   highlightedCourseId.value = "";
   controller.reset();
-  pling.task.activate("course.create");
   void nextTick(() => {
+    pling.task.activate("course.create");
     setTimeout(() => flashFields(["name"], "is-pointed"), 450);
   });
 }
 
 async function onCommand(command: TaskGuideCommand): Promise<void> {
   switch (command.action.command) {
-    case "apply-basics":
-      applyBasics();
-      break;
-    case "focus-basics":
-      focusedField.value = "name";
-      await focusFields(["name", "difficulty", "intro"]);
-      break;
-    case "apply-teaching":
-      applyTeaching();
-      break;
-    case "focus-teaching":
-      focusedField.value = "teacher";
-      await focusFields(["teacher", "cards", "note"]);
-      break;
-    case "focus-cover":
-      focusedField.value = "cover";
-      locateCover();
-      break;
-    case "check-cover":
-      checkCover();
-      break;
     case "save-course":
       await saveCourse();
       break;
     case "focus-save":
       focusedField.value = "";
       focusSave();
+      break;
+    case "review-task":
+    case "propose-save":
+      reviewOpen.value = true;
+      modalOpen.value = true;
+      if (!requiredComplete.value) taskError.value = missingReply();
       break;
     case "view-course":
       viewNewCourse();
@@ -858,7 +630,7 @@ onMounted(() => {
     initialValues: currentTaskValues,
     state: () => ({
       snapshot: taskSnapshot.value,
-      step: step.value,
+      step: 1,
       busy: busy.value,
       error: taskError.value,
       completed: completed.value,
@@ -1033,7 +805,6 @@ onBeforeUnmount(() => {
         model-settings="readonly"
         :visible="assistantOpen"
         @collapse="assistantOpen = false"
-        :before-send="handleBeforeSend"
       >
         <template #guide>
           <AgentGuideActions

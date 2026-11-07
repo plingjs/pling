@@ -1,6 +1,14 @@
 import type { Locale } from "../course-workspace/copy";
 import type { CourseDraft, CourseTeacher, RecommendedCourse } from "./model";
 
+/**
+ * Legacy deterministic natural-language intake.
+ *
+ * Kept as a historical reference for the pre-agent-first course demo. New
+ * integrations should let the model use the active task's working memory and
+ * the narrow task tools instead of maintaining an intent grammar here.
+ */
+
 /** Fields the demo can understand from one natural-language instruction. */
 export type CourseIntakeField =
   | "name"

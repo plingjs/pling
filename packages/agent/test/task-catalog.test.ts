@@ -280,7 +280,7 @@ describe("guided task catalog", () => {
 
     catalog.activate("course", { values: { name: "Yoga foundations" } });
     const text = renderTaskContext(catalog);
-    expect(text).toContain("cover (Cover, required, page-only): (empty)");
+    expect(text).toContain("cover (Cover, boolean, required, page-only): (empty)");
     expect(text).toContain("Missing required fields: cover (Cover)");
     expect(text).toContain("recommended: Yoga foundations");
     expect(text).toContain("A single-field delegation is actionable");
@@ -303,6 +303,143 @@ describe("guided task catalog", () => {
     } as const;
     expect(catalog.command(command)).toBe(true);
     expect(onCommand).toHaveBeenCalledWith(command, expect.objectContaining({ id: "course" }));
+    catalog.destroy();
+  });
+
+  it("exposes focus, review, save proposal and cancel as model-safe controls", async () => {
+    const { registry, catalog, controller } = setup();
+    const onCommand = vi.fn();
+    catalog.define({
+      definition: definition("course", {
+        fields: [
+          { name: "name", label: "Name" },
+          { name: "cover", label: "Cover", type: "boolean" },
+        ],
+      }),
+      controller,
+      guide: {
+        taskId: "course",
+        title: "Create a course",
+        fields: [{ field: "name", label: "Name", required: true }],
+        steps: [{ id: "review", label: "Review", title: "Review", description: "Check the page." }],
+        cancel: { label: "Cancel", command: "cancel-task" },
+        agent: { review: "review-task", proposeSave: "confirm-save" },
+      },
+      onCommand,
+    });
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+
+    const focus = registry.get(catalog.focusActionId)!;
+    const review = registry.get(catalog.reviewActionId)!;
+    const proposeSave = registry.get(catalog.proposeSaveActionId)!;
+    const cancel = registry.get(catalog.cancelActionId)!;
+    expect(focus.isAvailable?.()).toMatchObject({ available: false });
+
+    catalog.activate("course", { values: { name: "Yoga foundations" } });
+
+    expect(focus.isAvailable?.()).toBe(true);
+    const focused = await focus.run!({ task: "course", field: "name" });
+    expect(focused).toMatchObject({
+      taskId: "course",
+      field: "name",
+      command: "focus-name",
+      handled: true,
+    });
+
+    const reviewed = await review.run!({ task: "course" });
+    expect(reviewed).toMatchObject({ taskId: "course", command: "review-task", reviewed: true });
+
+    const blocked = await proposeSave.run!({ task: "course" });
+    expect(blocked).toMatchObject({
+      taskId: "course",
+      handled: false,
+      awaitingConfirmation: false,
+      missingRequiredFields: ["cover"],
+    });
+
+    controller.setValue("cover", true);
+    const proposed = await proposeSave.run!({ task: "course" });
+    expect(proposed).toMatchObject({
+      taskId: "course",
+      command: "confirm-save",
+      handled: true,
+      awaitingConfirmation: true,
+    });
+    expect(onCommand).toHaveBeenCalledWith(
+      expect.objectContaining({ action: expect.objectContaining({ command: "confirm-save" }) }),
+      expect.objectContaining({ id: "course" }),
+    );
+    expect(controller.snapshot()?.status).not.toBe("done");
+
+    const cancelled = await cancel.run!({ task: "course" });
+    expect(cancelled).toMatchObject({ taskId: "course", command: "cancel-task", cancelled: true });
+    expect(catalog.active()).toBeNull();
+    catalog.destroy();
+  });
+
+  it("does not advertise control tools that the guide does not implement", async () => {
+    const { registry, catalog, controller } = setup();
+    catalog.define({
+      definition: definition("course"),
+      controller,
+      guide: {
+        taskId: "course",
+        title: "Create a course",
+        fields: [{ field: "name", label: "Name", required: true }],
+        steps: [{ id: "details", label: "Details", title: "Fill details", description: "Use the page form." }],
+      },
+      onCommand: vi.fn(),
+    });
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+    catalog.activate("course");
+
+    expect(registry.get(catalog.focusActionId)?.isAvailable?.()).toBe(true);
+    expect(registry.get(catalog.reviewActionId)?.isAvailable?.()).toMatchObject({ available: false });
+    expect(registry.get(catalog.proposeSaveActionId)?.isAvailable?.()).toMatchObject({ available: false });
+    expect(registry.get(catalog.cancelActionId)?.isAvailable?.()).toMatchObject({ available: false });
+    const text = renderTaskContext(catalog);
+    expect(text).toContain("Page-owned control tools");
+    expect(text).toContain(catalog.focusActionId);
+    expect(text).not.toContain(catalog.reviewActionId);
+    expect(text).not.toContain(catalog.proposeSaveActionId);
+    expect(text).not.toContain(catalog.cancelActionId);
+    catalog.destroy();
+  });
+
+  it("rejects malformed and business-invalid agent values before they reach the run", async () => {
+    const { registry, catalog, controller } = setup();
+    catalog.define({
+      definition: definition("course", {
+        fields: [
+          { name: "name", label: "Name", maxLength: 12 },
+          { name: "difficulty", label: "Difficulty", type: "number", min: 1, max: 5 },
+          {
+            name: "teacherId",
+            label: "Teacher",
+            validate: (value) => (value === "teacher_chen" ? null : "Choose a teacher from the search results."),
+          },
+        ],
+      }),
+      controller,
+      onCommand: vi.fn(),
+    });
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+    catalog.activate("course");
+    const update = registry.get(catalog.updateActionId)!;
+
+    await expect(update.run!({ task: "course", values: { difficulty: 9 } })).rejects.toThrow("at most 5");
+    await expect(update.run!({ task: "course", values: { difficulty: "2" } })).rejects.toThrow("must be a number");
+    await expect(update.run!({ task: "course", values: { name: "   " } })).rejects.toThrow("must not be blank");
+    await expect(update.run!({ task: "course", values: { name: "A course name that is too long" } })).rejects.toThrow("at most 12");
+    await expect(update.run!({ task: "course", values: { teacherId: "guessed" } })).rejects.toThrow("search results");
+    expect(controller.snapshot()?.values).toEqual({});
+
+    await expect(
+      update.run!({ task: "course", values: { difficulty: 3, teacherId: "teacher_chen" } }),
+    ).resolves.toMatchObject({ values: { difficulty: 3, teacherId: "teacher_chen" } });
     catalog.destroy();
   });
 
@@ -388,13 +525,81 @@ describe("guided task catalog", () => {
     expect(text).toContain("Goal: Create a publishable course");
     expect(text).toContain("Constraints: The cover is uploaded by the person");
     expect(text).toContain("Success criteria: The course appears in the catalogue");
-    expect(text).toContain("name (Name, required, agent-writable): Pregnancy yoga");
+    expect(text).toContain("name (Name, text, required, agent-writable): Pregnancy yoga");
+    expect(text).toContain("count (Count, number, optional, agent-writable): (empty)");
     expect(text).toContain("Missing required fields: (none)");
     expect(text).toContain("Current guide step: 1. Fill details");
     expect(text).toContain("goal + constraints + working memory, not a script");
     expect(text).toContain("pling_update_task");
     expect(text).toContain("A whole sentence is never a field value");
     expect(text).toContain("Do not force the next missing field");
+    catalog.destroy();
+  });
+
+  it("renders field type, help, and value constraints for the model", async () => {
+    const { registry, catalog, controller } = setup();
+    catalog.define({
+      definition: definition("course", {
+        fields: [
+          {
+            name: "difficulty",
+            label: "Difficulty",
+            type: "number",
+            min: 1,
+            max: 5,
+            help: "Choose 1 to 5 stars.",
+          },
+          {
+            name: "deduct",
+            label: "Deductions",
+            pattern: "^[1-9]\\d*$",
+            minLength: 1,
+            maxLength: 2,
+          },
+        ],
+      }),
+      controller,
+    });
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+
+    catalog.activate("course");
+    const text = renderTaskContext(catalog);
+    expect(text).toContain("difficulty (Difficulty, number, required, agent-writable): (empty)");
+    expect(text).toContain("help: Choose 1 to 5 stars.");
+    expect(text).toContain("range: 1–5");
+    expect(text).toContain("deduct (Deductions, text, required, agent-writable): (empty)");
+    expect(text).toContain("length: 1–2");
+    expect(text).toContain("pattern: /^[1-9]\\d*$/");
+    catalog.destroy();
+  });
+
+  it("advertises only the page-owned control tools the guide actually exposes", async () => {
+    const { registry, catalog, controller } = setup();
+    catalog.define({
+      definition: definition("course"),
+      controller,
+      onCommand: vi.fn(),
+    });
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+    catalog.activate("course");
+
+    let text = renderTaskContext(catalog);
+    expect(text).toContain("Use the available task control tools to point at a field.");
+    expect(text).not.toContain("show a review");
+    expect(text).not.toContain("save proposal is not a write");
+
+    const registration = catalog.get("course")!;
+    registration.guide = {
+      taskId: "course",
+      title: "Create a course",
+      steps: [{ id: "details", label: "Details", title: "Fill details", description: "Use the page form." }],
+      agent: { review: "review-task", proposeSave: "propose-save" },
+    };
+    text = renderTaskContext(catalog);
+    expect(text).toContain("point at a field, show a review, propose a save");
+    expect(text).toContain("A save proposal is not a write");
     catalog.destroy();
   });
 });

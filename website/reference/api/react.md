@@ -16,11 +16,11 @@ This page lists only `@plingjs/react` entry points, plus the shared-package type
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.7` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.8` |
 
 The Hooks API on this page requires React 16.8+. React 16.3–16.7 use `@plingjs/react/legacy`, a class/render-prop entry documented in the [React adapter reference](/reference/react-adapter#react-163-167-legacy-entry).
 
-The current package version is `0.1.0-alpha.7`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.8`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -2068,6 +2068,10 @@ interface TaskCatalog {
 | --- | --- | --- | --- | --- |
 | `actionId` | `readonly string` | No | — | The actual model action id bound by this catalog. Read it instead of assuming pling_start_task when several runtimes share a registry. |
 | `updateActionId` | `readonly string` | No | — | The actual model action id for updating the active task's working memory. It accepts only declared, agent-writable fields. |
+| `focusActionId` | `readonly string` | No | — | The actual model action id that points at a declared guide field. It never writes a value and is unavailable when the active guide has no fields. |
+| `reviewActionId` | `readonly string` | No | — | The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command. |
+| `proposeSaveActionId` | `readonly string` | No | — | The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command. |
+| `cancelActionId` | `readonly string` | No | — | The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command. |
 | `define(registration)` | `() => void` | No | — | Adds a task registration and returns an unregister function. |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | No | — | Returns one registration even when its route or scope is currently unavailable. |
 | `list()` | `readonly GuidedTaskRegistration[]` | No | — | Returns every registration owned by this catalog. |
@@ -2304,6 +2308,7 @@ interface TaskGuideDefinition {
 | `cancel` | `TaskGuideAction` | No | — | Optional header action that lets the person leave the task. The renderer emits the command; the page decides how to end the run. |
 | `stepSubtitle` | `string` | No | — | Subtitle template supporting {step} and {total}. |
 | `avatar` | `string` | No | — | Short avatar text or initials used by the built-in renderer. |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | — | Page-owned commands the model may trigger. `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; each tool is unavailable when its command is omitted. `focusField(field)` overrides the default `focus-<field>` command while `pling_focus_field` stays limited to declared guide fields. None of these commands performs a business write; `proposeSave` opens the confirmation surface only. |
 | `labels` | `TaskGuideLabels` | No | — | Overrides for running, completed, current, done, pending, skipped, and error labels. |
 | `fields` | `TaskGuideFields` | No | — | Compact field list resolved from page state or the latest snapshot. The built-in renderer uses it for the horizontal progress rail; skip it for a full step card. |
 | `steps` | `readonly TaskGuideStep[]` | Yes | — | Ordered human-facing steps. At least one is required by the contract. |
@@ -2317,6 +2322,11 @@ const guide: TaskGuideDefinition = {
   title: "新建课程",
   welcome: "我会陪你确认课程信息，并填入右侧表单。",
   stepSubtitle: "第 {step} 步，共 {total} 步",
+  agent: {
+    review: "review-task",
+    proposeSave: "propose-save",
+    cancel: "cancel-task",
+  },
   steps: courseSteps,
   done: {
     title: "课程已创建",
@@ -2942,6 +2952,12 @@ interface TaskField {
 | `values` | `readonly TaskChoice[]` | No | — | Small closed choice set for select fields. |
 | `recommended` | `TaskValue` | No | — | A suggestion the model may use only when the person explicitly delegates this choice. It is not written automatically. |
 | `lookup` | `TaskLookup` | No | — | Async search for a large collection. UI and agent tooling should share this function. |
+| `min` | `number` | No | — | Minimum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `max` | `number` | No | — | Maximum for a numeric field. Enforced before a model-proposed value reaches the task snapshot. |
+| `minLength` | `number` | No | — | Minimum length for a text value. Counted on the trimmed string. |
+| `maxLength` | `number` | No | — | Maximum length for a text value. Counted on the trimmed string. |
+| `pattern` | `string` | No | — | Regular expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\\d*$`. |
+| `validate` | `(value, values) => string \| null \| undefined` | No | — | Business-level check run before a model-proposed value is written. Return a short human-readable reason to reject it, or nothing when valid. This validates a value; it must not classify intent or trigger side effects. |
 | `searchAction` | `string` | No | — | Action id exposed to the model for this lookup. Defaults to `search_<name>`; reuse one id when several tasks share a search implementation. |
 | `minChars` | `number` | No | `1` | Minimum query length before lookup runs. Values below one are clamped to one. |
 | `agentWritable` | `boolean` | No | `true` | Whether the model may write this field through the task update action. Set false for page-owned values such as an upload, signature, or one-time code. |
@@ -2959,6 +2975,30 @@ const studentField: TaskField = {
     label: row.name,
     description: row.phoneMasked,
   }))),
+};
+```
+
+**Example 2 · Reject an impossible value before it reaches the page**
+
+```ts
+const difficulty: TaskField = {
+  name: "difficulty",
+  label: "难度",
+  type: "number",
+  optional: true,
+  min: 1,
+  max: 5,
+};
+
+const teacher: TaskField = {
+  name: "teacherId",
+  label: "授课老师",
+  type: "lookup",
+  lookup: searchTeachers,
+  validate: (value) =>
+    teachers.some((item) => item.id === value)
+      ? null
+      : "请从搜索结果中选择老师。",
 };
 ```
 
@@ -3832,10 +3872,10 @@ card.current?.open("lesson.note", {}, {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
+| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
 
 | Item | Value |
 | --- | --- |
