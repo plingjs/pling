@@ -12,7 +12,8 @@
     "build": "vite build --config ./vite.config.ts && vite build --config ./demos/course-workspace-react/vite.config.ts",
     "typecheck": "tsc --noEmit",
     "surface:mcp": "node demos/external-agent-surface/mcp-server.mjs",
-    "surface:smoke": "node demos/external-agent-surface/scripts/mcp-smoke.mjs"
+    "surface:smoke": "node demos/external-agent-surface/scripts/mcp-smoke.mjs",
+    "test": "vitest run --root . shared"
   },
   "dependencies": {
     "@plingjs/agent": "workspace:*",
@@ -31,10 +32,11 @@
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5",
     "@types/react": "^16.14.70",
     "@types/react-dom": "^16.9.25",
+    "@vitejs/plugin-vue": "^5",
     "typescript": "^5",
-    "vite": "^6"
+    "vite": "^6",
+    "vitest": "^2"
   }
 }

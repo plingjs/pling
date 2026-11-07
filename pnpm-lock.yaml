@@ -226,6 +226,9 @@ importers:
       vite:
         specifier: ^6
         version: 6.4.4(@types/node@26.6.5)(tsx@4.23.15)
+      vitest:
+        specifier: ^2
+        version: 2.1.9(@types/node@26.6.5)(jsdom@25.0.1(supports-color@10.2.2))(supports-color@10.2.2)
 
   examples/apps/retrofit-full:
     dependencies:

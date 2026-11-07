@@ -54,6 +54,23 @@ describe("course intake", () => {
     expect(result.patch.name).toBeUndefined();
   });
 
+  it("does not turn a cadence fragment into the course name", () => {
+    const options = context();
+    const result = parseCourseIntake("每节扣2次", options);
+
+    expect(result.patch).toEqual({ deduct: "2" });
+    expect(result.recognized).toEqual(["deduct"]);
+    expect(result.patch.name).toBeUndefined();
+  });
+
+  it("keeps the real name when a cadence correction follows it", () => {
+    const options = context();
+    const result = parseCourseIntake("孕妇瑜伽，每节扣2次", options);
+
+    expect(result.patch.name).toBe("孕妇瑜伽");
+    expect(result.patch.deduct).toBe("2");
+  });
+
   it("does not silently replace an unknown teacher", () => {
     const options = context();
     const result = parseCourseIntake("空中瑜伽，王老师，月卡", options);

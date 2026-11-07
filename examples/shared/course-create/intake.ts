@@ -182,6 +182,15 @@ const AUTOFILL_PATTERN =
 const EXPLICIT_FIELD_PATTERN =
   /(?:课程名称|课程名字|课程名|课名|名称|名字|老师|教师|卡片|可用卡|会员卡|难度|星级|介绍|约课须知|须知|备注|扣卡|价格|金额|封面|course\s+name|name|teacher|card|level|star|intro|note|price|cover)/i;
 
+// Units and cadence words are never a course name. They are what remains after
+// a price or deduction phrase such as “每节扣2次” has been consumed.
+const MEASUREMENT_FRAGMENT =
+  /^(?:(?:每|单|一|两|这|那|本)\s*)?(?:一\s*)?(?:节|次|课时|天|周|星期|月|个月|年)(?:课)?$/;
+
+function isMeasurementFragment(value: string): boolean {
+  return MEASUREMENT_FRAGMENT.test(value.replace(/\s+/g, " ").trim());
+}
+
 function isStandaloneName(value: string): boolean {
   const text = value.trim();
   if (!text || text.length > 32) return false;
@@ -436,6 +445,7 @@ export function parseCourseIntake(
           if (!part || part.length < 2 || part.length > 40) return false;
           if (isQuestionLike(part)) return false;
           if (/^\d+(?:\.\d+)?$/.test(part)) return false;
+          if (isMeasurementFragment(part)) return false;
           if (NAME_STOPWORDS.has(part.toLowerCase())) return false;
           if (/^(?:帮我|帮忙|改|修改|调整)/.test(part)) return false;
           if (/(?:老师|课程|难度|星|介绍|月卡|次卡|体验卡|元|扣|封面|备注|teacher|course|level|star|card|price|cover|note)/i.test(part)) return false;
