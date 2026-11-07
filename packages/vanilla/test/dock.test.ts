@@ -135,10 +135,23 @@ describe("pling.dock() · 原生 JS", () => {
     expect(document.body.textContent).toContain("Todo 助手");
     expect(document.body.textContent).toContain("运行");
 
-    const close = [...document.querySelectorAll<HTMLButtonElement>(".pling-dock__ghost")]
-      .find((item) => item.textContent?.includes("收起"));
+    const close = document.querySelector<HTMLButtonElement>('.pling-dock__ghost[aria-label="收起"]');
     click(close ?? null);
     expect(document.querySelector(".pling-dock__panel")).toBeNull();
+    pling.destroy();
+  });
+
+  it("renders a supplied task card inside the conversation transcript", () => {
+    const pling = createZh({ onWarn: () => {} });
+    const task = document.createElement("section");
+    task.className = "pling-task-fixture";
+    task.textContent = "Guided task";
+    pling.dock({ defaultOpen: true, task });
+
+    const transcript = document.querySelector(".pling-chat__transcript")!;
+    expect(transcript.querySelector(".pling-task-fixture")).toBe(task);
+    expect(transcript.textContent).toContain("Guided task");
+    expect(transcript.querySelector(".pling-chat__empty")).toBeNull();
     pling.destroy();
   });
 
@@ -216,6 +229,32 @@ describe("pling.dock() · 原生 JS", () => {
     click(document.querySelector(".pling-dock__quick button"));
     await waitFor(() => onSave.mock.calls.length > 0);
     expect(onSave).toHaveBeenCalledOnce();
+    pling.destroy();
+  });
+
+  it("结构化的推荐任务可以显示短标签，同时发送完整提示", async () => {
+    const button = mountButton("保存");
+    const onSave = vi.fn();
+    button.addEventListener("click", onSave);
+    const pling = createZh({
+      onWarn: () => {},
+      agent: {
+        config: { baseUrl: "/llm/v1", model: "test-model" },
+        gate: () => false,
+        llm: createReplayLlm([{ calls: [{ tool: "save" }] }, { content: "好了" }]),
+      },
+    });
+    pling.tool(button, { id: "save", desc: "保存当前草稿" });
+    pling.dock({
+      quick: [{ label: "保存草稿", prompt: "帮我保存这份草稿", description: "写入当前版本" }],
+    });
+
+    click(document.querySelector(".pling-dock__launcher"));
+    const quick = document.querySelector<HTMLButtonElement>(".pling-dock__quick button")!;
+    expect(quick.textContent).toBe("保存草稿");
+    expect(quick.title).toBe("写入当前版本");
+    quick.click();
+    await waitFor(() => onSave.mock.calls.length > 0);
     pling.destroy();
   });
 
@@ -352,8 +391,7 @@ describe("pling.dock() · 原生 JS", () => {
     await waitFor(() => document.body.textContent?.includes("已删除。") ?? false);
     expect(onDelete).toHaveBeenCalledOnce();
 
-    const clear = [...document.querySelectorAll<HTMLButtonElement>(".pling-dock__ghost")]
-      .find((item) => item.textContent === "清空");
+    const clear = document.querySelector<HTMLButtonElement>('.pling-dock__ghost[aria-label="清空"]');
     click(clear ?? null);
     expect(document.querySelector(".pling-chat__transcript")!.textContent).not.toContain("已删除");
     click([...document.querySelectorAll<HTMLButtonElement>(".pling-dock__tabs button")]

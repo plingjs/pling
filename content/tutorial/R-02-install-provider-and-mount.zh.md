@@ -23,7 +23,11 @@ status: drafted
 | npm | `npm install @plingjs/react` |
 | Yarn | `yarn add @plingjs/react` |
 
-`@plingjs/react` 要求 React 18 或更新版本。安装它会同时带入适配器、Agent 运行时、DOM 执行层和问答入口所需的样式。React 的 Dock 会自行注入组件样式，因此不需要像 Vue 3 那样额外引入 `style.css`。
+`@plingjs/react` 支持 React 16.3 及更新版本。默认入口使用 Hooks，因此要求 React 16.8+；React 16.3–16.7 的应用改用 `@plingjs/react/legacy`。安装包会同时带入适配器、Agent 运行时、DOM 执行层和助手所需的样式。React 的 Dock 会自行注入组件样式，因此不需要像 Vue 3 那样额外引入 `style.css`。
+
+本章按 Hooks 入口和 `createRoot` 展开，所以配置适用于 React 16.8+。legacy 入口使用另一套 render-prop 接口来覆盖 Hooks 出现之前的版本，详见 [React 适配器](/zh/reference/react-adapter#react-163-167-legacy-entry)。
+
+需要直接看运行结果时，可以打开 [React 16.3 兼容 Todo](/zh/examples/react16-legacy-todo)；它使用真实的 `react@16.3.0`，包含完整源码与本地运行命令。若要继续看 legacy 入口如何承载业务任务，可以打开 [React 16.3 课程管理后台](/zh/examples/course-workspace-react16)。
 
 本章示例使用 Vite。适配器本身不依赖 Vite；换用其他构建工具时，只要应用在浏览器中渲染，安装和 Provider 的写法不变。模型配置不再自动读取 `VITE_AGENT_*`，需要按“配置模型”一节显式传入。
 

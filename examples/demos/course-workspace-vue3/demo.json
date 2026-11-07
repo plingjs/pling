@@ -1,0 +1,201 @@
+{
+  "id": "course-workspace-vue3",
+  "title": "Case 06: Guided task — create a course (Vue 3)",
+  "titleZh": "案例06：引导任务创建课程（Vue 3）",
+  "eyebrow": "Case 06 · Guided workflow",
+  "eyebrowZh": "案例06 · 引导式任务",
+  "summary": "A realistic course page whose only job is creating a course. One sentence fills what it can infer, the assistant asks only for real gaps, long recommendations stay one-line previews, and the saved record is read back.",
+  "summaryZh": "一个真实的课程页面，只做“创建课程”这件事。一句话填写可推断的字段，助手只追问真正的缺口；长推荐保持单行预览，保存后回读课程列表。",
+  "url": "/demos/course-workspace-vue3/",
+  "open": "src/CourseWorkspace.vue",
+  "files": [
+    {
+      "path": "src/CourseWorkspace.vue",
+      "label": "CourseWorkspace.vue",
+      "role": "Original page, task activation, and command handlers",
+      "roleZh": "原页面、任务激活与命令处理",
+      "lang": "vue"
+    },
+    {
+      "path": "src/main.ts",
+      "label": "main.ts",
+      "role": "Vue entry and Pling setup",
+      "roleZh": "Vue 入口与 Pling 初始化",
+      "lang": "ts"
+    },
+    {
+      "path": "src/course-create.css",
+      "label": "course-create.css",
+      "role": "Page and assistant layout",
+      "roleZh": "页面与助手布局",
+      "lang": "css"
+    },
+    {
+      "path": "shared/course-create/task.ts",
+      "scope": "workspace",
+      "label": "task.ts",
+      "role": "Executable task definition",
+      "roleZh": "可执行任务定义",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/guide.ts",
+      "scope": "workspace",
+      "label": "guide.ts",
+      "role": "Framework-neutral guided-task presentation",
+      "roleZh": "框架无关的引导任务展示定义",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/intake.ts",
+      "scope": "workspace",
+      "label": "intake.ts",
+      "role": "One-sentence intake and correction parser",
+      "roleZh": "整句信息解析与修正",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/model.ts",
+      "scope": "workspace",
+      "label": "model.ts",
+      "role": "Course rules and mock catalogue",
+      "roleZh": "课程规则与模拟数据",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/copy.ts",
+      "scope": "workspace",
+      "label": "copy.ts",
+      "role": "Task copy",
+      "roleZh": "任务文案",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/page.ts",
+      "scope": "workspace",
+      "label": "page.ts",
+      "role": "Page copy and seed values",
+      "roleZh": "页面文案与初始值",
+      "lang": "ts"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Purpose, architecture, and adaptation steps",
+      "roleZh": "用途、架构与接入步骤",
+      "lang": "markdown"
+    },
+    {
+      "path": "index.html",
+      "label": "index.html",
+      "role": "Vite entry",
+      "roleZh": "Vite 入口",
+      "lang": "html"
+    }
+  ],
+  "focus": {
+    "original-form": {
+      "selector": "[data-field=\"name\"]",
+      "match": "data-field=\"name\""
+    },
+    "task-contract": {
+      "selector": "shared/course-create/task.ts",
+      "match": "export function createCourseTaskDefinition"
+    },
+    "presentation-contract": {
+      "selector": "shared/course-create/guide.ts",
+      "match": "export function createCourseGuideDefinition"
+    },
+    "generic-guide": {
+      "selector": ".pling-guide",
+      "match": "pling.task.define"
+    },
+    "command-handler": {
+      "selector": "async function onCommand",
+      "match": "async function onCommand"
+    },
+    "assistant-inline": {
+      "selector": ".assistant-agent",
+      "match": "<AgentInline"
+    }
+  },
+  "guide": {
+    "title": "One page, one job, one reusable guide",
+    "titleZh": "一页一件事，一套可复用的引导",
+    "intro": [
+      "This example deliberately avoids a multi-module admin dashboard. The page is the original course form; the assistant accepts the whole course description and writes into that form.",
+      "The key split is between deterministic intake, the executable task definition, the framework-neutral presentation definition, and the Vue page that connects all three to existing controls."
+    ],
+    "introZh": [
+      "这个示例刻意不混入多个后台模块。页面就是原来的创建课程表单，助手接住整段课程描述并写回表单。",
+      "关键拆分有四层：确定性整句解析、可执行的任务定义、框架无关的展示定义，以及把三者连接到现有控件的 Vue 页面。"
+    ],
+    "steps": [
+      {
+        "title": "Hear the whole request first",
+        "titleZh": "先接住整段需求",
+        "body": "The page parses explicit fields and corrections through beforeSend. Questions, help, vague corrections, and delegated choices go to the model, which reads the active task's goal and working memory before deciding whether to answer or update a field.",
+        "bodyZh": "页面通过 beforeSend 处理明确的字段值与修正项。问句、帮助、模糊修正和委托选择交给模型；模型先读取当前任务的目标与工作记忆，再决定回答还是更新字段。",
+        "file": "shared/course-create/intake.ts",
+        "match": "export function parseCourseIntake",
+        "lines": 24
+      },
+      {
+        "title": "Define the goal and its boundaries",
+        "titleZh": "定义目标与边界",
+        "body": "The task definition owns the objective, constraints, success criteria, working memory fields, lookup, the write action, and read-back evidence. It is not a chat script and it does not render a form.",
+        "bodyZh": "任务定义负责目标、约束、成功判据、工作记忆字段、查找、写入动作与回读证据。它不是聊天脚本，也不渲染表单。",
+        "file": "shared/course-create/task.ts",
+        "match": "export function createCourseTaskDefinition",
+        "lines": 24
+      },
+      {
+        "title": "Describe what the user sees",
+        "titleZh": "定义用户看到什么",
+        "body": "The presentation definition supplies step names, read-only summary rows, handoff copy, and business command names. It stays free of Vue and of the course form.",
+        "bodyZh": "展示定义提供步骤名称、只读摘要行、人工接力文案和业务命令名。它不依赖 Vue，也不包含课程表单。",
+        "file": "shared/course-create/guide.ts",
+        "match": "export function createCourseGuideDefinition",
+        "lines": 20
+      },
+      {
+        "title": "Register the job, not a second UI",
+        "titleZh": "注册任务，而不是复制一套界面",
+        "body": "The page registers its executable task and presentation guide on the shared catalog. Route, scope, and autoStart decide when it is available. This demo sets task-placement=\"none\": the conversation carries the next action, while the original form remains the only input surface.",
+        "bodyZh": "页面把可执行任务和展示定义注册到共享任务目录。route、scope 与 autoStart 决定它何时可用。这个案例使用 task-placement=\"none\"：对话只承载下一步动作，原表单仍是唯一输入面。",
+        "file": "src/CourseWorkspace.vue",
+        "match": "pling.task.define",
+        "lines": 24
+      },
+      {
+        "title": "Let the assistant open the same task",
+        "titleZh": "允许助手主动开启同一任务",
+        "body": "The model sees only tasks available in this context and can call pling_start_task. Values already supplied by the user can ride along; the model cannot invent a task id or an unknown field.",
+        "bodyZh": "模型只能看到当前上下文可用的任务，并调用 pling_start_task。用户已经说出的字段值可以一并传入；模型不能编造任务 id 或未知字段。",
+        "file": "shared/course-create/task.ts",
+        "match": "export function createCourseTaskDefinition",
+        "lines": 20
+      },
+      {
+        "title": "Write into the original controls",
+        "titleZh": "写回原控件",
+        "body": "Command handlers update the existing draft or mark the real field on the form. The chat never grows a second copy of the form; the original page remains the source of truth.",
+        "bodyZh": "命令处理函数更新现有草稿，或在表单上标记真实字段。聊天里不会再长出一套表单，原页面始终是事实来源。",
+        "file": "src/CourseWorkspace.vue",
+        "match": "async function onCommand",
+        "lines": 34
+      },
+      {
+        "title": "Verify from the page, not from the promise",
+        "titleZh": "从页面验证，而不是相信返回值",
+        "body": "After create_course runs, the page checks that the new record is first in the catalogue. Completion is based on that read-back, not merely on an action result.",
+        "bodyZh": "create_course 执行后，页面确认新记录已经位于课程库第一位。完成态依据这次回读，而不是只相信动作返回值。",
+        "file": "src/CourseWorkspace.vue",
+        "match": "courses.value[0]?.id === newCourseId.value",
+        "lines": 8
+      }
+    ],
+    "note": "The chat card contains no form controls and no duplicate field rail. The page accepts a whole description locally, asks only for real gaps, and uses the same task definition and executor for context activation and an assistant-started run.",
+    "noteZh": "聊天卡里没有表单控件，也没有重复的字段轨道。页面在本地接住整段描述，只追问真正的缺口；上下文自动激活和助手主动启动共用同一套任务定义和执行器。"
+  }
+}

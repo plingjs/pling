@@ -93,6 +93,39 @@ describe("<AgentDock> placement", () => {
     expect(dock.classes()).toContain("dock--launcher-center");
   });
 
+  it("supports an overlay or fused sidebar without changing the runtime", async () => {
+    const { llm, pi, wrapper } = setup(`
+      <AgentDock
+        layout="sidebar"
+        sidebar-mode="fused"
+        side="left"
+        :default-open="true"
+      />
+    `);
+    const dock = wrapper.find(".dock");
+
+    expect(dock.classes()).toEqual(
+      expect.arrayContaining(["dock--sidebar", "dock--fused", "dock--left"]),
+    );
+    expect(dock.attributes("data-sidebar-mode")).toBe("fused");
+    expect(dockSource).toContain(".dock--sidebar.dock--fused.dock--left");
+    expect(dockSource).toContain("order: -1");
+    expect(dockSource).toContain(".dock--sidebar.dock--fused:not(.is-open)");
+    expect(dockSource).toContain("display: none");
+
+    await pi.ask("Keep this history");
+    await vi.waitFor(() => expect(llm.received).toHaveLength(1));
+    expect(wrapper.findAll(".dock__surface")).toHaveLength(1);
+  });
+
+  it("keeps overlay as the sidebar default", () => {
+    const { wrapper } = setup(`<AgentDock layout="sidebar" />`);
+    const dock = wrapper.find(".dock");
+
+    expect(dock.attributes("data-sidebar-mode")).toBe("overlay");
+    expect(dock.classes()).not.toContain("dock--fused");
+  });
+
   it("a v-task entrance opens the sidebar and uses its shared runtime", async () => {
     const { llm, wrapper } = setup(`
       <div>
@@ -117,5 +150,11 @@ describe("<AgentDock> placement", () => {
     expect(dockSource).toContain("height: min(640px, calc(100dvh - 72px))");
     expect(dockSource).toContain("bottom: 24px");
     expect(dockSource).toContain("writing-mode: horizontal-tb");
+  });
+
+  it("does not leave a closed sidebar surface intercepting page clicks", () => {
+    expect(dockSource).not.toContain(".dock--sidebar > * {");
+    expect(dockSource).toContain(".dock--sidebar > .dock__launcher,");
+    expect(dockSource).toContain(".dock--sidebar.is-open > .dock__surface {");
   });
 });

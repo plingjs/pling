@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watchEffect } from "vue";
+import { computed, ref, watchEffect } from "vue";
 import { RouterView } from "vue-router";
 import { AgentDock } from "@plingjs/vue";
 import PublishPanel from "./components/PublishPanel.vue";
@@ -10,6 +10,7 @@ const props = defineProps<{ locale?: DemoLocale }>();
 const locale = computed(() => props.locale ?? resolveDemoLocale());
 const copy = computed(() => copyFor(locale.value));
 const store = createTaskStore(copyFor(props.locale ?? resolveDemoLocale()));
+const assistantOpen = ref(false);
 
 watchEffect(() => {
   document.documentElement.lang = plingLocale(locale.value);
@@ -17,13 +18,18 @@ watchEffect(() => {
 </script>
 
 <template>
-  <main class="page">
+  <main class="page" :class="{ 'page--assistant-open': assistantOpen }">
     <PublishPanel :locale="locale" />
 
     <RouterView v-slot="{ Component }">
       <component :is="Component" :store="store" :copy="copy" :locale="locale" />
     </RouterView>
 
-    <AgentDock :title="copy.dockTitle" :quick="copy.quick" :debug="{ maxCalls: 8 }" />
+    <AgentDock
+      :title="copy.dockTitle"
+      :quick="copy.quick"
+      :debug="{ maxCalls: 8 }"
+      @open="assistantOpen = $event"
+    />
   </main>
 </template>

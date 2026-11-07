@@ -219,6 +219,48 @@ describe("Agent Surface：describe", () => {
     expect(surface.describe().capabilities.some((item) => item.id === "todo.edit")).toBe(true);
   });
 
+  it("projects human-readable action metadata and optional task playbooks", () => {
+    const registry = createRegistry();
+    registry.bind({
+      descriptor: {
+        id: "course.schedule",
+        primitive: "call",
+        description: "Schedule a lesson",
+        label: "Schedule",
+        summary: "Book a student into a free slot",
+        examples: ["Book Li Na on 18 March at 10:00"],
+        successHint: "The lesson appears in the timetable",
+        playbook: ["Search the student first", "Check the teacher's slot"],
+        kind: "write",
+      },
+      isAvailable: () => true,
+      run: async () => ({ lessonId: "lesson_3" }),
+    });
+    const surface = createSurface({
+      registry,
+      execute: async () => ({ result: { ok: true } }),
+      tasks: [{
+        id: "course.schedule",
+        title: "Schedule a lesson",
+        risk: "write",
+        fields: [{ name: "studentId", label: "Student", required: true }],
+        steps: [{ action: "course.schedule", label: "Schedule" }],
+        playbook: ["Search the student", "Create the lesson"],
+      }],
+    });
+
+    expect(surface.describe().capabilities[0]).toMatchObject({
+      label: "Schedule",
+      summary: "Book a student into a free slot",
+      examples: ["Book Li Na on 18 March at 10:00"],
+      successHint: "The lesson appears in the timetable",
+      playbook: ["Search the student first", "Check the teacher's slot"],
+    });
+    expect(surface.describe().tasks).toEqual([
+      expect.objectContaining({ id: "course.schedule", risk: "write" }),
+    ]);
+  });
+
   it("allowlist 同时收敛 describe 与 invoke", async () => {
     const { registry, add, view } = harness();
     const executor = createExecutor({ registry, policy: createPolicy(async () => true) });

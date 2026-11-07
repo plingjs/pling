@@ -295,6 +295,16 @@ export interface SurfaceApprovalChallenge extends SurfaceApprovalBinding {
 export interface SurfaceCapability {
   id: string;
   description: string;
+  /** Short human-facing name, when the page declares one. */
+  label?: string;
+  /** One-sentence explanation of why the capability exists and what it changes. */
+  summary?: string;
+  /** Example requests useful in help text and external-agent prompts. */
+  examples?: readonly string[];
+  /** What a person should observe after a successful call. */
+  successHint?: string;
+  /** Ordered operating notes; never a replacement for permissions or approval. */
+  playbook?: readonly string[];
   /** 省略 = 这个能力没有输入参数 */
   inputSchema?: JsonSchema;
   effect: SurfaceEffect;
@@ -362,11 +372,47 @@ export interface SurfaceDescription {
   /** 应用 / 站点标识（可选，由宿主提供） */
   app?: string;
   capabilities: SurfaceCapability[];
+  /** Optional business tasks that explain how capabilities fit together. */
+  tasks?: SurfaceTask[];
   /** true 表示能力清单与上一次 describe 相同，本次没有重复返回 */
   capabilitiesUnchanged?: true;
   /** 仅在 `capabilitiesUnchanged` 时出现，方便 Agent 知道清单总数 */
   capabilitiesTotal?: number;
   context: SurfaceContext;
+}
+
+export interface SurfaceTaskField {
+  name: string;
+  label: string;
+  type?: "text" | "textarea" | "number" | "boolean" | "date" | "select" | "lookup";
+  description?: string;
+  required?: boolean;
+}
+
+export interface SurfaceTaskStep {
+  /** Existing capability id; the task itself has no execution authority. */
+  action: string;
+  label: string;
+  summary?: string;
+  optional?: boolean;
+}
+
+/**
+ * A discoverable business task for external agents.
+ *
+ * This is descriptive metadata only. `invoke` still goes through the existing
+ * executor, session scope, approval and audit path; adding tasks never grants
+ * a capability.
+ */
+export interface SurfaceTask {
+  id: string;
+  title: string;
+  description?: string;
+  examples?: readonly string[];
+  risk?: SurfaceEffect;
+  fields?: readonly SurfaceTaskField[];
+  steps?: readonly SurfaceTaskStep[];
+  playbook?: readonly string[];
 }
 
 export type SurfaceSessionErrorCode =

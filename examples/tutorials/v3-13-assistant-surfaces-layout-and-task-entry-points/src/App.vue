@@ -11,6 +11,7 @@ const copy = computed(() => copyFor(locale.value));
 const store = createTaskStore(copyFor(props.locale ?? resolveDemoLocale()));
 const pling = usePling();
 const layout = ref<"dock" | "sidebar">("dock");
+const sidebarMode = ref<"overlay" | "fused">("overlay");
 const side = ref<"right" | "left">("right");
 const launcherPlacement = ref<"bottom" | "center">("bottom");
 
@@ -24,7 +25,7 @@ function askFromPage(): void {
 </script>
 
 <template>
-  <main class="page">
+  <main class="page" :class="{ 'page--fused': layout === 'sidebar' && sidebarMode === 'fused' }">
     <section class="surface-settings" aria-labelledby="surface-settings-title">
       <div>
         <p class="surface-settings__eyebrow">{{ copy.surfaceEyebrow }}</p>
@@ -42,6 +43,18 @@ function askFromPage(): void {
           <label>
             <input v-model="layout" type="radio" value="sidebar" />
             {{ copy.layoutSidebar }}
+          </label>
+        </fieldset>
+
+        <fieldset v-if="layout === 'sidebar'">
+          <legend>{{ copy.sidebarModeLabel }}</legend>
+          <label>
+            <input v-model="sidebarMode" type="radio" value="overlay" />
+            {{ copy.sidebarOverlay }}
+          </label>
+          <label>
+            <input v-model="sidebarMode" type="radio" value="fused" />
+            {{ copy.sidebarFused }}
           </label>
         </fieldset>
 
@@ -85,18 +98,26 @@ function askFromPage(): void {
       </div>
     </section>
 
-    <RouterView v-slot="{ Component }">
-      <component :is="Component" :store="store" :copy="copy" :locale="locale" />
-    </RouterView>
+    <div
+      class="workspace"
+      :class="{ 'workspace--fused': layout === 'sidebar' && sidebarMode === 'fused' }"
+    >
+      <div class="workspace__main">
+        <RouterView v-slot="{ Component }">
+          <component :is="Component" :store="store" :copy="copy" :locale="locale" />
+        </RouterView>
+      </div>
 
-    <AgentDock
-      :title="copy.dockTitle"
-      :quick="copy.quick"
-      :layout="layout"
-      :side="side"
-      :launcher-placement="launcherPlacement"
-      :launcher-label="copy.launcherText"
-      :debug="{ maxCalls: 8 }"
-    />
+      <AgentDock
+        :title="copy.dockTitle"
+        :quick="copy.quick"
+        :layout="layout"
+        :sidebar-mode="sidebarMode"
+        :side="side"
+        :launcher-placement="launcherPlacement"
+        :launcher-label="copy.launcherText"
+        :debug="{ maxCalls: 8 }"
+      />
+    </div>
   </main>
 </template>

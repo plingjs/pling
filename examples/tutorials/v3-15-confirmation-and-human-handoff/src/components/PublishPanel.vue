@@ -10,30 +10,32 @@ const copy = computed(() =>
     ? {
         eyebrow: "发布检查",
         heading: "工作区设置",
-        lead: "页面错误和人工步骤都应当被明确说明，而不是藏在红字与按钮后面。",
+        lead: "审批和必须由人完成的步骤属于动作本身，而不是提示词里的口头约定。",
         nameLabel: "工作区名称",
         namePlaceholder: "例如：产品运营",
         nameDesc: "填写工作区名称。名称不能只包含空格。",
-        saveLabel: "保存名称",
-        saveDesc: "保存当前工作区名称；名称为空时页面会给出可读反馈。",
+        saveLabel: "保存工作区名称",
+        saveDesc: "保存共享的工作区设置。这个写操作首次执行时需要确认。",
         saveExpect: "工作区名称已经保存",
         codeLabel: "发布验证码",
         codeHint: "验证码 246810 仅用于演示。这个输入框只由人填写。",
         codePlaceholder: "输入 6 位验证码",
         publishLabel: "发布变更",
         publishDesc: "发布工作区变更。需要本人输入验证码并确认。",
-        publishReason: "发布前需要本人确认验证码。",
+        publishReason: "发布前需要本人输入验证码。",
         publishStepOne: "在验证码输入框中填写 246810。",
         publishStepTwo: "点击“发布变更”完成确认。",
         publishExpect: "工作区变更已经发布",
         archiveLabel: "归档工作区",
         archiveDesc: "归档当前工作区。这个危险操作每次都需要确认。",
+        archiveExpect: "工作区已经归档",
         resetLabel: "重置工作区",
         resetDesc: "清空工作区设置。这个危险操作每次都需要确认。",
         errorEmpty: "请先填写工作区名称，名称不能只包含空格。",
         errorCode: "验证码不正确，请检查后重试。",
         saved: (name: string) => `已保存“${name}”。`,
         published: "变更已发布。",
+        archived: "工作区已归档。",
         regionLabel: "工作区发布",
         regionDescription: "保存工作区名称，并由本人输入验证码完成发布。",
         feedbackScope: "发布说明",
@@ -41,11 +43,11 @@ const copy = computed(() =>
     : {
         eyebrow: "Release check",
         heading: "Workspace settings",
-        lead: "Page errors and human steps should be explicit, not hidden in red text or button behavior.",
+        lead: "Approval and the steps a person must complete are explicit parts of the action, not prompt instructions.",
         nameLabel: "Workspace name",
         namePlaceholder: "For example: Product operations",
         nameDesc: "Enter the workspace name. It cannot contain only spaces.",
-        saveLabel: "Save name",
+        saveLabel: "Save workspace name",
         saveDesc: "Save the shared workspace settings. This write asks for confirmation once.",
         saveExpect: "The workspace name is saved",
         codeLabel: "Release verification code",
@@ -53,18 +55,20 @@ const copy = computed(() =>
         codePlaceholder: "Enter the 6-digit code",
         publishLabel: "Publish changes",
         publishDesc: "Publish workspace changes. The user must enter a verification code and confirm.",
-        publishReason: "The user must confirm the verification code before publishing.",
+        publishReason: "A person must enter the verification code before publishing.",
         publishStepOne: "Enter 246810 in the verification-code field.",
         publishStepTwo: "Select “Publish changes” to complete the confirmation.",
         publishExpect: "The workspace changes are published",
         archiveLabel: "Archive workspace",
         archiveDesc: "Archive the current workspace. This destructive action asks every time.",
+        archiveExpect: "The workspace is archived",
         resetLabel: "Reset workspace",
         resetDesc: "Clear the workspace settings. This dangerous action asks every time.",
         errorEmpty: "Enter a workspace name. It cannot contain only spaces.",
         errorCode: "The verification code is incorrect. Check it and try again.",
         saved: (name: string) => `Saved “${name}”.`,
         published: "Changes published.",
+        archived: "Workspace archived.",
         regionLabel: "Workspace release",
         regionDescription: "Save the workspace name and let the user enter a code before publishing.",
         feedbackScope: "Release status",
@@ -184,6 +188,7 @@ const archiveAction = computed<ToolOptions>(() => ({
   kind: "danger",
   confirm: true,
   run: archiveWorkspace,
+  expect: { desc: copy.value.archiveExpect, check: () => archived.value },
 }));
 
 const resetAction = computed<ToolOptions>(() => ({
@@ -281,7 +286,7 @@ const resetAction = computed<ToolOptions>(() => ({
       >
         {{ copy.resetLabel }}
       </button>
-      <span v-if="archived" class="release__archived">Archived</span>
+      <span v-if="archived" class="release__archived">{{ copy.archived }}</span>
     </div>
   </section>
 </template>

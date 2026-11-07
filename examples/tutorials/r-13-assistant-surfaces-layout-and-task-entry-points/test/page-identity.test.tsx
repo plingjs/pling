@@ -195,6 +195,16 @@ describe("R-13 · inherited page identity and routing", () => {
     });
     expect(document.querySelector(".todo__eyebrow")?.textContent).toBe("待办详情");
     expect(document.documentElement.lang).toBe("zh-CN");
+    expect(document.querySelector("a.back-link")?.getAttribute("href")).toBe("/tasks?lang=zh");
+    expect(warnings).toEqual([]);
+  });
+
+  it("keeps the Chinese locale through the root redirect and row links", async () => {
+    const { warnings } = await mountApp("/", "zh");
+    await act(async () => {});
+
+    expect(document.querySelector("a.task__body")?.getAttribute("href"))
+      .toBe("/tasks/t1?from=tasks&lang=zh");
     expect(warnings).toEqual([]);
   });
 

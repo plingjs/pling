@@ -1,7 +1,7 @@
 {
   "title": "Pling API 参考",
   "locale": "zh",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "pages": [
@@ -11,7 +11,7 @@
       "route": "/zh/reference/api/vue-3",
       "json": "/zh/api-index/vue-3.json",
       "package": "@plingjs/vue",
-      "entries": 43
+      "entries": 80
     },
     {
       "id": "react",
@@ -19,7 +19,7 @@
       "route": "/zh/reference/api/react",
       "json": "/zh/api-index/react.json",
       "package": "@plingjs/react",
-      "entries": 39
+      "entries": 76
     },
     {
       "id": "vue2",
@@ -27,7 +27,7 @@
       "route": "/zh/reference/api/vue-2",
       "json": "/zh/api-index/vue-2.json",
       "package": "@plingjs/vue2",
-      "entries": 25
+      "entries": 59
     },
     {
       "id": "vanilla",
@@ -35,7 +35,7 @@
       "route": "/zh/reference/api/vanilla",
       "json": "/zh/api-index/vanilla.json",
       "package": "@plingjs/vanilla",
-      "entries": 27
+      "entries": 79
     },
     {
       "id": "shared",
@@ -43,7 +43,7 @@
       "route": "/zh/reference/api/shared",
       "json": "/zh/api-index/shared.json",
       "package": "@plingjs/core",
-      "entries": 33
+      "entries": 70
     }
   ]
 }

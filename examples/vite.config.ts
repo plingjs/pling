@@ -1,4 +1,4 @@
-import { createReadStream, existsSync, readdirSync, statSync } from "node:fs";
+import { createReadStream, existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { extname, resolve, sep } from "node:path";
 import vue from "@vitejs/plugin-vue";
@@ -7,9 +7,27 @@ import { defineConfig } from "vite";
 const DEMOS_ROOT = fileURLToPath(new URL("./demos/", import.meta.url));
 const ENV_ROOT = fileURLToPath(new URL(".", import.meta.url));
 const TUTORIAL_PREVIEW_ROOT = resolve(fileURLToPath(new URL("./dist/tutorials/", import.meta.url)));
+
+function readRootModel(): string | undefined {
+  try {
+    for (const raw of readFileSync(new URL("../.llm", import.meta.url), "utf8").split(/\r?\n/)) {
+      const line = raw.trim().replace(/^export\s+/, "");
+      if (!line || line.startsWith("#")) continue;
+      const at = line.indexOf("=");
+      if (at <= 0 || line.slice(0, at).trim() !== "MODEL") continue;
+      return line.slice(at + 1).trim().replace(/^(['"])(.*)\1$/, "$2") || undefined;
+    }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
+  return undefined;
+}
+
+const previewModel = process.env.VITE_AGENT_MODEL?.trim() || readRootModel();
 const demos = readdirSync(new URL("./demos", import.meta.url), { withFileTypes: true })
   .filter((entry) => entry.isDirectory())
-  .map((entry) => entry.name);
+  .map((entry) => entry.name)
+  .filter((name) => name !== "course-workspace-react");
 
 const agentProxy = {
   "/api/agent": {
@@ -44,7 +62,9 @@ const MIME_TYPES: Record<string, string> = {
 function serveTutorialPreviews() {
   return {
     name: "pling-tutorial-previews",
-    configureServer(server: { middlewares: { use(handler: (req: any, res: any, next: () => void) => void): void } }) {
+    configureServer(server: {
+      middlewares: { use(handler: (req: any, res: any, next: () => void) => void): void };
+    }) {
       server.middlewares.use((req, res, next) => {
         const raw = (req.url ?? "").split("?")[0];
         const marker = "/tutorials/";
@@ -56,11 +76,28 @@ function serveTutorialPreviews() {
         } catch {
           return next();
         }
+        const insidePreviewRoot = (path: string) =>
+          path === TUTORIAL_PREVIEW_ROOT || path.startsWith(TUTORIAL_PREVIEW_ROOT + sep);
         let file = resolve(TUTORIAL_PREVIEW_ROOT, relative);
-        if (file !== TUTORIAL_PREVIEW_ROOT && !file.startsWith(TUTORIAL_PREVIEW_ROOT + sep)) return next();
-        if (!existsSync(file)) return next();
-        if (statSync(file).isDirectory()) file = resolve(file, "index.html");
-        if (!existsSync(file)) return next();
+        if (!insidePreviewRoot(file)) return next();
+        if (existsSync(file) && statSync(file).isDirectory()) file = resolve(file, "index.html");
+
+        if (!existsSync(file)) {
+          const acceptsHtml = (req.headers.accept ?? "").includes("text/html");
+          const segments = relative.split("/").filter(Boolean);
+          const [framework, id] = segments;
+          if (!framework || !id) return next();
+          const isRoute =
+            (req.method === "GET" || req.method === "HEAD") &&
+            acceptsHtml &&
+            !extname(relative) &&
+            segments.length > 2;
+          if (!isRoute) return next();
+
+          file = resolve(TUTORIAL_PREVIEW_ROOT, framework, id, "index.html");
+          if (!insidePreviewRoot(file) || !existsSync(file)) return next();
+        }
+
         res.setHeader("content-type", MIME_TYPES[extname(file).toLowerCase()] ?? "application/octet-stream");
         res.setHeader("cache-control", "no-store");
         createReadStream(file).pipe(res);
@@ -71,10 +108,23 @@ function serveTutorialPreviews() {
 
 export default defineConfig({
   base: "/demos/",
+  define: previewModel ? { "import.meta.env.VITE_AGENT_MODEL": JSON.stringify(previewModel) } : undefined,
+  esbuild: {
+    jsx: "transform",
+    jsxFactory: "React.createElement",
+    jsxFragment: "React.Fragment",
+  },
   envDir: ENV_ROOT,
   plugins: [vue(), serveTutorialPreviews()],
   root: DEMOS_ROOT,
-  server: { host: "127.0.0.1", proxy: { ...agentProxy, ...recipeProxy } },
+  server: {
+    host: "127.0.0.1",
+    proxy: {
+      "^/demos/course-workspace-react(?:/|$)": { target: "http://127.0.0.1:5195", changeOrigin: true, ws: true },
+      ...agentProxy,
+      ...recipeProxy,
+    },
+  },
   preview: { host: "127.0.0.1", proxy: { ...agentProxy, ...recipeProxy } },
   build: {
     outDir: fileURLToPath(new URL("./dist", import.meta.url)),

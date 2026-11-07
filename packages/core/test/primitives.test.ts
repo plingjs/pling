@@ -13,4 +13,15 @@ describe("hover 原语（S6b-2）", () => {
     expect(resolveKind("hover")).toBe("write");
     expect(resolveKind("hover", "read")).toBe("read");
   });
+
+  it("select accepts one value or a list for multiple-select controls", () => {
+    expect(PRIMITIVE_PARAMS.select.properties?.value).toMatchObject({
+      oneOf: [
+        { type: "string" },
+        { type: "array", items: { type: "string" } },
+      ],
+    });
+    expect(() => validateArgs("select", { value: ["a", "b"] })).not.toThrow();
+    expect(() => validateArgs("select", {})).toThrow(/Missing required parameter: value/);
+  });
 });

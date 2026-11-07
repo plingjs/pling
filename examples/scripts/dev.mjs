@@ -17,6 +17,7 @@ function run(label, command, args) {
 
 run("gateway", process.execPath, ["gateway.mjs"]);
 run("recipe-api", process.execPath, ["recipe-backends/access-service/server.mjs"]);
+run("react19", pnpm, ["exec", "vite", "--config", "./demos/course-workspace-react/vite.config.ts", "--host", "127.0.0.1"]);
 run("vite", pnpm, ["exec", "vite", "--config", "./vite.config.ts", "--host", "127.0.0.1", "--port", "5191", "--strictPort"]);
 
 function stop(signal = "SIGTERM") {

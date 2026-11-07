@@ -10,7 +10,7 @@ const locale = computed(() => (new URLSearchParams(location.search).get("lang") 
   <main class="page">
     <OrderFlowPanel :locale="locale" />
     <AgentDock
-      title="Order assistant"
+      :title="locale === 'zh' ? '订单助手' : 'Order assistant'"
       :quick="
         locale === 'zh'
           ? ['把 SO-1002 的备注改为“周五回电”', '先锁定保存，再完成一次可恢复的失败']

@@ -11,7 +11,7 @@ status: drafted
 
 `@plingjs/react` connects React refs, effects, and context to the same page runtime used by the Vue adapters. It does not ship a second executor or a second agent loop.
 
-Peer range: React 18 and later. The adapter is client-side; Next.js and other SSR hosts must create the instance after the DOM exists.
+Peer range: React 16.3 and later. The Hooks entry requires React 16.8+; React 16.3–16.7 use the legacy entry described below. Both are client-side adapters; Next.js and other SSR hosts must create the instance after the DOM exists.
 
 ## Installation and provider
 
@@ -52,6 +52,65 @@ createRoot(document.getElementById("root")!).render(
 | `exposePlingState(pling, key, source, options?)` | `() => void` | Register a view outside the component tree |
 
 `usePlingTool` accepts the same fields as Vue's `v-tool`: `id`, `desc`, `kind`, `params`, `run`, `available`, `expect`, `confirm`, `handoff`, `action`, `target`, `autoTarget`, and `fidelity`. The options are read from a ref, so handlers do not go stale after a re-render.
+
+<a id="react-163-167-legacy-entry"></a>
+
+## React 16.3–16.7 (legacy entry)
+
+React 16.3 has context, refs, and fragments, but it does not have Hooks. The default entry therefore stops at React 16.8. Older applications import the legacy entry instead:
+
+```tsx
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import {
+  AgentDock,
+  createPling,
+  PlingProvider,
+  PlingScope,
+  PlingState,
+  PlingTool,
+} from "@plingjs/react/legacy";
+
+const pling = createPling();
+
+class App extends React.Component {
+  state = { count: 0 };
+
+  render() {
+    return (
+      <PlingProvider pling={pling}>
+        <PlingState
+          name="counter"
+          source={() => ({ count: this.state.count })}
+          description="Current count"
+        />
+        <PlingScope options={{ id: "todo", label: "Todo list" }}>
+          {(scopeRef) => (
+            <section ref={scopeRef}>
+              <PlingTool options={{ id: "increment", desc: "Increase the count" }}>
+                {(toolRef) => (
+                  <button ref={toolRef} onClick={() => this.setState({ count: this.state.count + 1 })}>
+                    Count: {this.state.count}
+                  </button>
+                )}
+              </PlingTool>
+            </section>
+          )}
+        </PlingScope>
+        <AgentDock layout="inline" />
+      </PlingProvider>
+    );
+  }
+}
+
+ReactDOM.render(<App />, document.getElementById("root"));
+```
+
+The legacy entry uses render props instead of Hooks. `PlingTool`, `PlingScope`, `PlingRecord`, `PlingFeedback`, `PlingTask`, and `PlingGuideTarget` pass a ref callback as their only child. `PlingState` and `PlingAction` render nothing and register themselves on mount. `AgentDock` and `AgentInline` mount the shared DOM assistant; a ref to `AgentDock` exposes `open()`, `close()`, `toggle()`, `isOpen()`, and `destroy()`.
+
+The build uses the classic JSX transform and does not import `react/jsx-runtime`, so `react@16.3.0` is enough. The legacy assistant is the shared DOM dock, not a second React implementation; its Activity panel and optional debug/model settings therefore match the Vanilla adapter.
+
+There are two complete runnable examples. [React 16.3 legacy Todo](/examples/react16-legacy-todo) covers ordinary create/read/update/delete and a state view; the [React 16.3 course management back office](/examples/course-workspace-react16) uses the same legacy entry for course creation, duplicate-name lookup, teacher creation, scheduling, conflict failure, and a row-bound note task. Both run on real `react@16.3.0` with class components and render props.
 
 ## A complete row
 
@@ -117,11 +176,11 @@ Pass `debug` to `<AgentDock>` to enable the read-only run inspector in the activ
 
 The inspector shows the page projection at open time and the messages, tools, responses, and page snapshot for each retained model call. It uses the runtime that already drives the conversation; it does not execute actions or create a second session. `debug` is off by default. A number object bounds retained calls; `true` uses the default limit. Treat the inspector as a development surface: it can reveal outbound messages and page data, so do not enable it unconditionally in a public build.
 
-Model settings remain Vue 3-only. React applications should keep credentials behind their model gateway.
+The Hooks entry does not expose model settings. The legacy entry gets them from the shared DOM dock. In production, React applications should still keep model credentials behind their model gateway.
 
 ## Boundaries
 
-React supports actions, function tools, records, regions, state, confirmation, handoff, presence, derivation, namespaces, shared page runtimes, and the read-only run inspector.
+The Hooks entry supports actions, function tools, records, regions, state, confirmation, handoff, presence, derivation, namespaces, shared page runtimes, and the read-only run inspector.
 
 It does not currently support:
 
@@ -133,6 +192,8 @@ It does not currently support:
 - Router page identity.
 
 Do not import Vue components to fill these gaps. Add a React implementation or move the capability into the shared layers.
+
+The legacy entry exposes feedback, guide targets, and task entrances through its render-prop components. It is the compatibility path for React 16.3–16.7, not a drop-in replacement for the Hooks API.
 
 ## Failure modes
 
@@ -156,10 +217,10 @@ Do not import Vue components to fill these gaps. Add a React implementation or m
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/react` `0.1.0-alpha.3` |
+| Applies to | `@plingjs/react` `0.1.0-alpha.6` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
-| Runtime | React 18 or later in browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
-| Peer dependencies | `react >=18` |
+| Runtime | React 16.8+ for the Hooks entry; React 16.3+ for the legacy entry; browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
+| Peer dependencies | `react >=16.3` |
 | Stability | Pre-1.0 alpha; a minor release may change the API |
 
 The adapter does not depend on Vue or on a particular router. The provider, hooks, component names, and props on this page are the public surface at this version.

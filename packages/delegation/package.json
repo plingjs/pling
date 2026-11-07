@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/delegation",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "Optional delegation credential contracts and web-standard handlers for Pling.",
+  "description": "Pling delegation integration: contracts, in-memory adapters, SurfaceSession mapping, browser client, and Web HTTP/SSE handlers.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

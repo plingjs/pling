@@ -70,7 +70,7 @@ export function mountQuickstart(root: HTMLElement, options: QuickstartOptions = 
       },
     },
     mounted() {
-      dock = pling.dock({ title: copy.dockTitle, quick: [...copy.quick] });
+      dock = pling.dock({ title: copy.dockTitle, quick: [...copy.quick], debug: { maxCalls: 8 } });
     },
     beforeDestroy() {
       dock?.destroy();

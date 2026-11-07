@@ -188,7 +188,7 @@ const COPY: Record<DemoLocale, DemoCopy> = {
     dockTitle: "Todo assistant",
     quick: [
       "Clear the workspace name and try to save it. Explain what the page reported.",
-      "Walk me through how a person should publish the workspace changes.",
+      "Publish the workspace changes. If a person must enter the verification code, hand the steps to me.",
       "Which page am I on?",
     ],
     surfaceEyebrow: "Pling tutorial · React",
@@ -331,7 +331,7 @@ const COPY: Record<DemoLocale, DemoCopy> = {
     dockTitle: "待办助手",
     quick: [
       "清空工作区名称后尝试保存，说明页面报告了什么。",
-      "告诉我一个人应当如何完成发布。",
+      "发布工作区变更；如果需要本人输入验证码，请把步骤交给我。",
       "我现在在哪个页面？",
     ],
     surfaceEyebrow: "Pling 教程 · React",

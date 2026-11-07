@@ -11,7 +11,15 @@ export const PRIMITIVE_PARAMS: Record<Primitive, JsonSchema> = {
   },
   select: {
     type: "object",
-    properties: { value: { type: "string", description: "Option value to select" } },
+    properties: {
+      value: {
+        oneOf: [
+          { type: "string" },
+          { type: "array", items: { type: "string" } },
+        ],
+        description: "Option value to select; use an array for a multiple-select control",
+      },
+    },
     required: ["value"],
   },
   scroll: {

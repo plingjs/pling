@@ -36,7 +36,7 @@ const dock = pling.dock({
 });
 ```
 
-`createPling(options)` 支持 `ui`、`registry`、`shared`、`namespace`、`onWarn`、`agent`、`revealSensitive`、`defaultApproval`、`scopes`、`presence` 与 `derive`，返回 `VanillaPling`。
+`createPling(options)` 支持 `ui`、`registry`、`shared`、`namespace`、`onWarn`、`diagnostics`、`agent`、`revealSensitive`、`defaultApproval`、`scopes`、`presence`、`derive` 与 `page`，返回 `VanillaPling`。
 
 | 方法 | 返回 | 用途 |
 | --- | --- | --- |
@@ -45,12 +45,19 @@ const dock = pling.dock({
 | `record(element, value)` | 解绑函数 | 声明一行记录 |
 | `scope(element, options)` | 解绑函数 | 声明区域 |
 | `state(key, source, options?)` | 解绑函数 | 注册只读视图 |
+| `declareFeedback(element, value)` | 解绑函数 | 声明页面反馈 |
+| `declareTask(element, value)` | 解绑函数 | 声明面向人的任务入口，不注册动作 |
+| `guideTarget(element, id)` | 解绑函数 | 标记人工接力的指引目标 |
 | `setActiveScopes(ids)` | — | 观察器无法推断布局时手动激活 |
 | `dock(options?)` | `VanillaDock` | 挂载共享助手 |
+| `surfaceGateway(options)` | `VanillaSurfaceGateway` | 把允许的能力开放给外部 Agent |
+| `inspectCoverage(root?)` | `CoverageReport` | 扫描尚未声明的交互控件 |
 | `derived()` | 控制器或 `null` | 取自动派生控制器 |
 | `destroy()` | — | 停止观察器并注销全部声明 |
 
 每个声明都返回解绑函数。由你自己的代码移除节点时，要保留并调用它。运行时会跟踪元素所在区域；只移除节点而不解绑，会留下过期登记，直到调用 `destroy()`。
+
+原生页面没有框架的 `updated` / `beforeUnmount`，因此同一元素或同一状态 key 再次声明时，适配器会先撤销旧声明再登记新的。旧声明返回的解绑函数随后调用是安全的，不会误删新声明。这使列表重绘与 jQuery 插件替换节点时不必自己维护两份登记。
 
 ## 元素动作
 
@@ -90,6 +97,26 @@ pling.action({
 });
 ```
 
+`tool({ steps })` 声明复合动作；每一步都引用已经声明的动作 id，执行时仍走同一个确认闸门。需要用户亲自完成的步骤用 `handoff`：
+
+```ts
+pling.tool(document.querySelector("#submit-order")!, {
+  id: "submit_order",
+  desc: "保存并提交订单",
+  steps: [{ action: "save_order" }, { action: "confirm_order" }],
+});
+
+pling.tool(document.querySelector("#verify-phone")!, {
+  id: "verify_phone",
+  desc: "等待用户完成手机验证",
+  handoff: {
+    reason: "手机验证码只能由用户本人查看并填写",
+    steps: ["打开手机短信", "填写 6 位验证码"],
+    expect: { desc: "验证码已通过", check: () => Boolean(document.querySelector("[data-verified]")) },
+  },
+});
+```
+
 ## 记录与区域
 
 ```ts
@@ -122,6 +149,67 @@ const offState = pling.state("task_view", () => ({
 
 `state` 是只读的，没有 setter，也不会生成动作。若模型应能改变筛选，用 `pling.tool()` 声明那个筛选控件。
 
+## 页面反馈、任务与指引
+
+表单错误应作为页面反馈暴露，而不是再声明一个“读出错误”的动作：
+
+```ts
+pling.declareFeedback(document.querySelector("#customer-field")!, {
+  message: "客户名称不能为空",
+  field: "customer",
+  severity: "error",
+});
+
+pling.declareTask(document.querySelector("#ask-assistant")!, {
+  prompt: "检查当前订单是否缺少必填信息",
+});
+```
+
+`declareTask()` 只把一句话交给已挂载的助手，因此不会出现在动作清单里。`guideTarget()` 则只标记用户在人工接力时需要看的位置，同样不会生成动作。
+
+## 助手、模型设置与调试
+
+```ts
+const dock = pling.dock({
+  layout: "dock",
+  quick: ["总结当前订单"],
+  debug: { maxCalls: 8 },
+  modelSettings: { mode: "readonly" },
+});
+```
+
+`layout` 可为 `dock`、`sidebar` 或 `inline`；`side` / `launcherPlacement` 控制侧边栏位置。`debug` 在“活动”页打开只读检查器，展示页面投影、真实请求消息、tools、响应和最近的调用轨迹。`modelSettings: "readonly"` 展示应用托管端点，`{ mode: "byok", persist: "session" }` 允许可信页面使用自己的模型密钥；`persist` 只支持 `memory` 与 `session`，不支持 `localStorage`。
+
+当 `continuity.scope` 为 `browser` 或 `remote` 时，浮窗还会出现“任务”页。用户可以只读跟随另一个标签页 / 设备上的任务、接管它，或把它分叉成一条独立任务。只在一个标签页内工作的 `tab` 作用域不会显示这个页签。
+
+## 页面身份与覆盖率
+
+页面路径、标题和 allowlist 后的查询参数会自动进入快照。需要 Router-like 的 `name` / `params` 时，给 `page.router` 传一个带 `currentRoute` 与可选 `afterEach` 的对象即可。
+
+```ts
+const report = pling.inspectCoverage(document.querySelector("main"));
+console.log(report.coveragePercent, report.targets.filter((target) => target.status === "missing"));
+```
+
+覆盖率扫描只报告未声明的交互控件，不会自动注册动作。
+
+## 外部 Agent
+
+`pling.surfaceGateway()` 复用 `@plingjs/surface-browser`，只开放显式 allowlist 中的能力；`createSurfaceAccessPanel()` 是 Vue `<SurfaceAccessPanel>` 的原生 DOM 对应物：
+
+```ts
+import { createSurfaceAccessPanel } from "@plingjs/vanilla";
+
+const gateway = pling.surfaceGateway({
+  app: "orders",
+  mode: "bff",
+  expose: ["list_orders", "update_note@order:"],
+  getPageSession: () => fetch("/api/surface/session").then((response) => response.json()),
+});
+
+const panel = createSurfaceAccessPanel(gateway, { mount: document.querySelector("#access")! });
+```
+
 ## jQuery 写法
 
 ```js
@@ -142,8 +230,9 @@ $("#add").on("click", addTask);
 - `derive` 默认关闭。
 - `kind` 默认是 `write`；确认策略由当前审批策略决定。
 - `ui` 默认英文、浅色主题。
-- 本适配器不提供复合 `steps`、页面反馈、分步指引、任务入口、模型设置界面、调试检查器、覆盖率扫描或 Router 页面身份。
-- Surface 的 describe / invoke 由 `@plingjs/surface` 提供，不属于本适配器。
+- 没有框架组件树或 store：`AgentDock` / `AgentInline` 这类组件与 `useAgentStoreState` 不适用；对应能力由 `pling.dock()`、`pling.page` 与显式字段选择完成。
+- 不具备 Vue / React 的自动挂载与卸载生命周期。重复声明会替换旧声明，但节点销毁时仍应主动调用解绑函数。
+- SSR 不属于 DOM 适配器职责。Surface 协议仍由 `@plingjs/surface` 提供，本适配器只负责页面会话与浏览器传输接线。
 
 ## 常见失败
 
@@ -166,7 +255,7 @@ $("#add").on("click", addTask);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.3` |
+| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.6` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；jQuery 为可选项 |

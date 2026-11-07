@@ -1,4 +1,4 @@
-import { hydrateRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import { createPling, PlingProvider } from "@plingjs/react";
 import { App } from "./App";
 import { copyFor, plingLocale, type DemoLocale } from "./copy";
@@ -21,9 +21,11 @@ const pling = createPling({
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing #root");
 
-hydrateRoot(
-  root,
+const tree = (
   <PlingProvider pling={pling}>
     <App locale={locale} />
-  </PlingProvider>,
+  </PlingProvider>
 );
+
+if (root.hasChildNodes()) hydrateRoot(root, tree);
+else createRoot(root).render(tree);

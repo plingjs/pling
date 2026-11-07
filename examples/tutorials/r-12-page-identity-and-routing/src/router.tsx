@@ -1,6 +1,6 @@
 import type { PageView } from "@plingjs/core";
 import { matchPath, Navigate, Route, Routes } from "react-router-dom";
-import type { DemoCopy } from "./copy";
+import type { DemoCopy, DemoLocale } from "./copy";
 import { TaskDetailPage } from "./components/TaskDetailPage";
 import { TaskListPage } from "./components/TaskListPage";
 import type { Task, TaskActions } from "./tasks";
@@ -53,21 +53,22 @@ export function pageIdentityFor(
 export interface AppRoutesProps extends TaskActions {
   tasks: Task[];
   copy: DemoCopy;
+  locale: DemoLocale;
 }
 
-export function AppRoutes({ tasks, copy, ...actions }: AppRoutesProps) {
+export function AppRoutes({ tasks, copy, locale, ...actions }: AppRoutesProps) {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/tasks" replace />} />
+      <Route path="/" element={<Navigate to={locale === "zh" ? "/tasks?lang=zh" : "/tasks"} replace />} />
       <Route
         path="/tasks"
-        element={<TaskListPage tasks={tasks} copy={copy} {...actions} />}
+        element={<TaskListPage tasks={tasks} copy={copy} locale={locale} {...actions} />}
       />
       <Route
         path="/tasks/:id"
-        element={<TaskDetailPage tasks={tasks} copy={copy} onToggleTask={actions.toggleTask} />}
+        element={<TaskDetailPage tasks={tasks} copy={copy} locale={locale} onToggleTask={actions.toggleTask} />}
       />
-      <Route path="*" element={<TaskDetailPage tasks={tasks} copy={copy} onToggleTask={actions.toggleTask} />} />
+      <Route path="*" element={<TaskDetailPage tasks={tasks} copy={copy} locale={locale} onToggleTask={actions.toggleTask} />} />
     </Routes>
   );
 }

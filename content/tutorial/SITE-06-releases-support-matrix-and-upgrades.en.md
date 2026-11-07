@@ -24,6 +24,7 @@ All public packages are at `0.1.0-alpha.3`. This is an alpha line: APIs may chan
 | `@plingjs/agent` | Loop, context, tools, and continuity contracts | `0.1.0-alpha.3` |
 | `@plingjs/surface` | Agent Surface projection and `describe` / `invoke` | `0.1.0-alpha.3` |
 | `@plingjs/surface-browser` | Page-side Surface sessions, WebSocket transport, bridge, and reconnect lifecycle | `0.1.0-alpha.3` |
+| `@plingjs/surface-gateway` | Node transport and control plane for page sessions, pairing, MCP, scope, revocation, and audit | `0.1.0-alpha.3` |
 | `@plingjs/delegation` | Optional delegation credential lifecycle | `0.1.0-alpha.3` |
 | `@plingjs/continuity-http` | Optional remote continuity over HTTP | `0.1.0-alpha.3` |
 | `@plingjs/server` | OpenAI-compatible model gateway | `0.1.0-alpha.3` |
@@ -40,7 +41,7 @@ The protocol documented here is `pling.surface/0.1`, still a public draft. Versi
 | Environment | Supported range | Practical boundary |
 | --- | --- | --- |
 | Vue 3 | peer dependency `^3`; documentation targets 3.4+ | Examples use object-form `v-bind` and the Composition API |
-| React | peer dependency `>=18` | Examples use React 19; older major versions are not claimed |
+| React | peer dependency `>=16.3` | The Hooks entry requires React 16.8+; React 16.3–16.7 use `@plingjs/react/legacy` |
 | Vue 2 | `@plingjs/vue2` supports only `^2.7.0`; 2.6 and earlier can integrate manually through `@plingjs/vanilla` | 2.6 and earlier lack the Composition API needed by state helpers, directives, and automatic cleanup |
 | Vanilla JavaScript | No framework peer dependency | DOM and modern browser APIs are still required |
 | Node | Repository development and gateway examples require 20+ | This is not a restriction on unrelated application servers |

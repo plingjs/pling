@@ -39,6 +39,6 @@ watchEffect(() => {
       </aside>
     </section>
 
-    <AgentDock :title="copy.dockTitle" :quick="copy.quick" />
+    <AgentDock :title="copy.dockTitle" :quick="copy.quick" :debug="{ maxCalls: 8 }" />
   </main>
 </template>

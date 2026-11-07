@@ -1,3 +1,5 @@
+import { copyFor, type DemoLocale } from "./copy";
+
 /**
  * 业务数据。
  *
@@ -19,12 +21,9 @@ export interface Customer {
 
 const STORAGE_KEY = "case062:customers";
 
-const SEED: readonly Customer[] = [
-  { id: "c1", name: "ACME", owner: "林舟", phone: "138 0000 1001", status: "待跟进", note: "" },
-  { id: "c2", name: "Globex", owner: "周弈", phone: "138 0000 1002", status: "待跟进", note: "" },
-  { id: "c3", name: "Hooli", owner: "陈默", phone: "138 0000 1003", status: "已回访", note: "上周已电话沟通，等对方确认预算。" },
-  { id: "c4", name: "Initech", owner: "林舟", phone: "138 0000 1004", status: "已归档", note: "已签约，转入交付。" },
-];
+function storageKey(locale: DemoLocale): string {
+  return locale === "zh" ? STORAGE_KEY : `${STORAGE_KEY}:${locale}`;
+}
 
 function storage(): Storage | null {
   try {
@@ -35,8 +34,8 @@ function storage(): Storage | null {
   }
 }
 
-export function loadCustomers(): Customer[] {
-  const raw = storage()?.getItem(STORAGE_KEY);
+export function loadCustomers(locale: DemoLocale = "zh"): Customer[] {
+  const raw = storage()?.getItem(storageKey(locale));
   if (raw) {
     try {
       const parsed = JSON.parse(raw) as unknown;
@@ -45,12 +44,12 @@ export function loadCustomers(): Customer[] {
       // 坏数据不阻塞页面：退回种子。
     }
   }
-  return SEED.map((customer) => ({ ...customer }));
+  return copyFor(locale).seed.map((customer) => ({ ...customer }));
 }
 
-export function saveCustomers(customers: readonly Customer[]): void {
+export function saveCustomers(customers: readonly Customer[], locale: DemoLocale = "zh"): void {
   try {
-    storage()?.setItem(STORAGE_KEY, JSON.stringify(customers));
+    storage()?.setItem(storageKey(locale), JSON.stringify(customers));
   } catch {
     // 配额 / 隐私模式：内存里的状态仍然是当前页的真相。
   }
@@ -64,12 +63,13 @@ export function updateCustomer(
   customers: Customer[],
   id: string,
   patch: Partial<Pick<Customer, "status" | "note">>,
+  locale: DemoLocale = "zh",
 ): Customer | undefined {
   const customer = findCustomer(customers, id);
   if (!customer) return undefined;
   if (patch.status !== undefined) customer.status = patch.status;
   if (patch.note !== undefined) customer.note = patch.note;
-  saveCustomers(customers);
+  saveCustomers(customers, locale);
   return customer;
 }
 

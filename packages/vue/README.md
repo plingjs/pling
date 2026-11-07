@@ -34,9 +34,22 @@ createApp(App).use(pling.plugin).mount("#app");
 
 The adapter also provides `useAgentTool()`, `useAgentState()`,
 `useAgentStoreState()`, `AgentDock`, `AgentInline`, `AgentChat`, and the
-development inspector. `useSurfaceGateway()` owns the repeated external-Agent
-page session, WebSocket, bridge, pairing, and reconnection lifecycle without
-inferring capabilities.
+development inspector. Put guided tasks inside the conversation with
+`AgentTaskCard` and `AgentDock`'s `#task` slot (or `AgentChat`'s `#task` slot).
+`AgentGuideActions` mounts the same compact action row as the vanilla and React
+adapters. Keep the verb short and pass a long recommendation as `preview`; the
+component handles the ellipsis, `title`, and `aria-label` for you:
+
+```vue
+<AgentGuideActions
+  :items="[{ id: 'use', label: 'Fill it in', preview: note, command: 'apply-note', kind: 'suggestion' }]"
+  aria-label="Task actions"
+  @command="runCourseCommand"
+/>
+```
+
+`useSurfaceGateway()` owns the repeated external-Agent page session, WebSocket,
+bridge, pairing, and reconnection lifecycle without inferring capabilities.
 
 ## Documentation
 

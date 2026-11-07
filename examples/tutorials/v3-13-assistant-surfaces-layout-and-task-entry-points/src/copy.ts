@@ -44,6 +44,9 @@ export interface DemoCopy {
   layoutLabel: string;
   layoutDock: string;
   layoutSidebar: string;
+  sidebarModeLabel: string;
+  sidebarOverlay: string;
+  sidebarFused: string;
   sideLabel: string;
   sideRight: string;
   sideLeft: string;
@@ -153,6 +156,9 @@ const COPY: Record<DemoLocale, DemoCopy> = {
     layoutLabel: "Layout",
     layoutDock: "Floating dock",
     layoutSidebar: "Page sidebar",
+    sidebarModeLabel: "Sidebar mode",
+    sidebarOverlay: "Overlay the page",
+    sidebarFused: "Fuse with the page",
     sideLabel: "Sidebar edge",
     sideRight: "Right",
     sideLeft: "Left",
@@ -287,6 +293,9 @@ const COPY: Record<DemoLocale, DemoCopy> = {
     layoutLabel: "布局",
     layoutDock: "浮动 Dock",
     layoutSidebar: "页面侧栏",
+    sidebarModeLabel: "侧栏模式",
+    sidebarOverlay: "覆盖页面",
+    sidebarFused: "融入页面",
     sideLabel: "侧栏方向",
     sideRight: "右侧",
     sideLeft: "左侧",

@@ -11,7 +11,7 @@ Pling is not a browser agent, a replacement for backend APIs, or a generic click
 layer. It provides a bounded, auditable interface between a web application and
 an agent runtime. An action being visible never means it is authorized.
 
-> Status: `0.1.0-alpha.3`. Package APIs and the Surface protocol may still change.
+> Status: `0.1.0-alpha.6`. Package APIs and the Surface protocol may still change.
 > Check [releases](https://plingjs.dev/releases/) before relying on a production deployment.
 
 ## What it provides
@@ -37,6 +37,7 @@ an agent runtime. An action being visible never means it is authorized.
 | `@plingjs/agent` | Agent loop, context assembly, confirmation, continuity, and telemetry |
 | `@plingjs/surface` | Agent Surface projection and the `describe` / `invoke` protocol |
 | `@plingjs/surface-browser` | Page-side Surface sessions, WebSocket transport, bridge, and reconnect lifecycle |
+| `@plingjs/surface-gateway` | Reference Node transport and control plane for page sessions, pairing, MCP, scope, revocation, and audit |
 | `@plingjs/delegation` | Delegation contracts and web-standard handlers |
 | `@plingjs/continuity-http` | HTTP integration for cross-device task continuity |
 | `@plingjs/server` | Node model gateway for credentials, authentication, limits, and audit |

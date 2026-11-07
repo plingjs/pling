@@ -54,11 +54,12 @@ The shell exposes only presentation choices. It does not change what the agent c
 
 ## Use a sidebar when the page has a natural work column
 
-For a dense workspace, a side panel can make the assistant feel like part of the application rather than an overlay:
+For a dense workspace, a side panel can make the assistant feel like part of the application rather than an overlay. The sidebar has two modes: `overlay` stays above the page, while `fused` becomes a real grid column with its own space.
 
 ```vue{4-8}
 <AgentDock
   layout="sidebar"
+  sidebar-mode="overlay"
   side="right"
   launcher-placement="bottom"
   launcher-label="Ask Pling"
@@ -71,12 +72,37 @@ The supported presentation props are:
 | Prop | Values | Effect |
 | --- | --- | --- |
 | `layout` | `"dock"` or `"sidebar"` | Floating corner or viewport edge |
+| `sidebar-mode` | `"overlay"` or `"fused"` | Cover the page or join its grid |
 | `side` | `"right"` or `"left"` | Edge used by the sidebar layout |
 | `launcher-placement` | `"bottom"` or `"center"` | Position of the collapsed launcher |
 | `launcher-label` | string | Visible text on the collapsed launcher |
 | `default-open` | boolean | Whether the shell begins open |
 
-`side`, `launcher-placement`, and `launcher-label` do not apply to the floating dock. Keeping the surface variants in one component means an application can remember a user's preference and switch shells at runtime without rebuilding the conversation.
+`side`, `sidebar-mode`, `launcher-placement`, and `launcher-label` do not apply to the floating dock. `launcher-placement` only affects overlay mode; a fused sidebar has no launcher floating outside the page grid. Keeping the surface variants in one component means an application can remember a user's preference and switch shells at runtime without rebuilding the conversation.
+
+Fused mode expects the application to provide a column. `AgentDock` still owns the open state, launcher, and the one conversation history:
+
+```vue
+<div class="workspace">
+  <OrderTable />
+  <AgentDock layout="sidebar" sidebar-mode="fused" side="right" title="Order copilot" />
+</div>
+```
+
+```css
+.workspace {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.workspace__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+```
+
+Use `fused` when the assistant should keep its launcher and collapse behavior, but must not cover a table or editor when open. On narrow screens the component falls back to a floating panel so the working area does not collapse into a sliver.
 
 An application that needs its own grid can mount `AgentInline` in a column:
 
@@ -166,10 +192,11 @@ pnpm tutorial:dev v3-13
 Then check:
 
 1. Switch between **Floating dock** and **Page sidebar**. The assistant shell changes, but an existing reply remains.
-2. With the sidebar selected, change the edge and the collapsed launcher position.
-3. Close the shell, then select **Summarize open tasks**. The shell opens and sends the request.
-4. Ask a question from the page, then open the launcher. Both messages are in one history.
-5. Inspect the page actions. The two task buttons do not appear as model tools.
+2. With the sidebar selected, switch between **Overlay the page** and **Fuse with the page**. The business content should no longer sit under the open panel in fused mode.
+3. Change the edge and the collapsed launcher position. In fused mode, the left edge moves the assistant column before the main content.
+4. Close the shell, then select **Summarize open tasks**. The shell opens and sends the request.
+5. Ask a question from the page, then open the launcher. Both messages are in one history.
+6. Inspect the page actions. The two task buttons do not appear as model tools.
 
 Run the deterministic checks with:
 
@@ -177,7 +204,7 @@ Run the deterministic checks with:
 pnpm tutorial:check v3-13
 ```
 
-The tests cover shell switching, sidebar props, task-entry registration, shared conversation history, and Chinese copy.
+The tests cover shell switching, overlay and fused modes, sidebar props, task-entry registration, shared conversation history, and Chinese copy.
 
 ## Common failure modes
 

@@ -11,7 +11,7 @@ status: drafted
 
 `@plingjs/react` 把 React 的 ref、effect 与 context 接到 Vue 适配器共用的页面运行时上。它不另带执行器，也不另写一套 agent 循环。
 
-对等版本：React 18 及以上。它是客户端适配器；Next.js 等 SSR 宿主必须在 DOM 就绪后再创建实例。
+对等版本：React 16.3 及以上。Hooks 入口要求 React 16.8+；React 16.3–16.7 使用下面的 legacy 入口。两者都是客户端适配器；Next.js 等 SSR 宿主必须在 DOM 就绪后再创建实例。
 
 ## 安装与 Provider
 
@@ -52,6 +52,65 @@ createRoot(document.getElementById("root")!).render(
 | `exposePlingState(pling, key, source, options?)` | `() => void` | 在组件树外注册视图 |
 
 `usePlingTool` 接受与 Vue `v-tool` 相同的字段：`id`、`desc`、`kind`、`params`、`run`、`available`、`expect`、`confirm`、`handoff`、`action`、`target`、`autoTarget` 与 `fidelity`。选项从 ref 读取，因此重渲染后处理函数不会停留在旧闭包。
+
+<a id="react-163-167-legacy-entry"></a>
+
+## React 16.3–16.7（legacy 入口）
+
+React 16.3 有 context、ref 和 Fragment，但没有 Hooks。因此默认入口最低支持 React 16.8；更早的应用改用 legacy 入口：
+
+```tsx
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import {
+  AgentDock,
+  createPling,
+  PlingProvider,
+  PlingScope,
+  PlingState,
+  PlingTool,
+} from "@plingjs/react/legacy";
+
+const pling = createPling();
+
+class App extends React.Component {
+  state = { count: 0 };
+
+  render() {
+    return (
+      <PlingProvider pling={pling}>
+        <PlingState
+          name="counter"
+          source={() => ({ count: this.state.count })}
+          description="当前计数"
+        />
+        <PlingScope options={{ id: "todo", label: "待办列表" }}>
+          {(scopeRef) => (
+            <section ref={scopeRef}>
+              <PlingTool options={{ id: "increment", desc: "把计数加一" }}>
+                {(toolRef) => (
+                  <button ref={toolRef} onClick={() => this.setState({ count: this.state.count + 1 })}>
+                    当前：{this.state.count}
+                  </button>
+                )}
+              </PlingTool>
+            </section>
+          )}
+        </PlingScope>
+        <AgentDock layout="inline" />
+      </PlingProvider>
+    );
+  }
+}
+
+ReactDOM.render(<App />, document.getElementById("root"));
+```
+
+legacy 入口用 render props 代替 Hooks：`PlingTool`、`PlingScope`、`PlingRecord`、`PlingFeedback`、`PlingTask` 与 `PlingGuideTarget` 的唯一子节点是 ref 回调；`PlingState` 和 `PlingAction` 不渲染 DOM，挂载时登记、卸载时撤销。`AgentDock` 与 `AgentInline` 挂载共享的 DOM 助手；挂到 `AgentDock` 的 ref 可以用 `open()`、`close()`、`toggle()`、`isOpen()` 和 `destroy()` 控制它。
+
+构建使用经典 JSX 转换，不引用 `react/jsx-runtime`，因此 `react@16.3.0` 即可运行。legacy 的助手是共享 DOM Dock，不是第二套 React 实现；它的“最近操作”和可选的调试、模型设置与 Vanilla 适配器一致。
+
+完整可运行案例有两个：[React 16.3 兼容 Todo](/zh/examples/react16-legacy-todo) 覆盖常规增删改查与状态视图；[React 16.3 课程管理后台](/zh/examples/course-workspace-react16) 则用同一套 legacy 入口完成新建课程、重名查找、新增老师、排课冲突与绑定行备注。两者都使用真实的 `react@16.3.0`、class 组件和 render props，可直接在文档站打开。
 
 ## 完整的一行
 
@@ -117,11 +176,11 @@ function TaskList({ tasks }: { tasks: Task[] }) {
 
 检查器展示打开时的页面投影，以及每次保留的模型调用所收到的消息、工具、响应与请求时页面快照。它读取当前对话正在使用的 runtime，不执行动作，也不创建第二套会话。`debug` 默认关闭；传对象可限制保留的调用数，传 `true` 使用默认上限。检查器会显示发往模型的消息与页面数据，应把它视为开发工具，不要在生产公开构建里无条件开启。
 
-模型设置界面仍只在 Vue 3 适配器中提供。React 项目应把模型凭据留在自己的模型网关之后。
+Hooks 入口不提供模型设置界面；legacy 入口使用共享 DOM Dock 提供的模型设置。生产环境的 React 项目仍应把模型凭据留在自己的模型网关之后。
 
 ## 能力边界
 
-React 支持动作、函数级工具、记录、区域、状态、确认、人工接力、存在感、自动派生、命名空间、共享页面运行时与只读运行检查器。
+Hooks 入口支持动作、函数级工具、记录、区域、状态、确认、人工接力、存在感、自动派生、命名空间、共享页面运行时与只读运行检查器。
 
 当前不支持：
 
@@ -133,6 +192,8 @@ React 支持动作、函数级工具、记录、区域、状态、确认、人�
 - Router 页面身份。
 
 不要通过引入 Vue 组件来补这些缺口。应新增 React 实现，或把能力下沉到共享层。
+
+legacy 入口通过 render-prop 组件提供页面反馈、分步指引和任务入口。它是 React 16.3–16.7 的兼容路径，不是 Hooks API 的等价替代品。
 
 ## 常见失败
 
@@ -156,10 +217,10 @@ React 支持动作、函数级工具、记录、区域、状态、确认、人�
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/react` `0.1.0-alpha.3` |
+| 适用版本 | `@plingjs/react` `0.1.0-alpha.6` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
-| 运行环境 | 支持 ES2022 模块的浏览器中的 React 18 或更高版本；SSR 与构建需 Node.js 20 或更高版本 |
-| Peer 依赖 | `react >=18` |
+| 运行环境 | Hooks 入口要求 React 16.8+，legacy 入口支持 React 16.3+；浏览器需支持 ES2022 模块；SSR 与构建需 Node.js 20 或更高版本 |
+| Peer 依赖 | `react >=16.3` |
 | 稳定性 | 1.0 之前的 alpha；次版本可能改变 API |
 
 本适配器不依赖 Vue，也不绑定特定路由。本页列出的 Provider、Hook、组件名与 props 就是当前版本的公开接口。

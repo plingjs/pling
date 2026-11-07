@@ -8,5 +8,12 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ["@plingjs/core", "@plingjs/dom", "@plingjs/agent", "markdown-it"],
+  external: [
+    "@plingjs/core",
+    "@plingjs/dom",
+    "@plingjs/agent",
+    "@plingjs/surface",
+    "@plingjs/surface-browser",
+    "markdown-it",
+  ],
 });

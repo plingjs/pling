@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/ui",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "Pling shared UI contracts: locale catalogs, message translation, and theme tokens",
+  "description": "Shared UI contracts for Pling: locale catalogs, message translation, and theme tokens.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

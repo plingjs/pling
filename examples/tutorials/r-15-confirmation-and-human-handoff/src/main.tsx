@@ -8,6 +8,7 @@ import "./styles.css";
 
 const locale = resolveDemoLocale();
 const copy = copyFor(locale);
+const routerBase = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 
 const pling = createPling({
   presence: { effect: "spotlight" },
@@ -23,7 +24,7 @@ const pling = createPling({
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <PlingProvider pling={pling}>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBase}>
         <App locale={locale} />
       </BrowserRouter>
     </PlingProvider>

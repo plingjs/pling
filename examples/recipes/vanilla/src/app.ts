@@ -417,6 +417,7 @@ export function createRecipeApp(pling: VanillaPling, root: HTMLElement): () => v
       config: connection,
       title: copy.listTitle,
       quick: copy.quick,
+      debug: { maxCalls: 8 },
       onSessionEvent: (event: SessionEvent) => {
         if (event.type === "user") {
           started = true;

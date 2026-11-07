@@ -28,6 +28,12 @@ export interface FoldedAction {
   /** 给模型的 function name（`remove_order`）；协议层在撞名时才加后缀 */
   name: string;
   description: string;
+  /** Human-facing name / explanation; not used for execution. */
+  label?: string;
+  summary?: string;
+  examples?: readonly string[];
+  successHint?: string;
+  playbook?: readonly string[];
   primitive: Primitive;
   kind: Kind;
   approval: Approval;
@@ -132,6 +138,11 @@ function foldOf(template: string, members: ActionView[]): FoldedAction {
     template,
     name: toolNameOf(template.replace(/[:@]$/, "")),
     description: withRecordSlot(head, members),
+    ...(head.label ? { label: head.label } : {}),
+    ...(head.summary ? { summary: head.summary } : {}),
+    ...(head.examples?.length ? { examples: [...head.examples] } : {}),
+    ...(head.successHint ? { successHint: head.successHint } : {}),
+    ...(head.playbook?.length ? { playbook: [...head.playbook] } : {}),
     primitive: head.primitive,
     kind: head.kind,
     approval: head.approval,

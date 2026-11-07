@@ -5,6 +5,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { buildAndPackPackages, expandWorkspacePackages, run } from "./lib/pack-packages.mjs";
 import {
   PUBLIC_PREVIEW_AGENT,
+  resolvePublicPreviewModel,
   tutorialFramework,
   tutorialLocalCommand,
   tutorialPreviewPath,
@@ -47,6 +48,43 @@ if (!args.all && args.only.length === 0) {
   console.log(`[tutorial-preview] building all ${allIds.length} chapter previews`);
 }
 if (args.only.length > 0 && args.all) throw new Error("Use either --all or --only, not both");
+
+async function readEnvFile(file) {
+  let text;
+  try {
+    text = await readFile(file, "utf8");
+  } catch (error) {
+    if (error?.code === "ENOENT") return {};
+    throw error;
+  }
+  const values = {};
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim().replace(/^export\s+/, "");
+    if (!line || line.startsWith("#")) continue;
+    const at = line.indexOf("=");
+    if (at <= 0) continue;
+    const key = line.slice(0, at).trim();
+    const value = line.slice(at + 1).trim().replace(/^(['"])(.*)\1$/, "$2");
+    values[key] = value;
+  }
+  return values;
+}
+
+const [exampleEnv, rootEnv] = await Promise.all([
+  readEnvFile(join(root, "examples", ".env.local")),
+  readEnvFile(join(root, ".llm")),
+]);
+const selectedPreviewModel =
+  process.env.PLING_MODEL ||
+  process.env.VITE_AGENT_MODEL ||
+  process.env.MODEL ||
+  rootEnv.MODEL ||
+  exampleEnv.PLING_MODEL ||
+  exampleEnv.VITE_AGENT_MODEL;
+const previewModel = resolvePublicPreviewModel({ PLING_MODEL: selectedPreviewModel });
+if (previewModel !== PUBLIC_PREVIEW_AGENT.model) {
+  console.log(`[tutorial-preview] model shown in previews: ${previewModel}`);
+}
 
 for (const id of selectedIds) {
   if (!registry[id]) throw new Error(`Unknown tutorial "${id}". Available: ${allIds.join(", ")}`);
@@ -232,7 +270,7 @@ for (const [index, id] of selectedIds.entries()) {
     cwd: app,
     env: {
       VITE_AGENT_BASE_URL: PUBLIC_PREVIEW_AGENT.baseUrl,
-      VITE_AGENT_MODEL: PUBLIC_PREVIEW_AGENT.model,
+      VITE_AGENT_MODEL: previewModel,
       VITE_AGENT_API_KEY: "",
       VITE_AGENT_PROXY_TARGET: "",
       VITE_DEMO_LOCALE: "",
@@ -260,6 +298,7 @@ for (const [index, id] of selectedIds.entries()) {
       id,
       title: entry.title,
       framework: framework.label,
+      model: previewModel,
       route: tutorialPreviewPath(id),
       localCommand: tutorialLocalCommand(id, "zh"),
     }, null, 2)}\n`,

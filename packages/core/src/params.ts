@@ -169,6 +169,8 @@ interface ParamRule {
   maxLength?: number;
   pattern?: string;
   format?: string;
+  properties?: Record<string, ParamRule>;
+  required?: string[];
 }
 
 /**
@@ -201,7 +203,7 @@ export function normalizeDeclaredArgs(
     }
 
     // 先规整再比枚举：`"3"` 与 `3` 是同一个值，不该因为写法不同被拒绝
-    const coerced = coerce(name, rule.type ?? "string", value, hint);
+    const coerced = coerce(name, rule.type ?? "string", value, hint, rule);
 
     if (rule.enum && !rule.enum.includes(coerced)) {
       // 选项可能很多（上百个订单号）：列出前 8 个足够模型自救，剩下的它能在 schema 里读到
@@ -280,7 +282,29 @@ function isRealDate(text: string): boolean {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
 }
 
-function coerce(name: string, type: string, value: unknown, hint: string): unknown {
+function coerce(name: string, type: string, value: unknown, hint: string, rule?: ParamRule): unknown {
+  if (type === "object") {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) {
+      throw new ActionError(
+        "INVALID_PARAMS",
+        `Parameter "${name}" must be an object${hint}; received ${describeValue(value)}`,
+      );
+    }
+    if (!rule?.properties) return value;
+    return normalizeDeclaredArgs(
+      { type: "object", properties: rule.properties, required: rule.required },
+      value as Record<string, unknown>,
+    );
+  }
+  if (type === "array") {
+    if (!Array.isArray(value)) {
+      throw new ActionError(
+        "INVALID_PARAMS",
+        `Parameter "${name}" must be an array${hint}; received ${describeValue(value)}`,
+      );
+    }
+    return value;
+  }
   if (type === "number") {
     if (typeof value === "number" && Number.isFinite(value)) return value;
     if (typeof value === "string" && value.trim() !== "" && Number.isFinite(Number(value))) return Number(value);

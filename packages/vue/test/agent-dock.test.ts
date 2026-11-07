@@ -355,6 +355,31 @@ describe("<AgentDock>：悬浮入口 + 自动接线", () => {
     expect(wrapper.findAll(".dock__quick button").map((button) => button.text())).toEqual(["帮我保存"]);
   });
 
+  it("结构化推荐任务使用短标签，但发送完整提示", async () => {
+    const onRun = vi.fn();
+    const pi = createPling({
+      onWarn: () => {},
+      agent: {
+        config,
+        gate: () => false,
+        llm: createReplayLlm([{ calls: [{ tool: "save" }] }, { content: "好了" }] as never),
+      },
+    });
+    const Host = defineComponent({
+      template: `<div><button v-tool="{ id: 'save', desc: '保存', run: onRun }">保存</button><AgentDock :quick="[{ label: '保存草稿', prompt: '帮我保存这份草稿', description: '写入当前版本' }]" /></div>`,
+      components: { AgentDock },
+      setup: () => ({ onRun }),
+    });
+    const wrapper = mount(Host, { attachTo: document.body, global: { plugins: [pi.plugin] } });
+
+    await launcher(wrapper).trigger("click");
+    const button = wrapper.find(".dock__quick button");
+    expect(button.text()).toBe("保存草稿");
+    expect(button.attributes("title")).toBe("写入当前版本");
+    await button.trigger("click");
+    await waitFor(() => onRun.mock.calls.length > 0);
+  });
+
   it("没配置模型时不静默失败：把「缺什么、怎么补」当成一条回复贴出来", async () => {
     const pi = createPling({
       onWarn: () => {},

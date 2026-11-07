@@ -113,6 +113,7 @@ describe("页面上下文组装", () => {
     expect(text).toContain("requires human");
     expect(DEFAULT_SYSTEM_PROMPT).toContain("`requires human`");
     expect(DEFAULT_SYSTEM_PROMPT).toContain("never guess a CAPTCHA");
+    expect(DEFAULT_SYSTEM_PROMPT).toContain("never ask the user to repeat that step");
     expect(DEFAULT_SYSTEM_PROMPT).toContain("HANDOFF_CANCELLED");
   });
 

@@ -38,6 +38,16 @@ import type { PlingElement } from "./context";
 export interface ToolOptionsBase {
   /** 给 agent 的说明（必填）：这个元素是什么、做什么。 */
   desc: string;
+  /** 面向人的短名称；省略时界面回退到 desc。 */
+  label?: string;
+  /** 面向人的一句解释：为什么存在、会改变什么。 */
+  summary?: string;
+  /** 任务卡 / 帮助面板展示的示例说法。 */
+  examples?: readonly string[];
+  /** 成功后展示给人的判定说明，不是执行协议。 */
+  successHint?: string;
+  /** 外部 Agent 的操作提示；不替代权限与审批。 */
+  playbook?: readonly string[];
   /** 稳定 id；省略时按 hook 实例生成一次。 */
   id?: string;
   /** 显式作用域；省略时继承最近的 `data-pling-scope`。portal / 弹窗挂到 body 时用它。 */
@@ -46,6 +56,8 @@ export interface ToolOptionsBase {
   kind?: Kind;
   /** 确认策略覆盖；省略时按 kind 推导。 */
   confirm?: boolean | "always";
+  /** 隐藏模型入口；动作仍可由页面代码与任务步骤调用。 */
+  modelVisible?: boolean;
   /** 覆盖原语推断（默认：表单输入→type，其余→click）。 */
   action?: "click" | "fill" | "select" | "press" | "hover";
   /** action: "press" 时按哪个键，默认 Enter。 */
@@ -109,6 +121,7 @@ function inferPrimitive(el: Element, options: PlingToolOptions): Primitive {
   const tag = el.tagName.toLowerCase();
   if (tag === "select") return "select";
   if (tag === "textarea") return "type";
+  if (el.hasAttribute("contenteditable")) return "type";
   if (tag === "input") {
     const type = (el as HTMLInputElement).type;
     return type === "checkbox" || type === "radio" ? "click" : "type";
@@ -131,8 +144,14 @@ function signatureOf(id: string, options: PlingToolOptions): string {
   return JSON.stringify([
     id,
     options.desc,
+    options.label,
+    options.summary,
+    options.examples,
+    options.successHint,
+    options.playbook,
     options.kind,
     options.confirm,
+    options.modelVisible,
     options.action,
     options.key,
     options.fidelity,
@@ -243,8 +262,14 @@ function bindElement(
     id,
     primitive,
     description: options.desc,
+    ...(options.label ? { label: options.label } : {}),
+    ...(options.summary ? { summary: options.summary } : {}),
+    ...(options.examples?.length ? { examples: [...options.examples] } : {}),
+    ...(options.successHint ? { successHint: options.successHint } : {}),
+    ...(options.playbook?.length ? { playbook: [...options.playbook] } : {}),
     kind: options.kind,
     confirm: options.confirm,
+    ...(options.modelVisible === false ? { modelVisible: false } : {}),
     ...(handoff ? { handoff: { reason: handoff.reason } } : {}),
     fidelity: resolution.fidelity,
     ...(params ? { params } : {}),
@@ -371,8 +396,15 @@ function bindElement(
 export interface AgentToolOptions {
   id: string;
   desc: string;
+  label?: string;
+  summary?: string;
+  examples?: readonly string[];
+  successHint?: string;
+  playbook?: readonly string[];
   kind?: Kind;
   confirm?: boolean | "always";
+  /** 隐藏模型入口；动作仍可由页面代码与任务步骤调用。 */
+  modelVisible?: boolean;
   params?: ParamDeclaration;
   available?: () => boolean | string;
   expect?: Expectation;
@@ -388,7 +420,19 @@ export function useAgentTool(options: AgentToolOptions): void {
     throw new Error(`useAgentTool「${options.id}」缺少 desc：模型只能靠说明判断它是干什么的`);
   }
   const params = schemaOf(options.params);
-  const signature = JSON.stringify([options.id, options.desc, options.kind, options.confirm, paramSignature(options.params)]);
+  const signature = JSON.stringify([
+    options.id,
+    options.desc,
+    options.label,
+    options.summary,
+    options.examples,
+    options.successHint,
+    options.playbook,
+    options.kind,
+    options.confirm,
+    options.modelVisible,
+    paramSignature(options.params),
+  ]);
 
   useEffect(() => {
     const latest = optionsRef.current;
@@ -396,8 +440,14 @@ export function useAgentTool(options: AgentToolOptions): void {
       id: latest.id,
       primitive: "call",
       description: latest.desc,
+      ...(latest.label ? { label: latest.label } : {}),
+      ...(latest.summary ? { summary: latest.summary } : {}),
+      ...(latest.examples?.length ? { examples: [...latest.examples] } : {}),
+      ...(latest.successHint ? { successHint: latest.successHint } : {}),
+      ...(latest.playbook?.length ? { playbook: [...latest.playbook] } : {}),
       kind: latest.kind,
       confirm: latest.confirm,
+      ...(latest.modelVisible === false ? { modelVisible: false } : {}),
       fidelity: "high",
       ...(params ? { params } : {}),
     };

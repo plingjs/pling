@@ -1,20 +1,18 @@
 {
-  "name": "@plingjs/surface-gateway",
-  "version": "0.1.0-alpha.3",
+  "name": "@plingjs/surface-gateway-service",
+  "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Reference Surface gateway: tenant routing, page sessions, pairings, remote MCP, revocation, and audit",
-  "license": "Apache-2.0",
+  "description": "Deployment wrapper for @plingjs/surface-gateway.",
   "scripts": {
     "start": "node src/index.mjs",
     "dev": "node --watch src/index.mjs",
-    "test": "node --test test/*.test.mjs",
-    "check": "node --check src/gateway.mjs && node --check src/mcp.mjs && node --check src/server.mjs && node --check src/index.mjs"
+    "check": "node --check src/index.mjs"
   },
   "dependencies": {
-    "ws": "^8.18.0"
+    "@plingjs/surface-gateway": "workspace:*"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=20.12"
   }
 }

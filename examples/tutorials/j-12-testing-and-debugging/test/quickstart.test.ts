@@ -79,6 +79,16 @@ describe("J-12 · testing and debugging vanilla capabilities", () => {
     expect(trace!.calls[2]!.response).toMatchObject({ content: "The task was added." });
   });
 
+  it("exposes the trace through the Activity debug inspector", () => {
+    const mounted = setup();
+    mounted.dock.open();
+
+    expect(mounted.dock.element.querySelector('[data-testid="pling-debug-toggle"]')).not.toBeNull();
+    expect(mounted.dock.element.querySelector('[data-testid="pling-debug-toggle"]')?.textContent).toContain(
+      "Diagnostics",
+    );
+  });
+
   it("records a failed model request instead of hiding it behind a generic chat error", async () => {
     app = mountQuickstart(host, {
       presence: false,

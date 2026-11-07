@@ -1,0 +1,117 @@
+{
+  "app": "daylist",
+  "source": "src/baseline/App.vue",
+  "target": "src/integrated/App.vue",
+  "scopes": {
+    "daylist": "Main task workspace",
+    "task_list": "Visible task records and row actions"
+  },
+  "capabilities": [
+    {
+      "id": "new_todo_text",
+      "selector": "#new-task",
+      "primitive": "fill",
+      "kind": "write",
+      "scope": "daylist",
+      "review": "low"
+    },
+    {
+      "id": "add_todo",
+      "selector": "button[type=submit]",
+      "primitive": "click",
+      "kind": "write",
+      "scope": "daylist",
+      "review": "low",
+      "condition": "The list is below its eight-item cap"
+    },
+    {
+      "id": "filter_all",
+      "selector": ".filters button:nth-child(1)",
+      "primitive": "click",
+      "kind": "write",
+      "scope": "daylist",
+      "review": "low"
+    },
+    {
+      "id": "filter_open",
+      "selector": ".filters button:nth-child(2)",
+      "primitive": "click",
+      "kind": "write",
+      "scope": "daylist",
+      "review": "low"
+    },
+    {
+      "id": "filter_completed",
+      "selector": ".filters button:nth-child(3)",
+      "primitive": "click",
+      "kind": "write",
+      "scope": "daylist",
+      "review": "low"
+    },
+    {
+      "id": "toggle@<task.id>",
+      "selector": ".task-check",
+      "primitive": "click",
+      "kind": "write",
+      "scope": "task_list",
+      "review": "low",
+      "record": "task.id"
+    },
+    {
+      "id": "edit@<task.id>",
+      "selector": ".row-actions button:first-child",
+      "primitive": "click",
+      "kind": "write",
+      "scope": "task_list",
+      "review": "low",
+      "record": "task.id"
+    },
+    {
+      "id": "edit_text@<task.id>",
+      "selector": ".edit-input",
+      "primitive": "fill",
+      "kind": "write",
+      "scope": "task_list",
+      "review": "low",
+      "record": "task.id"
+    },
+    {
+      "id": "save_edit@<task.id>",
+      "selector": ".edit-input + .row-actions button:first-child",
+      "primitive": "click",
+      "kind": "write",
+      "scope": "task_list",
+      "review": "low",
+      "record": "task.id"
+    },
+    {
+      "id": "remove@<task.id>",
+      "selector": ".row-actions .danger",
+      "primitive": "click",
+      "kind": "danger",
+      "scope": "task_list",
+      "review": "human",
+      "record": "task.id"
+    },
+    {
+      "id": "clear_completed",
+      "selector": ".clear",
+      "primitive": "click",
+      "kind": "danger",
+      "scope": "daylist",
+      "review": "human"
+    }
+  ],
+  "state": [
+    {
+      "key": "daylist_view",
+      "fields": ["filter", "visible", "total", "open", "completed", "capacity"]
+    }
+  ],
+  "forbidden": [
+    "Inferring controls from DOM text",
+    "Exposing the summary card as an action",
+    "Exposing the whole component instance or store object",
+    "Marking destructive operations as read"
+  ]
+}

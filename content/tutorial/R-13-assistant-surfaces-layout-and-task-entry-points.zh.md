@@ -51,13 +51,14 @@ React 适配器把这两种职责拆成两个组件。
 
 ## 浮动与侧栏
 
-示例先保留浮动入口，再允许切换为贴边侧栏：
+示例先保留浮动入口，再允许切换为贴边侧栏。侧栏既可以是覆盖页面的 `overlay`，也可以是进入页面栅格的 `fused`：
 
 ```tsx{4-8}
 <AgentDock
   title={copy.dockTitle}
   debug={{ maxCalls: 8 }}
   layout={layout}
+  sidebarMode={sidebarMode}
   side={side}
   launcherPlacement={launcherPlacement}
   launcherLabel={copy.launcherText}
@@ -70,12 +71,37 @@ React 适配器把这两种职责拆成两个组件。
 | 参数 | 取值 | 作用 |
 | --- | --- | --- |
 | `layout` | `"dock"` / `"sidebar"` | 页面角落的浮层，或视口边缘的工作栏 |
+| `sidebarMode` | `"overlay"` / `"fused"` | 覆盖页面，或作为栅格的一列 |
 | `side` | `"right"` / `"left"` | 侧栏贴在哪一侧 |
 | `launcherPlacement` | `"bottom"` / `"center"` | 收起后入口位于底部角落，或作为边缘标签居中 |
 | `launcherLabel` | 字符串 | 收起入口的文案；默认使用当前语言的“Ask Pling” |
 | `surfaceId` | 字符串 | 任务路由使用的稳定标识，默认是 `"dock"` |
 
-`side`、`launcherPlacement` 和 `launcherLabel` 只在侧栏模式下有意义。浮动模式忽略这些位置参数。布局可以随用户偏好或窗口尺寸改变，但不需要卸载后再挂载一个新的助手。
+`side`、`sidebarMode`、`launcherPlacement` 和 `launcherLabel` 只在侧栏模式下有意义。`launcherPlacement` 只影响覆盖模式。布局可以随用户偏好或窗口尺寸改变，但不需要卸载后再挂载一个新的助手。
+
+融合模式要求外层给助手留出一列。`AgentDock` 仍负责展开状态、启动入口和同一份历史：
+
+```tsx
+<div className="workspace">
+  <OrderTable />
+  <AgentDock layout="sidebar" sidebarMode="fused" side="right" title="Order copilot" />
+</div>
+```
+
+```css
+.workspace {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.workspace__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+```
+
+如果业务表格、编辑器或看板不能被面板盖住，用 `fused`；如果助手只是临时覆盖内容，保留 `overlay`。窄屏下组件会退回浮动面板。
 
 侧栏在窄屏下会降级为浮动面板。全高侧栏在手机上会挤掉工作区域；保留入口、改换形态比强行维持桌面布局更实用。这个降级由组件内部完成，业务代码不需要再写一套移动端分支。
 
@@ -206,12 +232,13 @@ pnpm tutorial:dev r-13 --locale zh
 打开 `http://127.0.0.1:5253/?lang=zh`，依次检查：
 
 1. 在浮动入口与页面侧栏之间切换。已经收到的回复仍然存在。
-2. 选择侧栏后，切换左右边缘和收起入口的位置。
-3. 收起助手，再点击“总结未完成待办”。助手应自动展开并开始请求。
-4. 点击“从页面代码提问”。第二次请求应出现在同一段对话里。
-5. 查看模型工具清单。两个任务按钮不应出现。
+2. 选择侧栏后，在覆盖页面与融入页面之间切换；融合模式下业务内容不应再被面板遮住。
+3. 切换左右边缘和收起入口的位置；融合模式的左侧会把助手列排到主内容之前。
+4. 收起助手，再点击“总结未完成待办”。助手应自动展开并开始请求。
+5. 点击“从页面代码提问”。第二次请求应出现在同一段对话里。
+6. 查看模型工具清单。两个任务按钮不应出现。
 
-确定性检查覆盖布局参数、收起后自动展开、共享历史、中英文文案和“不注册为动作”：
+确定性检查覆盖布局参数、覆盖与融合模式、收起后自动展开、共享历史、中英文文案和“不注册为动作”：
 
 ```bash
 pnpm tutorial:check r-13

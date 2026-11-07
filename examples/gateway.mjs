@@ -9,7 +9,7 @@ import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { createPlingGateway, toNodeHandler } from "@plingjs/server";
 
-function loadEnv(file) {
+function loadEnv(file, aliases = {}) {
   let text;
   try {
     text = readFileSync(file, "utf8");
@@ -22,12 +22,17 @@ function loadEnv(file) {
     if (!line || line.startsWith("#")) continue;
     const at = line.indexOf("=");
     if (at <= 0) continue;
-    const key = line.slice(0, at).trim();
+    const key = aliases[line.slice(0, at).trim()] ?? line.slice(0, at).trim();
     const value = line.slice(at + 1).trim().replace(/^(['"])(.*)\1$/, "$2");
     if (!(key in process.env)) process.env[key] = value;
   }
 }
 
+loadEnv(new URL("../.llm", import.meta.url), {
+  BASE_URL: "PLING_UPSTREAM_BASE_URL",
+  API_KEY: "PLING_UPSTREAM_API_KEY",
+  MODEL: "PLING_MODEL",
+});
 loadEnv(new URL("./.env.local", import.meta.url));
 
 const port = Number(process.env.PLING_GATEWAY_PORT ?? 5192);

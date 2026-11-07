@@ -29,6 +29,12 @@ export interface ActionView {
   id: string;
   primitive: Primitive;
   description: string;
+  /** 面向人的名称 / 说明；只用于界面、调试和外部 Agent 的展示。 */
+  label?: string;
+  summary?: string;
+  examples?: readonly string[];
+  successHint?: string;
+  playbook?: readonly string[];
   kind: Kind;
   /** 确认策略（由 `kind` + 声明里的 `confirm` 解析而来；policy 只认它） */
   approval: Approval;
@@ -357,6 +363,8 @@ export interface SnapshotOptions {
 export interface Registry {
   /** 设置当前页面身份（只读数据）；传 undefined 表示清空 */
   setPage(page?: PageView): void;
+  /** 当前页面身份（只读）；任务目录用它在路由变化时判断可用性。 */
+  getPage(): PageView | undefined;
   /** 绑定元素（随组件生命周期注册 / 注销），返回解绑函数 */
   bind(binding: Binding): () => void;
   /** 声明一行业务数据（随组件生命周期注册 / 注销），返回取消声明函数 */
@@ -480,6 +488,9 @@ export function createRegistry(options: RegistryOptions = {}): Registry {
       if (JSON.stringify(normalized) === JSON.stringify(page)) return;
       page = normalized;
       emit();
+    },
+    getPage() {
+      return page;
     },
     bind(binding) {
       const { id } = binding.descriptor;
@@ -727,12 +738,32 @@ export function createRegistry(options: RegistryOptions = {}): Registry {
         scopePath: string[] | undefined,
         offscreen = false,
       ): ActionView => {
-        const { id, primitive, description, kind, params, fidelity, confirm, source, handoff } = binding.descriptor;
+        const {
+          id,
+          primitive,
+          description,
+          label,
+          summary,
+          examples,
+          successHint,
+          playbook,
+          kind,
+          params,
+          fidelity,
+          confirm,
+          source,
+          handoff,
+        } = binding.descriptor;
         const resolvedKind = resolveKind(primitive, kind);
         return {
           id,
           primitive,
           description,
+          ...(label ? { label } : {}),
+          ...(summary ? { summary } : {}),
+          ...(examples?.length ? { examples: [...examples] } : {}),
+          ...(successHint ? { successHint } : {}),
+          ...(playbook?.length ? { playbook: [...playbook] } : {}),
           kind: resolvedKind,
           approval: resolveApproval(resolvedKind, confirm, defaultApproval),
           ...(handoff ? { handoff } : {}),
@@ -747,6 +778,7 @@ export function createRegistry(options: RegistryOptions = {}): Registry {
       };
 
       for (const binding of bindings.values()) {
+        if (binding.descriptor.modelVisible === false) continue;
         const scope = scopeOf(binding);
         const scopePath = scope === undefined ? undefined : pathOf(scope);
         const availability = readAvailability(binding.isAvailable());

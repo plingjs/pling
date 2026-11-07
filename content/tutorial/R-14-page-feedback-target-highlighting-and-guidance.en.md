@@ -196,7 +196,7 @@ The source is in `examples/tutorials/r-14-page-feedback-target-highlighting-and-
 
 Open `http://127.0.0.1:5254/?lang=en` and check:
 
-1. Clear the workspace name and select **Save name**. The feedback appears and the status changes to “Needs attention.”
+1. Clear the workspace name and select **Save workspace name**. The feedback appears and the status changes to “Needs attention.”
 2. Inspect Activity. The page snapshot contains the message, field, severity, and `release_check` scope; no `release_feedback` action exists.
 3. Inspect the tool list. `verification_code` is absent and `publish_changes` is present.
 4. Ask the assistant to publish changes. The handoff lists the code field and the publish button, and the spotlight follows the current step.

@@ -40,7 +40,7 @@ export function mountSetup(root: HTMLElement, options: SetupOptions = {}): Setup
   let dock: VanillaDock | null = null;
   const vm = new Vue({
     mounted() {
-      dock = pling.dock({ title: copy.dockTitle, quick: [...copy.quick] });
+      dock = pling.dock({ title: copy.dockTitle, quick: [...copy.quick], debug: { maxCalls: 8 } });
     },
     beforeDestroy() {
       dock?.destroy();

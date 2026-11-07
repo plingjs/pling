@@ -23,6 +23,26 @@ select {
   padding: 48px 24px 128px;
 }
 
+.page--fused {
+  max-width: 1120px;
+}
+
+.workspace,
+.workspace__main {
+  min-width: 0;
+}
+
+.workspace--fused {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.workspace--fused .workspace__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .surface-settings {
   display: grid;
   gap: 18px;
@@ -607,5 +627,15 @@ h1 {
 
   .detail__card dl {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 980px) {
+  .page--fused {
+    max-width: 760px;
+  }
+
+  .workspace--fused {
+    flex-direction: column;
   }
 }

@@ -45,12 +45,12 @@ export const routes: RouteRecordRaw[] = [
 
 The entry point registers the router with Vue and configures the page identity that Pling may read:
 
-```ts{9-12,22}
+```ts{5,8-11,16}
 import { createRouter, createWebHistory } from "vue-router";
 import { createPling } from "@plingjs/vue";
 
 const locale = resolveDemoLocale();
-const router = createRouter({ history: createWebHistory(), routes });
+const router = createRouter({ history: createWebHistory(import.meta.env.BASE_URL), routes });
 
 const pling = createPling({
   page: {
@@ -63,6 +63,8 @@ const pling = createPling({
 
 createApp(App).use(router).use(pling.plugin).mount("#app");
 ```
+
+Vite injects `BASE_URL` from the deployment path. It is `/` at a site root and keeps the prefix for `/app/` or `/demos/tutorials/.../`. Without it, Vue Router treats `/tasks` as a site-root path, so a preview under a subpath renders the shell but no routed content.
 
 No extra wiring is required for the common case. Pling looks for `app.config.globalProperties.$router` when the application mounts. Registering the router before or after `pling.plugin` both work.
 
@@ -118,13 +120,17 @@ The handler uses the router normally:
 
 ```ts
 function openTask(id: string) {
+  const query: Record<string, string> = { from: "tasks" };
+  if (props.locale === "zh") query.lang = "zh";
   void router.push({
     name: "task-detail",
     params: { id },
-    query: { from: "tasks" },
+    query,
   });
 }
 ```
+
+Here, `lang` only preserves the tutorial's interface language; it is not part of page identity. The earlier `queryKeys: ["from"]` still sends only `from` to the model.
 
 After the action succeeds, the next snapshot has a different route, a different region tree, and a different action list. The old list actions are no longer present. That is the intended signal: the agent should reason from the new page, not from the page it was looking at one turn earlier.
 

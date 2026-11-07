@@ -5,10 +5,12 @@ import {
   type VanillaDock,
   type VanillaPling,
 } from "@plingjs/vanilla";
+import { copyFor, plingLocale, resolveDemoLocale, type DemoCopy, type DemoLocale } from "./copy";
 import { findCustomer, idFromSearch, loadCustomers, updateCustomer, type Customer } from "./data";
 import { currentPage, siblingHref } from "./location";
 
 export interface DetailPageOptions {
+  locale?: DemoLocale;
   /** 客户 id；省略时从 query 的 `id` 读，再退回第一位。 */
   id?: string;
   navigate?: (href: string) => void;
@@ -28,48 +30,44 @@ export interface DetailPage {
   destroy(): void;
 }
 
-const SHELL = `
+function shell(copy: DemoCopy): string {
+  return `
   <main class="shell shell--detail">
     <header class="hero">
       <div>
-        <p class="eyebrow">MPA continuity · 页面 B / 详情</p>
+        <p class="eyebrow">${copy.detailEyebrow}</p>
         <h1 data-name></h1>
-        <p class="lede">
-          这是新 document 里的运行时。Pling 从同一标签页的检查点恢复目标与对话，
-          但页面动作、记录和状态全部由本页重新声明。
-        </p>
+        <p class="lede">${copy.detailLede}</p>
       </div>
-      <a class="back" data-back href="./index.html">← 返回列表</a>
+      <a class="back" data-back href="./index.html">${copy.backLabel}</a>
     </header>
 
-    <section class="detail" aria-label="客户详情">
+    <section class="detail" aria-label="${copy.detailRegionLabel}">
       <div class="facts">
-        <div><span>负责人</span><strong data-owner></strong></div>
-        <div><span>联系电话</span><strong data-phone></strong></div>
-        <div><span>回访状态</span><strong data-status></strong></div>
+        <div><span>${copy.ownerField}</span><strong data-owner></strong></div>
+        <div><span>${copy.phoneField}</span><strong data-phone></strong></div>
+        <div><span>${copy.statusField}</span><strong data-status></strong></div>
       </div>
 
       <label class="editor">
-        <span>回访备注</span>
-        <textarea data-note rows="5" placeholder="记录这次回访的结论…"></textarea>
+        <span>${copy.noteLabel}</span>
+        <textarea data-note rows="5" placeholder="${copy.notePlaceholder}"></textarea>
       </label>
       <p class="feedback" data-feedback role="status"></p>
 
       <div class="actions">
-        <button data-save type="button">保存备注</button>
-        <button data-archive type="button" class="danger">归档客户</button>
+        <button data-save type="button">${copy.saveLabel}</button>
+        <button data-archive type="button" class="danger">${copy.archiveLabel}</button>
       </div>
     </section>
 
     <footer class="flow" data-pling-ignore>
-      <strong>安全边界</strong>
-      <p>
-        归档需要确认；恢复时<strong>不会</strong>恢复待确认的审批。页面跳转截断的那一步会在历史里
-        补成「结果未知」，模型必须先观察新页面。
-      </p>
+      <strong>${copy.detailFooterTitle}</strong>
+      <p>${copy.detailFooterText}</p>
     </footer>
   </main>
 `;
+}
 
 function must<T extends Element>(root: ParentNode, selector: string): T {
   const node = root.querySelector<T>(selector);
@@ -78,20 +76,25 @@ function must<T extends Element>(root: ParentNode, selector: string): T {
 }
 
 export function createDetailPage(root: HTMLElement, options: DetailPageOptions = {}): DetailPage {
-  root.innerHTML = SHELL;
-  if (typeof document !== "undefined") document.title = "客户详情 · Pling MPA continuity";
+  const locale = options.locale ?? resolveDemoLocale();
+  const copy = copyFor(locale);
+  root.innerHTML = shell(copy);
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = plingLocale(locale);
+  }
 
-  const customers = loadCustomers();
+  const customers = loadCustomers(locale);
   const id = options.id ?? idFromSearch(typeof location === "undefined" ? "" : location.search);
   const customer = findCustomer(customers, id) ?? customers[0]!;
+  if (typeof document !== "undefined") document.title = copy.detailDocumentTitle;
 
   const pling = createPling({
-    ui: { locale: "zh-CN" },
+    ui: { locale: plingLocale(locale) },
     presence: options.presence ?? true,
     onWarn: options.onWarn ?? ((message) => console.warn(message)),
     agent: options.agent ?? { config: { limits: { maxTurns: 100 } } },
   });
-  pling.registry.setPage(currentPage(`${customer.name} · 客户详情`));
+  pling.registry.setPage(currentPage(copy.detailPageTitle(customer.name)));
 
   const executor = createExecutor({
     registry: pling.registry,
@@ -101,9 +104,10 @@ export function createDetailPage(root: HTMLElement, options: DetailPageOptions =
     options.dock === false
       ? null
       : pling.dock({
-          title: "客户助手",
-          placeholder: "例如：把回访备注改成「周五约吃饭」并保存",
-          quick: ["把回访备注改成「周五约吃饭」并保存"],
+          title: copy.dockTitle,
+          placeholder: copy.detailPlaceholder,
+          quick: copy.detailQuick,
+          debug: { maxCalls: 8 },
           defaultOpen: typeof window === "undefined" ? false : window.innerWidth >= 1040,
           onOpenChange(open) {
             if (typeof document !== "undefined") {
@@ -135,7 +139,7 @@ export function createDetailPage(root: HTMLElement, options: DetailPageOptions =
   name.textContent = customer.name;
   owner.textContent = customer.owner;
   phone.textContent = customer.phone;
-  status.textContent = customer.status;
+  status.textContent = copy.status[customer.status];
   note.value = customer.note;
 
   const unbinds: Array<() => void> = [];
@@ -155,67 +159,67 @@ export function createDetailPage(root: HTMLElement, options: DetailPageOptions =
   function saveNote(): void {
     const text = draft.trim();
     if (!text) {
-      say("备注是空的，先写点内容。");
+      say(copy.emptyNoteFeedback);
       return;
     }
     customer.note = text;
     if (customer.status === "待跟进") customer.status = "已回访";
-    updateCustomer(customers, customer.id, { note: customer.note, status: customer.status });
-    status.textContent = customer.status;
-    say("备注已保存。");
+    updateCustomer(customers, customer.id, { note: customer.note, status: customer.status }, locale);
+    status.textContent = copy.status[customer.status];
+    say(copy.noteSavedFeedback);
     syncActions();
   }
 
   function archiveCustomer(): void {
     customer.status = "已归档";
-    updateCustomer(customers, customer.id, { status: customer.status });
-    status.textContent = customer.status;
-    say("客户已归档。");
+    updateCustomer(customers, customer.id, { status: customer.status }, locale);
+    status.textContent = copy.status[customer.status];
+    say(copy.archivedFeedback);
     syncActions();
   }
 
   remember(
     pling.scope(must<HTMLElement>(root, ".detail"), {
       id: "customer_detail",
-      label: "客户详情",
-      description: "当前客户的资料、回访备注与归档操作",
+      label: copy.detailRegionLabel,
+      description: copy.detailRegionDescription,
       role: "main",
     }),
   );
   remember(
     pling.record(must<HTMLElement>(root, ".detail"), {
-      data: customer,
-      label: `客户：${customer.name}`,
+      data: { ...customer, status: copy.status[customer.status] },
+      label: `${copy.detailRegionLabel}: ${customer.name}`,
     }),
   );
   remember(
     pling.tool(note, {
       id: "detail_note",
-      desc: "填写当前客户的回访备注",
+      desc: copy.noteDesc,
       action: "fill",
-      params: [{ name: "text", label: "回访备注" }],
+      params: [{ name: "text", label: copy.noteParamLabel }],
     }),
   );
   remember(
     pling.tool(save, {
       id: "detail_save",
-      desc: "保存当前回访备注；保存后客户状态会从「待跟进」变成「已回访」",
-      available: () => (draft.trim() ? true : "备注是空的，先填写内容"),
+      desc: copy.saveDesc,
+      available: () => (draft.trim() ? true : copy.emptyNoteFeedback),
     }),
   );
   remember(
     pling.tool(archive, {
       id: "detail_archive",
-      desc: "归档当前客户（不可逆，归档后不再出现在待跟进里）",
+      desc: copy.archiveDesc,
       kind: "danger",
       confirm: true,
-      available: () => (customer.status === "已归档" ? "当前客户已经归档" : true),
+      available: () => (customer.status === "已归档" ? copy.archivedReason : true),
     }),
   );
   remember(
     pling.tool(back, {
       id: "detail_back",
-      desc: "返回客户列表（整页导航）",
+      desc: copy.backDesc,
       kind: "read",
       run: () => navigate(backHref),
     }),
@@ -227,10 +231,10 @@ export function createDetailPage(root: HTMLElement, options: DetailPageOptions =
         id: customer.id,
         name: customer.name,
         owner: customer.owner,
-        status: customer.status,
+        status: copy.status[customer.status],
         note: customer.note,
       }),
-      { description: "当前客户详情：身份、回访状态与已保存的备注" },
+      { description: copy.detailStateDescription },
     ),
   );
 

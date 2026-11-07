@@ -14,6 +14,21 @@ describe("AgentChat Markdown 渲染", () => {
     wrapper.unmount();
   });
 
+  it("multiline composer keeps Shift+Enter for a new line and sends on Enter", async () => {
+    const wrapper = mount(AgentChat, { props: { multiline: true } });
+    const composer = wrapper.find(".composer textarea");
+
+    expect(composer.exists()).toBe(true);
+    await composer.setValue("First line");
+    await composer.trigger("keydown", { key: "Enter", shiftKey: true });
+    expect(wrapper.emitted("send")).toBeUndefined();
+
+    await composer.trigger("keydown", { key: "Enter" });
+    expect(wrapper.emitted("send")).toEqual([["First line"]]);
+    expect((wrapper.find(".composer textarea").element as HTMLTextAreaElement).value).toBe("");
+    wrapper.unmount();
+  });
+
   it("渲染助手和最终回复的常用 Markdown", () => {
     const events: SessionEvent[] = [
       { type: "user", text: "**用户输入仍是纯文本**" },
@@ -76,6 +91,46 @@ describe("AgentChat Markdown 渲染", () => {
     });
 
     expect(wrapper.find(".line.final").text()).toContain("{{p:1w9el7a}}");
+    wrapper.unmount();
+  });
+
+  it("speakers 在消息上方渲染说话人与时间", () => {
+    const events: SessionEvent[] = [
+      { type: "user", text: "帮我建课程" },
+      { type: "final", text: "已经建好" },
+    ];
+    const wrapper = mount(AgentChat, { props: { events, speakers: true } });
+
+    expect(wrapper.findAll(".line-head")).toHaveLength(2);
+    expect(wrapper.find(".line.user .line-head").text()).toMatch(/^(我|Me)$/);
+    expect(wrapper.find(".line.final .line-head strong").text()).toBe("Pling");
+    expect(wrapper.find(".line.final .line-head time").text()).toMatch(/^\d{2}:\d{2}$/);
+    wrapper.unmount();
+  });
+
+  it("guide 插槽渲染在对话上方，并替代空状态提示", () => {
+    const wrapper = mount(AgentChat, {
+      props: { events: [], emptyHint: "fallback" },
+      slots: { guide: '<section class="custom-guide">Next field</section>' },
+    });
+
+    expect(wrapper.find(".chat-guide .custom-guide").text()).toBe("Next field");
+    expect(wrapper.find(".empty").exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  it("guidePlacement=end 把引导作为最新一条消息渲染在对话之后", () => {
+    const events: SessionEvent[] = [{ type: "final", text: "上一轮回答" }];
+    const wrapper = mount(AgentChat, {
+      props: { events, guidePlacement: "end" },
+      slots: { guide: '<section class="custom-guide">Next field</section>' },
+    });
+
+    const transcript = wrapper.find(".transcript");
+    const children = Array.from(transcript.element.children);
+    expect(children.at(-1)?.classList.contains("chat-guide--end")).toBe(true);
+    expect(transcript.find(".line.final").text()).toBe("上一轮回答");
+    expect(transcript.find(".chat-guide--end .custom-guide").text()).toBe("Next field");
     wrapper.unmount();
   });
 });

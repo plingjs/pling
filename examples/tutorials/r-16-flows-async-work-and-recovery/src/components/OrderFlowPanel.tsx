@@ -23,13 +23,6 @@ function mergeRefs<T>(...refs: Array<Ref<T> | undefined>) {
   };
 }
 
-const INITIAL_ORDERS: Order[] = [
-  { id: "SO-1001", customer: "Northwind", status: "open", note: "Confirm delivery window" },
-  { id: "SO-1002", customer: "Lakeside Studio", status: "open", note: "Send revised quote" },
-  { id: "SO-1003", customer: "Mori Bakehouse", status: "done", note: "Invoice sent" },
-  { id: "SO-1004", customer: "Aster Lab", status: "open", note: "Waiting for PO number" },
-];
-
 const COPY = {
   en: {
     eyebrow: "Order desk",
@@ -66,6 +59,14 @@ const COPY = {
     regionDescription: "Order records, filters, and a note editor.",
     editorDescription: "Edit one order's note without changing the rest of the list.",
     saved: (id: string) => `Saved the note on ${id}.`,
+    recordLabel: (id: string) => `Order ${id}`,
+    closeDesc: "Close the editor without saving.",
+    seedNotes: {
+      "SO-1001": "Confirm delivery window",
+      "SO-1002": "Send revised quote",
+      "SO-1003": "Invoice sent",
+      "SO-1004": "Waiting for PO number",
+    },
   },
   zh: {
     eyebrow: "订单工作台",
@@ -102,8 +103,25 @@ const COPY = {
     regionDescription: "包含订单记录、筛选与备注编辑。",
     editorDescription: "修改一张订单的备注，页面其他部分在弹窗打开时不参与操作。",
     saved: (id: string) => `已保存 ${id} 的备注。`,
+    recordLabel: (id: string) => `订单 ${id}`,
+    closeDesc: "不保存，关闭备注编辑框。",
+    seedNotes: {
+      "SO-1001": "确认交付时间",
+      "SO-1002": "发送修订报价",
+      "SO-1003": "发票已发送",
+      "SO-1004": "等待采购单号",
+    },
   },
 } as const;
+
+function createInitialOrders(copy: (typeof COPY)[DemoLocale]): Order[] {
+  return [
+    { id: "SO-1001", customer: "Northwind", status: "open", note: copy.seedNotes["SO-1001"] },
+    { id: "SO-1002", customer: "Lakeside Studio", status: "open", note: copy.seedNotes["SO-1002"] },
+    { id: "SO-1003", customer: "Mori Bakehouse", status: "done", note: copy.seedNotes["SO-1003"] },
+    { id: "SO-1004", customer: "Aster Lab", status: "open", note: copy.seedNotes["SO-1004"] },
+  ];
+}
 
 function OrderRow({
   order,
@@ -117,7 +135,7 @@ function OrderRow({
   const rowRef = usePlingRecord<HTMLTableRowElement>({
     data: order,
     id: order.id,
-    label: `Order ${order.id}`,
+    label: copy.recordLabel(order.id),
     fields: { customer: order.customer, status: order.status, note: order.note },
   });
   const openRef = usePlingTool<HTMLButtonElement>({
@@ -145,7 +163,7 @@ function OrderRow({
 
 export function OrderFlowPanel({ locale }: { locale: DemoLocale }) {
   const copy = COPY[locale];
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
+  const [orders, setOrders] = useState<Order[]>(() => createInitialOrders(copy));
   const [filter, setFilter] = useState<"all" | "open">("all");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draftNote, setDraftNote] = useState("");
@@ -326,7 +344,7 @@ function NoteEditor({
   const closeRef = usePlingTool<HTMLButtonElement>({
     id: "close_note_editor",
     action: "click",
-    desc: "Close the editor without saving.",
+    desc: copy.closeDesc,
     kind: "read",
     run: onClose,
   });

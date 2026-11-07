@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/core",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "Framework-neutral capability registry and execution runtime for Pling.",
+  "description": "Framework-agnostic core for Pling: action registry, UI primitives, permissions, execution pipeline, and tool-calling loop.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

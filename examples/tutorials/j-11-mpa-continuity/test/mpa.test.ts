@@ -68,6 +68,7 @@ const SNAPSHOT: ContinuitySnapshot = {
 
 beforeEach(() => {
   sessionStorage.clear();
+  window.history.replaceState({}, "", "/?lang=zh");
   mount();
 });
 
@@ -85,6 +86,7 @@ describe("J-11 · MPA task continuity", () => {
   });
 
   it("列表页的查看详情是真实 href：整页导航而不是路由内跳转", async () => {
+    setLocation("/demos/tutorials/vanilla/j-11/demo/index.html");
     const navigations: string[] = [];
     page = createListPage(host, {
       navigate: (href) => navigations.push(href),
@@ -113,6 +115,30 @@ describe("J-11 · MPA task continuity", () => {
 
     await page.executor.execute("open@c1", "{}");
     expect(navigations).toEqual(["./detail.html?id=c1&lang=zh"]);
+  });
+
+  it("英文页面使用英文业务文案、状态和动作描述", async () => {
+    setLocation("/demos/tutorials/vanilla/j-11/demo/index.html?lang=en");
+    page = createListPage(host, { presence: false, dock: false });
+
+    expect(document.documentElement.lang).toBe("en-US");
+    expect(document.title).toContain("Customer follow-ups");
+    expect(host.querySelector("h1")?.textContent).toBe("Customer follow-ups");
+    expect(host.textContent).toContain("View details");
+    expect(host.textContent).not.toContain("查看详情");
+    expect(host.querySelector("[data-pending]")?.textContent).toBe("2");
+
+    page.destroy();
+    page = createDetailPage(host, { id: "c2", presence: false, dock: false });
+    expect(host.textContent).toContain("Follow-up note");
+    expect(host.textContent).toContain("Save note");
+    expect(host.textContent).not.toContain("保存备注");
+    expect(host.querySelector("[data-feedback]")?.textContent).toBe("");
+
+    await page.executor.execute("detail_note", JSON.stringify({ text: "Friday dinner" }));
+    await page.executor.execute("detail_save", "{}");
+    expect(host.querySelector("[data-feedback]")?.textContent).toBe("Note saved.");
+    expect(host.querySelector("[data-status]")?.textContent).toBe("Visited");
   });
 
   it("详情页的动作走真实 DOM：填写、保存、归档都会落到业务对象", async () => {

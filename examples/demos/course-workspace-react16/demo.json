@@ -1,0 +1,51 @@
+{
+  "id": "course-workspace-react16",
+  "title": "Course management back office (React 16.3)",
+  "titleZh": "冰草约课 · 课程管理后台（React 16.3）",
+  "eyebrow": "React 16.3 · Guided workflow",
+  "eyebrowZh": "React 16.3 · 引导式业务",
+  "summary": "The Bingcao Studio course back office running on real React 16.3 class components, using @plingjs/react/legacy, render props, and a guided-task card inside a fused assistant sidebar.",
+  "summaryZh": "真实运行在 React 16.3 上的冰草约课课程管理后台，使用 class 组件、@plingjs/react/legacy、render props，并在融合侧栏的聊天中展示任务卡。",
+  "url": "/demos/course-workspace-react16/",
+  "open": "src/App.tsx",
+  "files": [
+    { "path": "src/App.tsx", "label": "App.tsx", "role": "React 16.3 class page and render props", "roleZh": "React 16.3 class 页面与 render props", "lang": "tsx" },
+    { "path": "src/main.tsx", "label": "main.tsx", "role": "React 16.3 root and Pling provider", "roleZh": "React 16.3 根节点与 Pling Provider", "lang": "tsx" },
+    { "path": "shared/course-workspace/runtime.ts", "scope": "workspace", "label": "runtime.ts", "role": "Shared actions and task runtime", "roleZh": "共享动作与任务运行时", "lang": "ts" },
+    { "path": "shared/course-workspace/tasks.ts", "scope": "workspace", "label": "tasks.ts", "role": "Guided task definitions", "roleZh": "引导任务定义", "lang": "ts" },
+    { "path": "shared/course-workspace/course-service.ts", "scope": "workspace", "label": "course-service.ts", "role": "Business rules and mock data", "roleZh": "业务规则与模拟数据", "lang": "ts" },
+    { "path": "shared/course-workspace/copy.ts", "scope": "workspace", "label": "copy.ts", "role": "Bilingual copy", "roleZh": "双语文案", "lang": "ts" },
+    { "path": "shared/course-workspace/styles.css", "scope": "workspace", "label": "styles.css", "role": "Shared workspace styles", "roleZh": "共享工作台样式", "lang": "css" },
+    { "path": "index.html", "label": "index.html", "role": "Page shell", "roleZh": "页面外壳", "lang": "html" },
+    { "path": "README.md", "label": "README.md", "role": "Run steps and source map", "roleZh": "运行步骤与源码导览", "lang": "markdown" }
+  ],
+  "focus": {
+    "legacy-root": { "selector": "src/main.tsx", "match": "ReactDOM.render(" },
+    "provider": { "selector": "src/main.tsx", "match": "<PlingProvider" },
+    "scope": { "selector": "#students-panel", "match": "<PlingScope options={{ id: \"students\"" },
+    "record": { "selector": ".course-student", "match": "<PlingRecord" },
+    "task-runtime": { "selector": "createCourseTaskRuntime", "match": "createCourseTaskRuntime({" },
+    "task-card": { "selector": ".pling-chat__transcript", "match": "createCourseTaskView(" },
+    "assistant-dock": { "selector": ".pling-dock", "match": "<AgentDock" }
+  },
+  "guide": {
+    "title": "React 16.3 without pretending Hooks exist",
+    "titleZh": "不假装 Hooks 存在，也能接住同一套能力",
+    "intro": [
+      "React 16.3 has context, refs, and fragments, but no Hooks. The legacy entry provides context, class-based bindings, and render props without requiring a second application architecture.",
+      "The business outcomes are identical to the React 19 page: duplicate-name lookup, teacher creation, conflict rejection, and schedule updates."
+    ],
+    "introZh": [
+      "React 16.3 有 context、ref 与 Fragment，但没有 Hooks。legacy 入口提供基于 context、class 与 render props 的绑定，不需要再复制一套应用架构。",
+      "业务结果与 React 19 页面一致：重名查找、新增老师、冲突拒绝与课表更新都不打折。"
+    ],
+    "steps": [
+      { "title": "Render through legacy APIs", "titleZh": "使用 legacy API 渲染", "body": "ReactDOM.render and PlingProvider mount a real React 16.3 root. There is no React 19 compatibility shim silently running underneath.", "bodyZh": "ReactDOM.render 与 PlingProvider 挂载真实的 React 16.3 根节点，没有偷偷运行的 React 19 兼容层。", "file": "src/main.tsx", "match": "ReactDOM.render(", "lines": 10 },
+      { "title": "Bind elements with render props", "titleZh": "用 render props 绑定元素", "body": "PlingScope and PlingRecord hand back refs. Their class-based binding keeps registration in sync with component lifecycle.", "bodyZh": "PlingScope 与 PlingRecord 返回 ref；基于 class 的绑定让注册状态与组件生命周期保持同步。", "file": "src/App.tsx", "match": "<PlingRecord", "lines": 12 },
+      { "title": "Keep execution out of React", "titleZh": "执行不进入 React", "body": "The task runtime is created in componentDidMount and destroyed on unmount. React renders progress; it does not reimplement lookup or business validation.", "bodyZh": "任务运行时在 componentDidMount 创建，卸载时销毁。React 负责渲染进度，不重写查找或业务校验。", "file": "src/App.tsx", "match": "createCourseTaskRuntime({", "lines": 18 },
+      { "title": "Use the shared assistant", "titleZh": "使用共享助手", "body": "The legacy dock exposes the same Activity and Debug panels as the Hooks adapter.", "bodyZh": "legacy 助手入口提供与 Hooks 适配器相同的最近操作和调试面板。", "file": "src/App.tsx", "match": "<AgentDock", "lines": 10 }
+    ],
+    "note": "This example is the compatibility proof, not a reduced feature set. The same five tasks and the same failure path are available.",
+    "noteZh": "这个示例是兼容性证明，不是功能缩水版；五个任务与失败路径都完整保留。"
+  }
+}

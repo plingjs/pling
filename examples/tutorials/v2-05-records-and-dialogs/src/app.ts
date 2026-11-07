@@ -1,5 +1,5 @@
 import Vue, { type CreateElement } from "vue";
-import { createPling, type AgentSetup, type Vue2Pling } from "@plingjs/vue2";
+import { createPling, type AgentSetup, type VanillaDock, type Vue2Pling } from "@plingjs/vue2";
 import { copyFor, resolveDemoLocale, type DemoLocale, type DemoTask } from "./copy";
 
 interface Task extends DemoTask {
@@ -15,6 +15,7 @@ export interface RecordsAppOptions {
 
 export interface RecordsApp {
   pling: Vue2Pling;
+  dock: VanillaDock | null;
   vm: Vue;
   tasks: readonly Task[];
   destroy(): void;
@@ -49,7 +50,19 @@ export function mountRecordsApp(root: HTMLElement, options: RecordsAppOptions = 
         sequence: copy.seedTasks.length,
         editingId: null as string | null,
         editText: "",
+        dock: null as VanillaDock | null,
       };
+    },
+    mounted() {
+      this.dock = pling.dock({
+        title: copy.dockTitle,
+        quick: [...copy.quick],
+        debug: { maxCalls: 8 },
+      });
+    },
+    beforeDestroy() {
+      this.dock?.destroy();
+      this.dock = null;
     },
     computed: {
       editing(this: { tasks: Task[]; editingId: string | null }): Task | null {
@@ -204,6 +217,7 @@ export function mountRecordsApp(root: HTMLElement, options: RecordsAppOptions = 
 
   return {
     pling,
+    get dock() { return (vm as unknown as { dock: VanillaDock | null }).dock; },
     vm,
     get tasks() { return (vm as unknown as { tasks: Task[] }).tasks; },
     destroy() {

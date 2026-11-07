@@ -52,7 +52,7 @@ function sourceExport(value) {
 function publishedExport(key, value) {
   if (key === "./package.json") return value;
   const source = sourceExport(value);
-  const match = typeof source === "string" ? /^\.\/src\/(.+)\.ts$/.exec(source) : null;
+  const match = typeof source === "string" ? /^\.\/src\/(.+)\.(?:ts|tsx)$/.exec(source) : null;
   if (!match?.[1]) throw new Error(`${pkg.name} 的导出 ${key} 必须指向 src/*.ts`);
   return { types: `./${match[1]}.d.ts`, import: `./${match[1]}.js` };
 }

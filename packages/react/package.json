@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/react",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "React provider, hooks, and assistant UI for Pling.",
+  "description": "Pling React adapter: actions, records, regions, read-only state, and an inline assistant entry point.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -20,6 +20,10 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./legacy": {
+      "types": "./src/legacy.tsx",
+      "default": "./src/legacy.tsx"
     }
   },
   "scripts": {
@@ -33,14 +37,17 @@
     "@plingjs/core": "workspace:*",
     "@plingjs/dom": "workspace:*",
     "@plingjs/ui": "workspace:*",
+    "@plingjs/vanilla": "workspace:*",
+    "use-sync-external-store": "^1.5.0",
     "markdown-it": "^15.0.3"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=16.3"
   },
   "devDependencies": {
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/use-sync-external-store": "^1.7.0",
     "jsdom": "^25",
     "react": "^19",
     "react-dom": "^19",

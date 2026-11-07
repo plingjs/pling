@@ -199,6 +199,17 @@ export const CONTENT = [
     "routeZh": "/zh/concepts/projection-shadow-dom-and-iframes"
   },
   {
+    "id": "C-15",
+    "section": "C",
+    "title": "Tasks, references, and guided execution",
+    "titleZh": "任务、引用与引导式执行",
+    "prereq": "C-04 / C-13",
+    "status": "draft",
+    "release": "0.1",
+    "route": "/concepts/tasks-references-and-guided-execution",
+    "routeZh": "/zh/concepts/tasks-references-and-guided-execution"
+  },
+  {
     "id": "OPS-01",
     "section": "OPS",
     "title": "Add the assistant UI",
@@ -540,6 +551,17 @@ export const CONTENT = [
     "routeZh": "/zh/vue/nuxt-and-ssr"
   },
   {
+    "id": "V3-25",
+    "section": "V3",
+    "title": "Guided tasks for a real workflow",
+    "titleZh": "面向真实业务流程的引导任务",
+    "prereq": "V3-08 / V3-13",
+    "status": "draft",
+    "release": "0.1",
+    "route": "/vue/guided-tasks-for-a-real-workflow",
+    "routeZh": "/zh/vue/guided-tasks-for-a-real-workflow"
+  },
+  {
     "id": "R-01",
     "section": "R",
     "title": "React learning path",
@@ -804,6 +826,17 @@ export const CONTENT = [
     "routeZh": "/zh/react/next-js-and-ssr"
   },
   {
+    "id": "R-25",
+    "section": "R",
+    "title": "Guided tasks for a real workflow",
+    "titleZh": "面向真实业务流程的引导任务",
+    "prereq": "R-08 / R-13",
+    "status": "draft",
+    "release": "0.1",
+    "route": "/react/guided-tasks-for-a-real-workflow",
+    "routeZh": "/zh/react/guided-tasks-for-a-real-workflow"
+  },
+  {
     "id": "J-01",
     "section": "J",
     "title": "Vanilla and jQuery overview",
@@ -931,7 +964,7 @@ export const CONTENT = [
     "titleZh": "测试与调试原生页面能力",
     "prereq": "J-06 / OPS-05",
     "status": "draft",
-    "release": "later",
+    "release": "0.1",
     "route": "/vanilla/test-and-debug-vanilla-capabilities",
     "routeZh": "/zh/vanilla/test-and-debug-vanilla-capabilities"
   },
@@ -956,6 +989,17 @@ export const CONTENT = [
     "release": "later",
     "route": "/vanilla/expose-selected-capabilities-to-external-agents",
     "routeZh": "/zh/vanilla/expose-selected-capabilities-to-external-agents"
+  },
+  {
+    "id": "J-15",
+    "section": "J",
+    "title": "Guided tasks for a real workflow",
+    "titleZh": "面向真实业务流程的引导任务",
+    "prereq": "J-05 / J-08",
+    "status": "draft",
+    "release": "0.1",
+    "route": "/vanilla/guided-tasks-for-a-real-workflow",
+    "routeZh": "/zh/vanilla/guided-tasks-for-a-real-workflow"
   },
   {
     "id": "V2-01",
@@ -1044,6 +1088,17 @@ export const CONTENT = [
     "release": "later",
     "route": "/vue2/migrating-from-vue-2-to-vue-3",
     "routeZh": "/zh/vue2/migrating-from-vue-2-to-vue-3"
+  },
+  {
+    "id": "V2-09",
+    "section": "V2",
+    "title": "Guided tasks for a real workflow",
+    "titleZh": "面向真实业务流程的引导任务",
+    "prereq": "V2-05 / V2-06",
+    "status": "draft",
+    "release": "0.1",
+    "route": "/vue2/guided-tasks-for-a-real-workflow",
+    "routeZh": "/zh/vue2/guided-tasks-for-a-real-workflow"
   },
   {
     "id": "S-01",
@@ -1594,6 +1649,17 @@ export const CONTENT = [
     "release": "later",
     "route": "/reference/protocol-schemas-and-registries",
     "routeZh": "/zh/reference/protocol-schemas-and-registries"
+  },
+  {
+    "id": "REF-15",
+    "section": "REF",
+    "title": "Guided task API",
+    "titleZh": "引导任务 API",
+    "prereq": "C-15",
+    "status": "draft",
+    "release": "0.1",
+    "route": "/reference/guided-task-api",
+    "routeZh": "/zh/reference/guided-task-api"
   },
   {
     "id": "TS-01",
@@ -2183,6 +2249,10 @@ export const EN_SIDEBAR = {
         {
           "text": "Failure model and error codes",
           "link": "/concepts/failure-model-and-error-codes"
+        },
+        {
+          "text": "Tasks, references, and guided execution",
+          "link": "/concepts/tasks-references-and-guided-execution"
         }
       ]
     },
@@ -2355,6 +2425,10 @@ export const EN_SIDEBAR = {
         {
           "text": "Nuxt and SSR",
           "link": "/vue/nuxt-and-ssr"
+        },
+        {
+          "text": "Guided tasks for a real workflow",
+          "link": "/vue/guided-tasks-for-a-real-workflow"
         }
       ]
     }
@@ -2430,6 +2504,10 @@ export const EN_SIDEBAR = {
         {
           "text": "Migrating an existing React app",
           "link": "/react/migrating-an-existing-react-app"
+        },
+        {
+          "text": "Guided tasks for a real workflow",
+          "link": "/react/guided-tasks-for-a-real-workflow"
         }
       ]
     },
@@ -2496,8 +2574,16 @@ export const EN_SIDEBAR = {
           "link": "/vanilla/mount-the-assistant-ui"
         },
         {
+          "text": "Test and debug vanilla capabilities",
+          "link": "/vanilla/test-and-debug-vanilla-capabilities"
+        },
+        {
           "text": "Add Pling to an existing jQuery app",
           "link": "/vanilla/add-pling-to-an-existing-jquery-app"
+        },
+        {
+          "text": "Guided tasks for a real workflow",
+          "link": "/vanilla/guided-tasks-for-a-real-workflow"
         }
       ]
     },
@@ -2523,10 +2609,6 @@ export const EN_SIDEBAR = {
         {
           "text": "MPA and task continuity",
           "link": "/vanilla/mpa-and-task-continuity"
-        },
-        {
-          "text": "Test and debug vanilla capabilities",
-          "link": "/vanilla/test-and-debug-vanilla-capabilities"
         },
         {
           "text": "Expose selected capabilities to external agents",
@@ -2562,6 +2644,10 @@ export const EN_SIDEBAR = {
         {
           "text": "Test and deploy a Vue 2 app",
           "link": "/vue2/test-and-deploy-a-vue-2-app"
+        },
+        {
+          "text": "Guided tasks for a real workflow",
+          "link": "/vue2/guided-tasks-for-a-real-workflow"
         }
       ]
     },
@@ -2748,6 +2834,10 @@ export const EN_SIDEBAR = {
         {
           "text": "Error codes and diagnostics",
           "link": "/reference/error-codes-and-diagnostics"
+        },
+        {
+          "text": "Guided task API",
+          "link": "/reference/guided-task-api"
         }
       ]
     },
@@ -3247,6 +3337,10 @@ export const ZH_SIDEBAR = {
         {
           "text": "失败模型与错误码",
           "link": "/zh/concepts/failure-model-and-error-codes"
+        },
+        {
+          "text": "任务、引用与引导式执行",
+          "link": "/zh/concepts/tasks-references-and-guided-execution"
         }
       ]
     },
@@ -3419,6 +3513,10 @@ export const ZH_SIDEBAR = {
         {
           "text": "Nuxt 与服务端渲染",
           "link": "/zh/vue/nuxt-and-ssr"
+        },
+        {
+          "text": "面向真实业务流程的引导任务",
+          "link": "/zh/vue/guided-tasks-for-a-real-workflow"
         }
       ]
     }
@@ -3494,6 +3592,10 @@ export const ZH_SIDEBAR = {
         {
           "text": "在存量 React 应用中接入 Pling",
           "link": "/zh/react/migrating-an-existing-react-app"
+        },
+        {
+          "text": "面向真实业务流程的引导任务",
+          "link": "/zh/react/guided-tasks-for-a-real-workflow"
         }
       ]
     },
@@ -3560,8 +3662,16 @@ export const ZH_SIDEBAR = {
           "link": "/zh/vanilla/mount-the-assistant-ui"
         },
         {
+          "text": "测试与调试原生页面能力",
+          "link": "/zh/vanilla/test-and-debug-vanilla-capabilities"
+        },
+        {
           "text": "在存量 jQuery 应用中接入 Pling",
           "link": "/zh/vanilla/add-pling-to-an-existing-jquery-app"
+        },
+        {
+          "text": "面向真实业务流程的引导任务",
+          "link": "/zh/vanilla/guided-tasks-for-a-real-workflow"
         }
       ]
     },
@@ -3587,10 +3697,6 @@ export const ZH_SIDEBAR = {
         {
           "text": "MPA 与任务连续性",
           "link": "/zh/vanilla/mpa-and-task-continuity"
-        },
-        {
-          "text": "测试与调试原生页面能力",
-          "link": "/zh/vanilla/test-and-debug-vanilla-capabilities"
         },
         {
           "text": "向外部 Agent 开放选定能力",
@@ -3626,6 +3732,10 @@ export const ZH_SIDEBAR = {
         {
           "text": "测试与部署 Vue 2 应用",
           "link": "/zh/vue2/test-and-deploy-a-vue-2-app"
+        },
+        {
+          "text": "面向真实业务流程的引导任务",
+          "link": "/zh/vue2/guided-tasks-for-a-real-workflow"
         }
       ]
     },
@@ -3812,6 +3922,10 @@ export const ZH_SIDEBAR = {
         {
           "text": "错误码与诊断",
           "link": "/zh/reference/error-codes-and-diagnostics"
+        },
+        {
+          "text": "引导任务 API",
+          "link": "/zh/reference/guided-task-api"
         }
       ]
     },

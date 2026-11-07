@@ -6,6 +6,11 @@ import { resolveDemoLocale } from "./locale";
 import "./styles.css";
 
 const locale = resolveDemoLocale();
+const pageTitle = locale === "zh" ? "流程、异步与失败续跑" : "Flows, async work, and recovery";
+
+document.documentElement.lang = locale === "zh" ? "zh-CN" : "en-US";
+document.title = `${pageTitle} · Pling`;
+
 const pling = createPling({
   presence: { effect: "spotlight" },
   ui: { locale: locale === "zh" ? "zh-CN" : "en-US" },
@@ -18,6 +23,7 @@ const pling = createPling({
     },
   },
 });
+pling.registry.setPage({ title: pageTitle, path: location.pathname });
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

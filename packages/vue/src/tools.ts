@@ -39,10 +39,22 @@ export interface AgentToolOptions {
   id: string;
   /** 一句话说明：模型只靠它判断这个工具是干什么的（必填） */
   desc: string;
+  /** 面向人的短名称；省略时界面回退到 desc */
+  label?: string;
+  /** 面向人的一句解释：为什么存在、会改变什么 */
+  summary?: string;
+  /** 任务卡 / 帮助面板展示的示例说法 */
+  examples?: readonly string[];
+  /** 成功后展示给人的判定说明，不是执行协议 */
+  successHint?: string;
+  /** 外部 Agent 的操作提示；不替代权限与审批 */
+  playbook?: readonly string[];
   /** 风险等级。省略按 `kind` 推导（fail-closed 视为 write） */
   kind?: Kind;
   /** 确认策略覆盖（同 `v-tool`） */
   confirm?: boolean | "always";
+  /** 隐藏模型入口；动作仍可由页面代码与任务步骤调用。 */
+  modelVisible?: boolean;
   /** 参数声明（写法与 `v-tool` 的 `params` 相同） */
   params?: ParamDeclaration;
   /**
@@ -67,8 +79,14 @@ export function useAgentTool(options: AgentToolOptions): void {
     id: options.id,
     primitive: "call",
     description: options.desc,
+    ...(options.label ? { label: options.label } : {}),
+    ...(options.summary ? { summary: options.summary } : {}),
+    ...(options.examples?.length ? { examples: [...options.examples] } : {}),
+    ...(options.successHint ? { successHint: options.successHint } : {}),
+    ...(options.playbook?.length ? { playbook: [...options.playbook] } : {}),
     kind: options.kind,
     confirm: options.confirm,
+    ...(options.modelVisible === false ? { modelVisible: false } : {}),
     // 实现是开发者注入的，不存在「DOM 模拟不准」的问题
     fidelity: "high",
     ...(params ? { params } : {}),

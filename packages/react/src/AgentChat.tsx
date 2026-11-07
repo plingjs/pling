@@ -13,6 +13,8 @@ const STANDALONE_CHAT_UI = createUiController({ locale: "en-US" });
 
 export interface AgentChatProps {
   title?: string;
+  /** Optional task card rendered as the latest item in the transcript. */
+  task?: ReactNode;
   events?: readonly SessionEvent[];
   running?: boolean;
   pending?: PendingApproval | null;
@@ -48,6 +50,7 @@ export interface AgentChatProps {
  */
 export function AgentChat({
   title,
+  task,
   events = [],
   running = false,
   pending = null,
@@ -85,6 +88,16 @@ export function AgentChat({
     const box = transcriptRef.current;
     if (box) box.scrollTop = box.scrollHeight;
   }, [events.length, running, pending, pendingHandoff]);
+
+  useEffect(() => {
+    const box = transcriptRef.current;
+    if (!box || typeof MutationObserver === "undefined") return;
+    const observer = new MutationObserver(() => {
+      box.scrollTop = box.scrollHeight;
+    });
+    observer.observe(box, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
 
   function submit(): void {
     const text = draft.trim();
@@ -127,7 +140,7 @@ export function AgentChat({
             </div>
           </div>
         ) : null}
-        {!lines.length ? <p className="pling-chat__empty">{emptyText}</p> : null}
+        {!lines.length && !task ? <p className="pling-chat__empty">{emptyText}</p> : null}
         {lines.map((line, index) => {
           if (line.kind === "user") {
             return <p key={index} className="pling-chat__line is-user">{shown(line.text)}</p>;
@@ -168,6 +181,7 @@ export function AgentChat({
             </p>
           );
         })}
+        {task}
         {running && !pending && !pendingHandoff ? (
           <p className="pling-chat__line is-executing">
             <span className="pling-chat__dot" aria-hidden="true" />

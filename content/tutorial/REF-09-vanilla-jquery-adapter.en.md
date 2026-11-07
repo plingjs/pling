@@ -9,7 +9,7 @@ status: drafted
 
 # Vanilla and jQuery adapter (`@plingjs/vanilla`)
 
-`@plingjs/vanilla` is the DOM-level adapter. It has no framework dependency. Vue 2.7 also builds on it, which makes it the smallest executable reference for how declaration, visibility, and execution fit together.
+`@plingjs/vanilla` is the DOM-level adapter. It has no framework dependency. The Vue 2.7 adapter also builds on it, which makes it the smallest executable reference for how declarations, visibility, and execution fit together.
 
 jQuery projects use this adapter directly. There is no separate jQuery package, and none is needed: `pling.tool()` accepts any DOM element, including `$el[0]`.
 
@@ -36,7 +36,7 @@ const dock = pling.dock({
 });
 ```
 
-`createPling(options)` accepts `ui`, `registry`, `shared`, `namespace`, `onWarn`, `agent`, `revealSensitive`, `defaultApproval`, `scopes`, `presence`, and `derive`. It returns a `VanillaPling`.
+`createPling(options)` accepts `ui`, `registry`, `shared`, `namespace`, `onWarn`, `diagnostics`, `agent`, `revealSensitive`, `defaultApproval`, `scopes`, `presence`, `derive`, and `page`. It returns a `VanillaPling`.
 
 | Method | Returns | Purpose |
 | --- | --- | --- |
@@ -45,12 +45,19 @@ const dock = pling.dock({
 | `record(element, value)` | unbind | Declare a row record |
 | `scope(element, options)` | unbind | Declare a region |
 | `state(key, source, options?)` | unbind | Register a read-only view |
-| `setActiveScopes(ids)` | — | Manual activation for layouts the observer cannot infer |
+| `declareFeedback(element, value)` | unbind | Declare page feedback |
+| `declareTask(element, value)` | unbind | Declare a human-facing task entrance without registering an action |
+| `guideTarget(element, id)` | unbind | Mark a target for a human handoff |
+| `setActiveScopes(ids)` | - | Manual activation when the observer cannot infer the layout |
 | `dock(options?)` | `VanillaDock` | Mount the shared assistant |
+| `surfaceGateway(options)` | `VanillaSurfaceGateway` | Expose allowed capabilities to external Agents |
+| `inspectCoverage(root?)` | `CoverageReport` | Scan interactive controls that have not been declared |
 | `derived()` | controller or `null` | Access the automatic-derivation controller |
-| `destroy()` | — | Stop observers and unregister declarations |
+| `destroy()` | - | Stop observers and unregister every declaration |
 
-Every declaration returns an unbind function. Keep it and call it when the node is removed by code you own. The runtime also tracks the element for scope visibility; removing the node without unbinding leaves a stale registration until `destroy()`.
+Every declaration returns an unbind function. Keep it and call it when your own code removes the node. The runtime tracks the element for scope visibility; removing the node without unbinding leaves a stale registration until `destroy()` is called.
+
+The vanilla page does not have a framework `updated` or `beforeUnmount` hook. Declaring the same element or state key again therefore removes the previous declaration before registering the new one. Calling the old unbind function afterwards is safe and will not remove the replacement. A list rerender or a jQuery plugin that replaces a node can use this behavior without maintaining two registries.
 
 ## Element actions
 
@@ -90,6 +97,26 @@ pling.action({
 });
 ```
 
+`tool({ steps })` declares a compound action. Each step references an action id that is already registered, and execution still goes through the same confirmation gate. Use `handoff` for a step that the user must complete in person:
+
+```ts
+pling.tool(document.querySelector("#submit-order")!, {
+  id: "submit_order",
+  desc: "Save and submit the order",
+  steps: [{ action: "save_order" }, { action: "confirm_order" }],
+});
+
+pling.tool(document.querySelector("#verify-phone")!, {
+  id: "verify_phone",
+  desc: "Wait for the user to verify their phone",
+  handoff: {
+    reason: "Only the user can see and enter the SMS code",
+    steps: ["Open the SMS message", "Enter the 6-digit code"],
+    expect: { desc: "The code has been verified", check: () => Boolean(document.querySelector("[data-verified]")) },
+  },
+});
+```
+
 ## Records and regions
 
 ```ts
@@ -122,7 +149,68 @@ const offState = pling.state("task_view", () => ({
 
 `state` is read-only. It has no setter and does not create an action. If the model should be able to change the filter, declare the filter control with `pling.tool()`.
 
-## jQuery shape
+## Page feedback, tasks, and guide targets
+
+Expose form errors as page feedback instead of adding an action whose only job is to read the error:
+
+```ts
+pling.declareFeedback(document.querySelector("#customer-field")!, {
+  message: "Customer name is required",
+  field: "customer",
+  severity: "error",
+});
+
+pling.declareTask(document.querySelector("#ask-assistant")!, {
+  prompt: "Check whether the current order is missing any required fields",
+});
+```
+
+`declareTask()` only sends a prompt to the mounted assistant, so it never appears in the action list. `guideTarget()` only marks the place a user should look during a handoff; it also does not create an action.
+
+## Assistant, model settings, and debugging
+
+```ts
+const dock = pling.dock({
+  layout: "dock",
+  quick: ["Summarize the current order"],
+  debug: { maxCalls: 8 },
+  modelSettings: { mode: "readonly" },
+});
+```
+
+`layout` can be `dock`, `sidebar`, or `inline`; `side` and `launcherPlacement` control the sidebar position. `debug` opens the read-only inspector in Activity and shows the page projection, actual request messages, tools, responses, and the latest call trace. `modelSettings: "readonly"` shows the application-managed endpoint; `{ mode: "byok", persist: "session" }` lets a trusted page use its own model key. `persist` supports only `memory` and `session`, not `localStorage`.
+
+When `continuity.scope` is `browser` or `remote`, the dock also shows a Tasks tab. A person can follow another tab or device read-only, take the task over, or fork it into an independent task. A page whose continuity is local to one tab keeps the tab hidden.
+
+## Page identity and coverage
+
+The page path, title, and allowlisted query parameters enter the snapshot automatically. When you need Router-like `name` and `params`, pass an object with `currentRoute` and an optional `afterEach` to `page.router`.
+
+```ts
+const report = pling.inspectCoverage(document.querySelector("main"));
+console.log(report.coveragePercent, report.targets.filter((target) => target.status === "missing"));
+```
+
+The coverage scan only reports interactive controls that have not been declared. It does not register actions automatically.
+
+## External Agents
+
+`pling.surfaceGateway()` reuses `@plingjs/surface-browser` and exposes only capabilities in the explicit allowlist. `createSurfaceAccessPanel()` is the native DOM counterpart of Vue's `<SurfaceAccessPanel>`:
+
+```ts
+import { createSurfaceAccessPanel } from "@plingjs/vanilla";
+
+const gateway = pling.surfaceGateway({
+  app: "orders",
+  mode: "bff",
+  expose: ["list_orders", "update_note@order:"],
+  getPageSession: () => fetch("/api/surface/session").then((response) => response.json()),
+});
+
+const panel = createSurfaceAccessPanel(gateway, { mount: document.querySelector("#access")! });
+```
+
+## jQuery usage
 
 ```js
 const $ = window.jQuery;
@@ -134,7 +222,7 @@ pling.scope($("#task-list")[0], { id: "task_list", label: "Task list", role: "li
 $("#add").on("click", addTask);
 ```
 
-Attach Pling after the element exists. If a plugin replaces the DOM node later, unbind the old declaration and declare the new node. Do not keep a declaration pointing at a detached clone.
+Attach Pling after the element exists. If a plugin replaces the DOM node afterwards, unbind the old declaration before declaring the new node. Do not keep a declaration pointing at a detached clone.
 
 ## Defaults and boundaries
 
@@ -142,10 +230,11 @@ Attach Pling after the element exists. If a plugin replaces the DOM node later, 
 - `derive` is off by default.
 - `kind` defaults to `write`; confirmation follows the active approval policy.
 - `ui` defaults to English and the light theme.
-- The adapter has no compound `steps`, page feedback, guide targets, task entrance, model settings UI, debug inspector, coverage scanner, or Router page identity.
-- Surface describe/invoke is provided by `@plingjs/surface`, not by this adapter.
+- There is no framework component tree or store: `AgentDock` / `AgentInline` components and `useAgentStoreState` do not apply. Use `pling.dock()`, `pling.page`, and explicit field selection instead.
+- The adapter does not have Vue / React's automatic mount and unmount lifecycle. Declaring again replaces the previous declaration, but you should still call the unbind function when the node is destroyed.
+- SSR is outside the DOM adapter's scope. The Surface protocol remains available from `@plingjs/surface`; this adapter only wires the page session and browser transport.
 
-## Failure modes
+## Common failures
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -166,10 +255,8 @@ Attach Pling after the element exists. If a plugin replaces the DOM node later, 
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vanilla` `0.1.0-alpha.3` |
+| Applies to | `@plingjs/vanilla` `0.1.0-alpha.6` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for builds |
 | Peer dependencies | None; jQuery is optional |
 | Stability | Pre-1.0 alpha; a minor release may change the API |
-
-The adapter assumes a browser DOM and an ES2022-capable build. jQuery only affects the optional wrapper; the declaration and execution contract on this page is the same without it.

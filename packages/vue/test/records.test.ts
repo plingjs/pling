@@ -10,9 +10,17 @@ import { normalizeRecordValue } from "../src/record";
  * 它是**读**：登记的是数据，不是动作 —— 所以这里断言的全是快照里的字段，
  * 没有一个 executed / ACTION_* 的东西。
  */
-function setup(template: string, setupFn?: () => Record<string, unknown>, warn?: (message: string) => void) {
+function setup(
+  template: string,
+  setupFn?: () => Record<string, unknown>,
+  warn?: (message: string) => void,
+  options: { namespace?: string } = {},
+) {
   const warnings: string[] = [];
-  const pi = createPling(undefined, { onWarn: warn ?? ((message) => warnings.push(message)) });
+  const pi = createPling(undefined, {
+    ...options,
+    onWarn: warn ?? ((message) => warnings.push(message)),
+  });
   const Host = defineComponent({ template, setup: setupFn });
   const wrapper = mount(Host, { attachTo: document.body, global: { plugins: [pi.plugin] } });
   return { pi, wrapper, warnings };
@@ -88,6 +96,21 @@ describe("v-record：行数据", () => {
     await nextTick();
 
     expect(pi.registry.snapshot().records.map((record) => record.id)).toEqual(["SO-1002"]);
+  });
+
+  it("namespace：同一行替换数据对象时，快照字段也要更新", async () => {
+    const row = ref({ id: "SO-1001", note: "旧备注" });
+    const { pi } = setup(
+      `<ul><li v-record="{ data: row, id: row.id, label: '订单 ' + row.id, fields: { note: row.note } }" /></ul>`,
+      () => ({ row }),
+      undefined,
+      { namespace: "orders" },
+    );
+
+    expect(pi.registry.snapshot().records[0]!.fields).toEqual({ note: "旧备注" });
+    row.value = { id: "SO-1001", note: "新备注" };
+    await nextTick();
+    expect(pi.registry.snapshot().records[0]!.fields).toEqual({ note: "新备注" });
   });
 
   it("卸载：记录跟着消失", async () => {

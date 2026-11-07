@@ -34,20 +34,24 @@ pnpm add react-router-dom
 
 The entry point wraps the app in `BrowserRouter`; the Pling provider remains outside it:
 
-```tsx{4,9-11}
+```tsx{4,10,14}
 import { BrowserRouter } from "react-router-dom";
 import { createPling, PlingProvider } from "@plingjs/react";
+
+const routerBase = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <PlingProvider pling={pling}>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBase}>
         <App locale={locale} />
       </BrowserRouter>
     </PlingProvider>
   </StrictMode>,
 );
 ```
+
+Vite injects `BASE_URL` from the deployment path. It is `/` at a site root and keeps the prefix for `/app/` or a chapter preview. Without that `basename`, `BrowserRouter` cannot match `/tasks` below the prefix, and the page renders its shell without routed content.
 
 The route table maps URL shapes to page components:
 
@@ -156,7 +160,9 @@ return (
     <Link
       ref={openRef}
       className="task__body"
-      to={`/tasks/${task.id}?from=tasks`}
+      to={locale === "zh"
+        ? `/tasks/${task.id}?from=tasks&lang=zh`
+        : `/tasks/${task.id}?from=tasks`}
     >
       {task.text}
     </Link>
@@ -165,6 +171,8 @@ return (
 ```
 
 The model sees the folded row action `open(record)`. After selecting `t1`, it executes `open@t1`. The executor clicks the real link, React Router completes navigation, and the next snapshot is rebuilt from the new route and the declarations on the new page.
+
+The fixture also preserves the tutorial language query so the interface does not switch languages after navigation. Page identity still reads only `from` from `queryKeys`; keep your application's real business queries, and do not treat the fixture's `lang` parameter as a Pling option.
 
 This still passes through the same boundary as a user click:
 

@@ -114,6 +114,16 @@ describe("@plingjs/ui", () => {
       .toBe("Covered by <div.modal> (possibly an open dialog or overlay)");
   });
 
+  it("localizes generated scroll actions with the same page language", () => {
+    expect(translate("en-US", "scroll.reveal", { label: "Task list" }))
+      .toBe('Scroll the page to the "Task list" region (use when the region is outside the viewport)');
+    expect(translate("zh-CN", "scroll.reveal", { label: "待办列表" }))
+      .toBe("滚动页面到“待办列表”区域（区域不在视口时使用）");
+    expect(translate("zh-CN", "scroll.inside", { label: "待办列表" }))
+      .toBe("在“待办列表”区域内滚动，以显示更多内容");
+    expect(translate("zh-CN", "scroll.direction")).toBe("滚动方向；默认为 next（向后 / 向下）");
+  });
+
   it("accepts explicit message overrides", () => {
     expect(
       translate("fr-FR", "dock.launcher.open", undefined, {

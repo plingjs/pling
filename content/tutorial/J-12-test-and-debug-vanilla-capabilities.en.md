@@ -13,6 +13,20 @@ An agent can fail in several places that look similar in the chat window. A cont
 
 The example is a small work queue. Its page already has ordinary DOM controls. Pling adds a region, one input action, one submit action, and one action per visible row. The same page is used for all checks below.
 
+## Open the debug inspector first
+
+The example enables the read-only inspector when it mounts the assistant:
+
+```ts
+const dock = pling.dock({
+  debug: { maxCalls: 8 },
+});
+```
+
+Open the page assistant, switch to Activity, then select Diagnostics. The inspector shows the current page projection and the latest eight model calls. Each call retains the messages and tool schemas that were actually sent, the model response, the execution status, and the page snapshot taken during that request. It reads the runtime already driving the conversation; it does not create a second session or execute actions.
+
+The inspector is off by default. Once enabled, system prompts, page records, and outbound messages become visible in the interface, so enable it only in development or a controlled diagnostic environment. `debug: true` keeps the latest 20 calls by default; this tutorial uses `maxCalls: 8` to bound memory use.
+
 ## Test three boundaries
 
 Start with the declaration boundary. This test reads the registry and asserts what the page actually published.

@@ -2,6 +2,7 @@ import type {
   DefaultApproval,
   Expectation,
   Fidelity,
+  FlowStep,
   HandoffStep,
   Kind,
   Llm,
@@ -14,23 +15,43 @@ import type {
   AgentConfigOverrides,
   AgentRuntime,
   AgentRuntimeOptions,
+  AgentTraceOptions,
   HookRegistry,
   SessionEvent,
+  TaskCatalog,
 } from "@plingjs/agent";
 import type {
+  CoverageReport,
   DeriveController,
   DeriveOptions,
+  FeedbackCollector,
+  FeedbackValue,
   PlingPage,
+  PlingAskOptions,
+  PlingTaskController,
   PresenceController,
   PresenceOptions,
   ScopeController,
   ScopeControllerOptions,
 } from "@plingjs/dom";
-import type { PlingUiController, PlingUiOptions } from "@plingjs/ui";
+import type { PlingUiController, PlingUiOptions, QuickTaskItem } from "@plingjs/ui";
+import type { ModelSettingsSetting } from "./model-settings";
+import type { PageOptions, PageTracker } from "./page";
+import type { VanillaSurfaceGateway, VanillaSurfaceGatewayOptions } from "./surface-gateway";
 
 export interface ToolOptionsBase {
   /** 给 agent 的说明（必填）：这个元素是什么、做什么。 */
   desc: string;
+  /** 面向人的短名称；省略时界面回退到 desc。 */
+  label?: string;
+  /** 面向人的一句解释：为什么存在、会改变什么。 */
+  summary?: string;
+  /** 任务卡 / 帮助面板展示的示例说法。 */
+  examples?: readonly string[];
+  /** 成功后展示给人的判定说明，不是执行协议。 */
+  successHint?: string;
+  /** 外部 Agent 的操作提示；不替代权限与审批。 */
+  playbook?: readonly string[];
   /** 稳定 id；省略时按绑定顺序生成一次。列表行建议显式传入。 */
   id?: string;
   /** 显式作用域；省略时继承最近的 `data-pling-scope`。 */
@@ -39,6 +60,8 @@ export interface ToolOptionsBase {
   kind?: Kind;
   /** 确认策略覆盖；省略时按 kind 推导。 */
   confirm?: boolean | "always";
+  /** 隐藏模型入口；动作仍可由页面代码与任务步骤调用。 */
+  modelVisible?: boolean;
   /** 覆盖原语推断（默认：表单输入→type，其余→click）。 */
   action?: "click" | "fill" | "select" | "press" | "hover";
   /** action: "press" 时按哪个键，默认 Enter。 */
@@ -60,6 +83,8 @@ export interface ToolOptionsBase {
     steps?: readonly (string | HandoffStep)[];
     timeout?: number;
   };
+  /** 复合动作：按顺序执行这些已注册动作；给了它就不会再执行 `run`。 */
+  steps?: readonly FlowStep[];
 }
 
 export interface AtomicToolOptions extends ToolOptionsBase {
@@ -77,8 +102,15 @@ export type ToolOptions = AtomicToolOptions | ParamsToolOptions;
 export interface ActionOptions {
   id: string;
   desc: string;
+  label?: string;
+  summary?: string;
+  examples?: readonly string[];
+  successHint?: string;
+  playbook?: readonly string[];
   kind?: Kind;
   confirm?: boolean | "always";
+  /** Keep the action callable by page code but out of the model's tool list. */
+  modelVisible?: boolean;
   params?: ParamDeclaration;
   available?: () => boolean | string;
   expect?: Expectation;
@@ -105,6 +137,17 @@ export interface StateOptions {
 
 export type StateSource = unknown | (() => unknown);
 
+/** Human-facing task entrance. It sends a prompt; it is never registered as an action. */
+export interface TaskOptions {
+  prompt: string;
+  /** Optional named assistant surface. Omit it for the most recently mounted surface. */
+  surface?: string;
+  /** Keep the entrance visible but stop it from sending tasks. */
+  disabled?: boolean;
+}
+
+export type TaskValue = string | TaskOptions;
+
 /**
  * 应用级问答接线。与 Vue 的 `AgentSetup` / React 的 `AgentSetup` 同义：
  * 业务侧只在入口写一次，`pling.dock()` 自己取。
@@ -112,6 +155,8 @@ export type StateSource = unknown | (() => unknown);
 export type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
   config?: AgentConfigOverrides;
   gate?: () => boolean;
+  /** Model-settings entry point in Activity. Defaults to `off`. */
+  modelSettings?: ModelSettingsSetting;
 };
 
 export interface VanillaDockOptions {
@@ -119,7 +164,9 @@ export interface VanillaDockOptions {
   placeholder?: string;
   emptyHint?: string;
   /** 推荐指令：点一下等于把这句话发出去。 */
-  quick?: readonly string[];
+  quick?: readonly QuickTaskItem[];
+  /** Optional element rendered inside the chat transcript, after the messages. */
+  task?: HTMLElement | (() => HTMLElement | null);
   defaultOpen?: boolean;
   /** 覆盖模型配置（只写想改的字段；其余从 `.env.local` 读）。 */
   config?: AgentConfigOverrides;
@@ -136,11 +183,28 @@ export interface VanillaDockOptions {
   onOpenChange?: (open: boolean) => void;
   /** 任务完成后的导航实现；默认 `window.location.replace`。一般只在测试 / 自定义宿主要传。 */
   navigate?: (href: string) => void;
+  /** Built-in assistant surface id used by `pling.ask({ surface })`. Defaults to `dock`. */
+  surfaceId?: string;
+  /** `dock` floats, `sidebar` pins to a viewport edge, and `inline` belongs to its mount element. */
+  layout?: "dock" | "sidebar" | "inline";
+  /** `overlay` keeps a sidebar above the page; `fused` makes it a normal grid column. */
+  sidebarMode?: "overlay" | "fused";
+  side?: "left" | "right";
+  launcherPlacement?: "bottom" | "center";
+  /** Custom label for the closed launcher. */
+  launcherLabel?: string;
+  /** Mount target for the assistant shell. Defaults to `document.body`. */
+  mount?: Element;
+  /** Enable the read-only request inspector in Activity. */
+  debug?: boolean | AgentTraceOptions;
+  /** Expose model connection details in Activity. */
+  modelSettings?: ModelSettingsSetting;
 }
 
 /** `pling.dock()` 返回的控制器：高级场景可主动开关 / 销毁。 */
 export interface VanillaDock {
   readonly element: HTMLElement;
+  /** The current runtime. It is replaced when the user applies a model setting. */
   readonly runtime: AgentRuntime;
   open(): void;
   close(): void;
@@ -161,6 +225,8 @@ export interface VanillaPlingOptions {
   /** 本适配器的动作 id 命名空间：`add` → `todo/add`。 */
   namespace?: string;
   onWarn?: (message: string) => void;
+  /** Dev-only coverage warning after the current script turn. */
+  diagnostics?: boolean;
   /** 问答入口接线：模型、钩子、确认通道等都写在这里。 */
   agent?: AgentSetup;
   /** 聊天里把敏感值代号还原成真值；默认开。 */
@@ -173,6 +239,8 @@ export interface VanillaPlingOptions {
   presence?: boolean | PresenceOptions;
   /** L1 自动派生：默认关闭。 */
   derive?: boolean | DeriveOptions;
+  /** Page identity from location, title and an optional router-like object. */
+  page?: false | PageOptions;
 }
 
 /** 适配器内部与公开实例共用的宿主能力。 */
@@ -180,6 +248,7 @@ export interface VanillaHost {
   ui: PlingUiController;
   registry: Registry;
   scopes: ScopeController;
+  task: PlingTaskController & TaskCatalog;
   presence: PresenceController | null;
   agent?: AgentSetup;
   revealSensitive: boolean;
@@ -189,6 +258,14 @@ export interface VanillaHost {
 }
 
 export interface VanillaPling extends VanillaHost {
+  /** ARIA page feedback collector. Starts with the instance unless `shared` is used. */
+  feedback: FeedbackCollector;
+  /** Page identity tracker. Starts with the instance unless `page: false`. */
+  page: PageTracker;
+  /** Shared task router used by `ask()` and every built-in assistant surface. */
+  task: PlingTaskController & TaskCatalog;
+  /** Send a human-facing task to the mounted assistant surface. */
+  ask(prompt: string, options?: PlingAskOptions): Promise<void>;
   /** 把一个 DOM 元素声明成动作；返回解绑函数。 */
   tool(element: Element, options: ToolOptions): () => void;
   /** 声明没有 DOM 元素的函数级动作；返回解绑函数。 */
@@ -199,10 +276,20 @@ export interface VanillaPling extends VanillaHost {
   scope(element: Element, options: ScopeOptions): () => void;
   /** 暴露只读状态视图；返回注销函数。 */
   state(key: string, source: StateSource, options?: StateOptions | string): () => void;
+  /** Declare page feedback visible to the user; returns a disposer. */
+  declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;
+  /** Turn an element into a human-facing task entrance; returns a disposer. */
+  declareTask(element: HTMLElement, value: TaskValue): () => void;
+  /** Mark a handoff guide target without registering it as an action. */
+  guideTarget(element: Element, id: string): () => void;
   /** 手动声明活跃区域（自动判定之外的后门）。 */
   setActiveScopes(scopes: Iterable<string>): void;
   /** 挂一个原生浮动问答入口；返回控制器。 */
   dock(options?: VanillaDockOptions): VanillaDock;
+  /** Create an external-Agent Surface gateway controller backed by this registry. */
+  surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway;
+  /** Read-only interactive-control coverage scan. */
+  inspectCoverage(root?: Element | null): CoverageReport;
   /** L1 自动派生器（只在 `derive` 开启时非空）。 */
   derived(): DeriveController | null;
   /** 停掉观察器并注销全部声明。 */

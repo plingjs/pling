@@ -34,20 +34,24 @@ pnpm add react-router-dom
 
 入口用 `BrowserRouter` 包住应用，Pling 的 Provider 仍在外层：
 
-```tsx{4,9-11}
+```tsx{4,10,14}
 import { BrowserRouter } from "react-router-dom";
 import { createPling, PlingProvider } from "@plingjs/react";
+
+const routerBase = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <PlingProvider pling={pling}>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBase}>
         <App locale={locale} />
       </BrowserRouter>
     </PlingProvider>
   </StrictMode>,
 );
 ```
+
+`BASE_URL` 由 Vite 根据部署路径注入。应用位于站点根目录时结果是 `/`，位于 `/app/` 或章节预览的子路径时则保留该前缀。`BrowserRouter` 没有这个 `basename`，就无法在子路径下匹配 `/tasks`，页面会只剩外壳而没有路由内容。
 
 路由表把 URL 形状映射到页面组件：
 
@@ -156,7 +160,9 @@ return (
     <Link
       ref={openRef}
       className="task__body"
-      to={`/tasks/${task.id}?from=tasks`}
+      to={locale === "zh"
+        ? `/tasks/${task.id}?from=tasks&lang=zh`
+        : `/tasks/${task.id}?from=tasks`}
     >
       {task.text}
     </Link>
@@ -165,6 +171,8 @@ return (
 ```
 
 模型看到的是折叠后的行内动作 `open(record)`，选择 `t1` 后执行 `open@t1`。执行器点击真实链接，React Router 完成导航；下一份快照由新路由和新页面上的声明重建。
+
+示例额外保留了教程站的语言参数，这只是为了切换界面语言。页面身份仍只读取 `queryKeys` 中声明的 `from`；应用应保留自己的业务 query，不要把教程的 `lang` 当成 Pling 配置。
 
 这一过程仍然经过与用户点击相同的边界：
 

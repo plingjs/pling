@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createReplayLlm, defaultSettle, renderPageContext } from "@plingjs/agent";
 import { createExecutor, createPolicy, modelActions } from "@plingjs/core";
 import { createPling, type PlingElement } from "@plingjs/vue";
+import mainSource from "../src/main.ts?raw";
 import App from "../src/App.vue";
 import { copyFor, type DemoLocale } from "../src/copy";
 import { routes } from "../src/router";
@@ -59,6 +60,10 @@ function executorFor(pling: PlingElement) {
 }
 
 describe("V3-12 · page identity and routing", () => {
+  it("uses the Vite base path so deep links work in tutorial previews", () => {
+    expect(mainSource).toContain("createWebHistory(import.meta.env.BASE_URL)");
+  });
+
   it("starts on the list route with a bounded page identity", async () => {
     const { pling } = await mountApp("/tasks?tab=active&token=secret");
 

@@ -26,3 +26,4 @@ The shared model behind every adapter: declarations, context, execution, approva
 - [Versioning and compatibility](/concepts/versioning-and-compatibility)
 - [Task continuity across pages and tabs](/concepts/task-continuity-across-pages-and-tabs)
 - [Projection: Shadow DOM and iframes](/concepts/projection-shadow-dom-and-iframes)
+- [Tasks, references, and guided execution](/concepts/tasks-references-and-guided-execution)

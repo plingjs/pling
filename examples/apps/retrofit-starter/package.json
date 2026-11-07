@@ -1,0 +1,28 @@
+{
+  "name": "@plingjs/example-retrofit-starter",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A normal Vue Todo app and its staged Pling retrofit, kept side by side",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite --config ./vite.config.ts --host 127.0.0.1 --port 5230 --strictPort",
+    "build": "vue-tsc --noEmit && vite build --config ./vite.config.ts",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@plingjs/vue": "workspace:*",
+    "vue": "^3"
+  },
+  "devDependencies": {
+    "@plingjs/core": "workspace:*",
+    "@vitejs/plugin-vue": "^5",
+    "@vue/test-utils": "^2",
+    "jsdom": "^25",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^2",
+    "vue-tsc": "^3.3.13"
+  }
+}

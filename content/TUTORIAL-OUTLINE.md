@@ -1,6 +1,6 @@
-# Pling 文档主目录 v1.12
+# Pling 文档主目录 v1.13
 
-> 状态：**Locked architecture**（v1.12，2026-10-28）
+> 状态：**Locked architecture**（v1.13，2026-11-04）
 > 文件角色：**章节 ID、公共 IA、标题、顺序、可见性与成熟度的唯一真相（outline of record）**。
 > 上游：`docs/TUTORIAL-BLUEPRINT.md`（读者、写作标准、评审方法）。
 > 下游：`docs/tutorial/`（内部正文工作区）、`website/`（公开文档的唯一发布面）。
@@ -16,7 +16,7 @@ Pling 的文档系统采用**双层结构**：
 Public Information Architecture（读者看到的 7 个入口）
         │  由本文件的 visibility + route 投影生成
         ▼
-Content Ledger（内部内容台账，170 个稳定单元）
+Content Ledger（内部内容台账，176 个稳定单元）
         │  逐章正文、翻译、验证与发布状态
         ▼
 website/（公开文档唯一真相）
@@ -38,7 +38,7 @@ Docs · Examples · Surface · Spec · Reference · Evidence · About
 - `Evidence` 负责证明有效、展示失败与说明边界；
 - `About` 负责使命、架构、安全、发布、治理与社区。
 
-首发公开约 **82 页**，但内部台账有 **170 个单元**。未被 `visibility` 选中的单元不进入导航，不以空页伪装成已完成。
+首发公开约 **84 页**，但内部台账有 **176 个单元**。未被 `visibility` 选中的单元不进入导航，不以空页伪装成已完成。
 
 产品定位固定为一句话：
 
@@ -346,6 +346,7 @@ Surface 不要求所有 Agent 换传输协议；它可以编译或适配到 MCP�
 | C-12 | Versioning and compatibility | 版本与兼容性 | C-01 | drafted | later |
 | C-13 | Task continuity across pages and tabs | 跨页面与标签页的任务连续性 | C-07 / C-12 | drafted | later |
 | C-14 | Projection: Shadow DOM and iframes | 投影：Shadow DOM 与 iframe | C-03 | drafted | later |
+| C-15 | Tasks, references, and guided execution | 任务、引用与引导式执行 | C-04 / C-13 | drafted | 0.1 |
 
 ## 9. Shared Operations · 跨框架运维（OPS）
 
@@ -395,6 +396,7 @@ Vue 3 是首条完整学习线。其他框架复用章节结构，不复用具�
 | V3-22 | Migrating an existing Vue app | 在存量 Vue 应用中接入 Pling | V3-03 | drafted | 0.1 |
 | V3-23 | Exposing selected capabilities to external agents | 向外部 Agent 开放选定能力 | V3-19 / V3-15 | drafted | 0.1 |
 | V3-24 | Nuxt and SSR | Nuxt 与服务端渲染 | V3-12 | drafted | 0.1 |
+| V3-25 | Guided tasks for a real workflow | 面向真实业务流程的引导任务 | V3-08 / V3-13 | drafted | 0.1 |
 
 ### 10.1 不进入 V3 主线的能力
 
@@ -439,6 +441,7 @@ Vue 3 是首条完整学习线。其他框架复用章节结构，不复用具�
 | R-22 | Migrating an existing React app | 在存量 React 应用中接入 Pling | R-03 | drafted | 0.1 |
 | R-23 | Exposing selected capabilities to external agents | 向外部 Agent 开放选定能力 | R-19 / R-15 | drafted | later |
 | R-24 | Next.js and SSR | Next.js 与 SSR | R-12 | drafted | later |
+| R-25 | Guided tasks for a real workflow | 面向真实业务流程的引导任务 | R-08 / R-13 | drafted | 0.1 |
 
 ## 12. Vanilla / jQuery · DOM 兼容路线（J）
 
@@ -459,9 +462,10 @@ jQuery 不单独造适配器；它归入 DOM 适配层，但教程必须覆盖�
 | J-09 | Protect sensitive data and destructive actions | 保护敏感数据与危险操作 | J-07 | drafted | later |
 | J-10 | Connect vanilla pages to the model gateway | 原生页面接入模型网关 | J-08 / OPS-03 | drafted | later |
 | J-11 | MPA and task continuity | MPA 与任务连续性 | J-07 / C-13 | drafted | later |
-| J-12 | Test and debug vanilla capabilities | 测试与调试原生页面能力 | J-06 / OPS-05 | drafted | later |
+| J-12 | Test and debug vanilla capabilities | 测试与调试原生页面能力 | J-06 / OPS-05 | drafted | 0.1 |
 | J-13 | Add Pling to an existing jQuery app | 在存量 jQuery 应用中接入 Pling | J-03 | drafted | 0.1 |
 | J-14 | Expose selected capabilities to external agents | 向外部 Agent 开放选定能力 | J-10 / S-04 | drafted | later |
+| J-15 | Guided tasks for a real workflow | 面向真实业务流程的引导任务 | J-05 / J-08 | drafted | 0.1 |
 
 ## 13. Vue 2 Legacy · 规划位（V2）
 
@@ -479,6 +483,7 @@ jQuery 不单独造适配器；它归入 DOM 适配层，但教程必须覆盖�
 | V2-06 | Mount the assistant UI | 挂载问答入口与助手界面 | V2-04 | drafted | 0.1 |
 | V2-07 | Test and deploy a Vue 2 app | 测试与部署 Vue 2 应用 | V2-04 | drafted | 0.1 |
 | V2-08 | Migrating from Vue 2 to Vue 3 | 从 Vue 2 迁移到 Vue 3 | V2-07 | drafted | later |
+| V2-09 | Guided tasks for a real workflow | 面向真实业务流程的引导任务 | V2-05 / V2-06 | drafted | 0.1 |
 
 ## 14. Agent Surface · 能力开放（S）
 
@@ -580,6 +585,7 @@ Reference 负责穷举、签名、默认值、错误码和兼容性。**REF ID �
 | REF-12 | Continuity and projection | 连续性与投影 | C-13 / C-14 | drafted | later |
 | REF-13 | Surface conformance and interoperability | Surface 一致性与互操作 | S-10 | drafted | later |
 | REF-14 | Protocol schemas and registries | 协议 Schema 与注册表 | SPEC-05 | drafted | later |
+| REF-15 | Guided task API | 引导任务 API | C-15 | drafted | 0.1 |
 
 ## 19. Troubleshooting · 症状排障（TS）
 
@@ -633,15 +639,15 @@ Reference 负责穷举、签名、默认值、错误码和兼容性。**REF ID �
 | 切片 | 公开 ID | 目的 |
 | --- | --- | --- |
 | `0.1-start` | M-01 至 M-04、SITE-01/02/03/04/05/06/08 | 让人先理解、先跑通、先看到证据与边界 |
-| `0.1-concepts` | C-01 至 C-06 | 建立共享心智模型 |
-| `0.1-vue` | V3-01 至 V3-12 | Vue 3 首条完整接入线 |
-| `0.1-react` | R-01 至 R-14、R-22 | React 平滑接入线 |
-| `0.1-vanilla` | J-01 至 J-04、J-06、J-08、J-13 | 原生 JS / jQuery 接入线 |
+| `0.1-concepts` | C-01 至 C-06、C-15 | 建立共享心智模型 |
+| `0.1-vue` | V3-01 至 V3-12、V3-25 | Vue 3 首条完整接入线 |
+| `0.1-react` | R-01 至 R-14、R-22、R-25 | React 平滑接入线 |
+| `0.1-vanilla` | J-01 至 J-04、J-06、J-08、J-13、J-15 | 原生 JS / jQuery 接入线 |
 | `0.1-ops` | OPS-01 至 OPS-05 | 跨框架的入口、网关、生产、测试 |
 | `0.1-surface` | S-01 至 S-05、S-07 | 外部 Agent 的最小真实闭环 |
 | `0.1-spec` | SPEC-01 至 SPEC-05 | 公开最小协议，标记 Draft |
 | `0.1-recipes` | RCP-01 至 RCP-03 | 最常见业务任务 |
-| `0.1-reference` | REF-01/02/04/07/08/09/11 | 能查、能排障 |
+| `0.1-reference` | REF-01/02/04/07/08/09/11/15 | 能查、能排障 |
 | `0.1-troubleshooting` | TS-01/02/03/05/06 | 首次接入最常见失败 |
 | `0.1-evidence` | EV-01、EV-04 | 说明已证明与未证明什么 |
 
@@ -727,7 +733,7 @@ React / Vanilla 的公开页面随对应适配器验证完成度开放；Vue 2.7
 
 | # | 决策 |
 | --- | --- |
-| 1 | 公开 IA 与内容台账分层；170 个内部单元不进入同一个侧边栏 |
+| 1 | 公开 IA 与内容台账分层；176 个内部单元不进入同一个侧边栏 |
 | 2 | 首发先 Start / Demo / Quick Start，Mission 放在 About |
 | 3 | 产品身份固定为 agent capability layer；`framework` 只指宿主框架 |
 | 4 | 公共导航固定为 Docs / Examples / Surface / Spec / Reference / Evidence / About |
@@ -770,5 +776,6 @@ React / Vanilla 的公开页面随对应适配器验证完成度开放；Vue 2.7
 | v1.10 | 2026-10-27 | R-12 页面身份与路由进入 0.1 草稿，前置修正为 R-11；React 首发切片扩展到 R-01 至 R-12、R-13、R-22 |
 | v1.11 | 2026-10-27 | R-13 助手入口、布局与任务入口进入 0.1 草稿，前置修正为 R-12；React 首发切片收缩为 R-01 至 R-13、R-22 |
 | v1.12 | 2026-10-28 | R-14 页面反馈、目标高亮与人工指引进入 0.1 草稿；前置保持 R-04，React 首发切片扩展为 R-01 至 R-14、R-22 |
+| v1.13 | 2026-11-04 | 增加 Guided Tasks 主线：共享概念、四框架接入章与任务 API 参考；内容台账由 170 调整为 176 |
 | v1.0 | 2026-10-24 | 定型双层文档架构；新增公共 IA、158 个内容单元、OPS / EV / SITE；固定 7 个一级入口；增加成熟度与 `since`；拆分多职责标题；引入 Evidence、迁移与文档门禁；解决 v0.1 的 10 个待定决策 |
 

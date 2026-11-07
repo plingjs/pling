@@ -89,6 +89,31 @@ function setNativeValue(input: HTMLInputElement | HTMLTextAreaElement | HTMLSele
   else input.value = value;
 }
 
+function setEditableValue(el: HTMLElement, value: string): void {
+  el.focus();
+  el.textContent = value;
+  const selection = el.ownerDocument.getSelection?.();
+  if (selection) {
+    const range = el.ownerDocument.createRange();
+    range.selectNodeContents(el);
+    range.collapse(false);
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+}
+
+/**
+ * `instanceof` 在跨 realm 时不可靠：同源 iframe 的输入框可能由父页面脚本创建，
+ * 因而不满足 `frameWindow.HTMLInputElement`。原生标签名没有这个问题。
+ */
+function isInputElement(el: Element): el is HTMLInputElement {
+  return el.localName === "input";
+}
+
+function isTextAreaElement(el: Element): el is HTMLTextAreaElement {
+  return el.localName === "textarea";
+}
+
 /** 框架无关的 DOM 原语执行（Vue / React / 原生共用这一层逻辑）。 */
 export function performPrimitive(el: Element, primitive: Primitive, args: Record<string, unknown>): void {
   const win = el.ownerDocument.defaultView;
@@ -100,17 +125,34 @@ export function performPrimitive(el: Element, primitive: Primitive, args: Record
       (el as HTMLElement).click();
       return;
     case "type": {
-      const input = el as HTMLInputElement | HTMLTextAreaElement;
-      input.focus();
-      setNativeValue(input, String(args.text ?? ""));
-      input.dispatchEvent(new EventCtor("input", { bubbles: true }));
-      input.dispatchEvent(new EventCtor("change", { bubbles: true }));
+      const value = String(args.text ?? "");
+      if (isInputElement(el) || isTextAreaElement(el)) {
+        const input = el;
+        input.focus();
+        setNativeValue(input, value);
+        input.dispatchEvent(new EventCtor("input", { bubbles: true }));
+        input.dispatchEvent(new EventCtor("change", { bubbles: true }));
+      } else if (el.hasAttribute("contenteditable")) {
+        setEditableValue(el as HTMLElement, value);
+        el.dispatchEvent(new EventCtor("input", { bubbles: true, composed: true }));
+        el.dispatchEvent(new EventCtor("change", { bubbles: true }));
+      }
       return;
     }
     case "select": {
       const select = el as HTMLSelectElement;
-      setNativeValue(select, String(args.value ?? ""));
-      select.dispatchEvent(new EventCtor("change", { bubbles: true }));
+      const values = Array.isArray(args.value)
+        ? args.value.map((value) => String(value))
+        : [String(args.value ?? "")];
+      if (select.multiple) {
+        const selected = new Set(values);
+        for (const option of [...select.options]) option.selected = selected.has(option.value);
+        select.dispatchEvent(new EventCtor("input", { bubbles: true }));
+        select.dispatchEvent(new EventCtor("change", { bubbles: true }));
+      } else {
+        setNativeValue(select, values[0] ?? "");
+        select.dispatchEvent(new EventCtor("change", { bubbles: true }));
+      }
       return;
     }
     case "scroll": {
@@ -128,8 +170,14 @@ export function performPrimitive(el: Element, primitive: Primitive, args: Record
     case "press": {
       const key = String(args.key ?? "Enter");
       const init = { key, bubbles: true, cancelable: true };
-      el.dispatchEvent(new KeyboardCtor("keydown", init));
+      const accepted = el.dispatchEvent(new KeyboardCtor("keydown", init));
+      el.dispatchEvent(new KeyboardCtor("keypress", init));
       el.dispatchEvent(new KeyboardCtor("keyup", init));
+      if (accepted && key === "Enter" && isInputElement(el)) {
+        const input = el;
+        const form = input.form;
+        if (form && !["submit", "reset", "button"].includes(input.type)) form.requestSubmit();
+      }
       return;
     }
     case "hover": {

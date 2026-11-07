@@ -1,0 +1,53 @@
+{
+  "id": "course-workspace-react",
+  "title": "Course management back office (React 19)",
+  "titleZh": "冰草约课 · 课程管理后台（React 19）",
+  "eyebrow": "React 19 · Guided workflow",
+  "eyebrowZh": "React 19 · 引导式业务",
+  "summary": "The Bingcao Studio course back office implemented with React 19 Hooks, Pling scope and record hooks, one shared task runtime, and a guided-task card inside a fused assistant sidebar.",
+  "summaryZh": "用 React 19 Hooks 实现的冰草约课课程管理后台：通过 Pling 的 scope、record Hook 声明页面，复用同一套任务运行时，并在融合侧栏的聊天中展示任务卡。",
+  "url": "/demos/course-workspace-react/",
+  "open": "src/App.tsx",
+  "files": [
+    { "path": "src/App.tsx", "label": "App.tsx", "role": "React page, hooks, and declarations", "roleZh": "React 页面、Hook 与能力声明", "lang": "tsx" },
+    { "path": "src/main.tsx", "label": "main.tsx", "role": "React 19 root and Pling setup", "roleZh": "React 19 根节点与 Pling 初始化", "lang": "tsx" },
+    { "path": "src/react19-runtime.js", "label": "react19-runtime.js", "role": "React 19 runtime boundary", "roleZh": "React 19 运行时边界", "lang": "js" },
+    { "path": "vite.config.ts", "label": "vite.config.ts", "role": "Isolated React 19 build and dev proxy", "roleZh": "隔离的 React 19 构建与开发代理", "lang": "ts" },
+    { "path": "shared/course-workspace/runtime.ts", "scope": "workspace", "label": "runtime.ts", "role": "Shared actions and task runtime", "roleZh": "共享动作与任务运行时", "lang": "ts" },
+    { "path": "shared/course-workspace/tasks.ts", "scope": "workspace", "label": "tasks.ts", "role": "Guided task definitions", "roleZh": "引导任务定义", "lang": "ts" },
+    { "path": "shared/course-workspace/course-service.ts", "scope": "workspace", "label": "course-service.ts", "role": "Business rules and mock data", "roleZh": "业务规则与模拟数据", "lang": "ts" },
+    { "path": "shared/course-workspace/copy.ts", "scope": "workspace", "label": "copy.ts", "role": "Bilingual copy", "roleZh": "双语文案", "lang": "ts" },
+    { "path": "shared/course-workspace/styles.css", "scope": "workspace", "label": "styles.css", "role": "Shared workspace styles", "roleZh": "共享工作台样式", "lang": "css" },
+    { "path": "index.html", "label": "index.html", "role": "Page shell", "roleZh": "页面外壳", "lang": "html" },
+    { "path": "README.md", "label": "README.md", "role": "Run steps and source map", "roleZh": "运行步骤与源码导览", "lang": "markdown" }
+  ],
+  "focus": {
+    "react-root": { "selector": "src/main.tsx", "match": "createRoot(host).render(" },
+    "state": { "selector": "usePlingState", "match": "usePlingState(\"course\"" },
+    "scope": { "selector": "#students-panel", "match": "usePlingScope({ id: \"students\"" },
+    "record": { "selector": ".course-student", "match": "usePlingRecord({" },
+    "task-runtime": { "selector": "createCourseTaskRuntime", "match": "createCourseTaskRuntime({" },
+    "task-card": { "selector": ".pling-chat__transcript", "match": "createCourseTaskView(" },
+    "assistant-dock": { "selector": ".pling-dock", "match": "<AgentDock" }
+  },
+  "guide": {
+    "title": "Hooks for the page, one runtime for the work",
+    "titleZh": "页面用 Hook，执行仍只有一套运行时",
+    "intro": [
+      "The React page owns rendering and hook lifecycles. Task definitions, lookups, conflicts, activity evidence, and execution still come from the shared course management back-office runtime.",
+      "React 19 runs in an isolated Vite entry so the React 16.3 compatibility demo can keep using its own runtime without either page loading two copies of React."
+    ],
+    "introZh": [
+      "React 页面负责渲染与 Hook 生命周期；任务定义、查找、冲突、操作证据与执行仍来自共享的课程管理后台运行时。",
+      "React 19 使用独立的 Vite 入口构建，这样 React 16.3 兼容示例可以保留自己的运行时，两个页面都不会加载两份 React。"
+    ],
+    "steps": [
+      { "title": "Create one root runtime", "titleZh": "创建唯一的根运行时", "body": "The entry creates Pling once and mounts the provider around the application. The demo keeps the 100-turn limit and enables the debug log.", "bodyZh": "入口只创建一次 Pling，并在应用外层挂载 Provider。演示保持 100 轮上限并开启调试日志。", "file": "src/main.tsx", "match": "createRoot(host).render(", "lines": 10 },
+      { "title": "Expose a read-only view", "titleZh": "暴露只读视图", "body": "usePlingState exposes the students, teachers, and schedule snapshot. Writes still go through declared actions, never through a state setter.", "bodyZh": "usePlingState 暴露学员、老师与课表快照；写入仍然只经过声明动作，不通过 state setter。", "file": "src/App.tsx", "match": "usePlingState(\"course\"", "lines": 8 },
+      { "title": "Attach scope and record hooks", "titleZh": "附着 scope 与 record Hook", "body": "The page marks each business region and record. The assistant gets stable, bounded data instead of the whole component tree.", "bodyZh": "页面标记业务区域与记录，助手得到稳定且有边界的数据，而不是整个组件树。", "file": "src/App.tsx", "match": "usePlingRecord({", "lines": 12 },
+      { "title": "Mount the guide in the conversation", "titleZh": "把引导挂进对话", "body": "The effect creates the task runtime and a view that switches between the course guide and record-bound task cards. Cleanup removes actions and stops lookups with the page.", "bodyZh": "effect 创建任务运行时，以及一个在课程引导和记录任务卡之间切换的视图；清理时随页面移除动作并中止查找。", "file": "src/App.tsx", "match": "createCourseTaskView(", "lines": 18 }
+    ],
+    "note": "The React 16.3 version reaches the same business outcomes through class components and render props, using the legacy adapter entry.",
+    "noteZh": "React 16.3 版本通过 class 组件、render props 与 legacy 适配器入口达成相同的业务结果。"
+  }
+}

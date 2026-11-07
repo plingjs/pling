@@ -128,6 +128,20 @@ const SNAPSHOT: ContinuitySnapshot = {
 };
 
 describe("<AgentDock> · React", () => {
+  it("keeps an optional task card inside the conversation transcript", async () => {
+    const pling = createPling({ onWarn: () => {} });
+    await render(
+      <PlingProvider pling={pling}>
+        <AgentDock defaultOpen task={<section className="task-card-fixture">Guided task</section>} />
+      </PlingProvider>,
+    );
+
+    const transcript = document.querySelector(".pling-chat__transcript")!;
+    expect(transcript.querySelector(".task-card-fixture")).not.toBeNull();
+    expect(transcript.textContent).toContain("Guided task");
+    expect(transcript.querySelector(".pling-chat__empty")).toBeNull();
+  });
+
   it("默认英文界面：不配置 ui 也显示英文", async () => {
     const pling = createPling({ onWarn: () => {} });
     await render(<PlingProvider pling={pling}><Host onRun={() => {}} /></PlingProvider>);
@@ -378,5 +392,30 @@ describe("<AgentDock> · React", () => {
     await click(document.querySelector(".pling-dock__quick button"));
     await waitFor(() => onRun.mock.calls.length > 0);
     expect(onRun).toHaveBeenCalledOnce();
+  });
+
+  it("结构化推荐任务显示短标签并发送完整提示", async () => {
+    const onRun = vi.fn();
+    const pling = createZh({
+      onWarn: () => {},
+      agent: {
+        config: { baseUrl: "/llm/v1", model: "test-model" },
+        gate: () => false,
+        llm: createReplayLlm([{ calls: [{ tool: "save" }] }, { content: "好了" }]),
+      },
+    });
+    await render(
+      <PlingProvider pling={pling}>
+        <ButtonOnly onRun={onRun} />
+        <AgentDock quick={[{ label: "保存草稿", prompt: "帮我保存这份草稿", description: "写入当前版本" }]} />
+      </PlingProvider>,
+    );
+
+    await click(document.querySelector(".pling-dock__launcher"));
+    const quick = document.querySelector<HTMLButtonElement>(".pling-dock__quick button")!;
+    expect(quick.textContent).toBe("保存草稿");
+    expect(quick.title).toBe("写入当前版本");
+    await click(quick);
+    await waitFor(() => onRun.mock.calls.length > 0);
   });
 });

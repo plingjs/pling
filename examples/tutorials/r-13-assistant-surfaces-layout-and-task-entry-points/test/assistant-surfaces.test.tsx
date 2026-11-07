@@ -87,6 +87,22 @@ describe("R-13 · assistant surfaces and task entry points", () => {
     expect(dock.getAttribute("data-launcher-placement")).toBe("center");
   });
 
+  it("switches a sidebar between overlay and fused layouts without a second runtime", async () => {
+    await mountApp();
+
+    await click(document.querySelector('input[name="surface-layout"][value="sidebar"]'));
+    let dock = document.querySelector(".pling-dock")!;
+    expect(dock.getAttribute("data-sidebar-mode")).toBe("overlay");
+    expect(document.querySelector(".workspace")!.classList).not.toContain("workspace--fused");
+
+    await click(document.querySelector('input[name="surface-sidebar-mode"][value="fused"]'));
+    dock = document.querySelector(".pling-dock")!;
+    expect(dock.getAttribute("data-sidebar-mode")).toBe("fused");
+    expect(dock.classList).toContain("pling-dock--fused");
+    expect(document.querySelector(".workspace")!.classList).toContain("workspace--fused");
+    expect(document.querySelectorAll(".pling-dock")).toHaveLength(1);
+  });
+
   it("opens a collapsed dock and sends both human entrances into one history", async () => {
     const llm = createReplayLlm([
       { content: "Two tasks are open." },

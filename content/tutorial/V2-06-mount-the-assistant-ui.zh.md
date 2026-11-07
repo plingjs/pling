@@ -25,6 +25,7 @@ mounted() {
     placeholder: "需要完成什么？",
     emptyHint: "我可以操作这个页面上的任务列表。",
     quick: ["把第 1 个待办标记完成"],
+    debug: { maxCalls: 8 },
     defaultOpen: true,
     onOpenChange: (open) => { this.assistantOpen = open; },
   });
@@ -47,6 +48,7 @@ beforeDestroy() {
 | `placeholder` | 消息输入框内的提示 |
 | `emptyHint` | 第一轮对话前的说明 |
 | `quick` | 推荐问题；点击后会直接发送 |
+| `debug` | 开启只读调试视图；`{ maxCalls: 8 }` 保留最近八次模型调用 |
 | `defaultOpen` | 是否默认展开面板 |
 | `config` | 仅针对这个入口的模型或运行时覆盖 |
 | `gate` | 需要确认的动作所使用的确认通道 |

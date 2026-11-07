@@ -1,4 +1,5 @@
-import { createContext, createElement, useContext, useSyncExternalStore, type ReactNode } from "react";
+import { createContext, createElement, useContext, version as reactVersion, type ReactNode } from "react";
+import { useSyncExternalStore } from "use-sync-external-store/shim";
 import type { Registry } from "@plingjs/core";
 import type {
   DeriveController,
@@ -9,7 +10,7 @@ import type {
   ScopeController,
   CoverageReport,
 } from "@plingjs/dom";
-import type { AgentConfigOverrides, AgentRuntimeOptions } from "@plingjs/agent";
+import type { AgentConfigOverrides, AgentRuntimeOptions, TaskCatalog } from "@plingjs/agent";
 import type { PlingUiController } from "@plingjs/ui";
 
 /**
@@ -36,7 +37,7 @@ export interface PlingElement {
   /** L1 自动派生器（只在 `createPling({ derive: ... })` 时非空）。 */
   derived(): DeriveController | null;
   /** Human-facing task routing shared by all mounted surfaces. */
-  task: PlingTaskController;
+  task: PlingTaskController & TaskCatalog;
   /** Ask the mounted surface to start a task. Equivalent to `task.ask()`. */
   ask(prompt: string, options?: PlingAskOptions): Promise<void>;
   /** Read-only scan for actionable controls without a declaration. */
@@ -51,6 +52,15 @@ export interface PlingElement {
 }
 
 const PLING_CONTEXT = createContext<PlingElement | null>(null);
+
+const [reactMajorText, reactMinorText] = String(reactVersion).split(".");
+const reactMajor = Number(reactMajorText ?? 0);
+const reactMinor = Number(reactMinorText ?? 0);
+if (reactMajor < 16 || (reactMajor === 16 && reactMinor < 8)) {
+  throw new Error(
+    `@plingjs/react needs React 16.8 or newer for its Hooks API; use @plingjs/react/legacy on React ${reactVersion}`,
+  );
+}
 
 export interface PlingProviderProps {
   pling: PlingElement;

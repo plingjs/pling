@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "categories": [
@@ -17,7 +17,12 @@
           "kind": "function",
           "summary": "Creates the application-level Pling instance and returns the adapter-specific runtime object.",
           "summaryZh": "创建应用级 Pling 实例，并返回对应适配器的运行时对象。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "createPling(options?: PlingOptions): PlingElement;\ncreatePling(registry: Registry | undefined, options?: PlingOptions): PlingElement;",
             "react": "createPling(options?: PlingOptions): PlingElement;\ncreatePling(registry: Registry | undefined, options?: PlingOptions): PlingElement;",
@@ -26,10 +31,40 @@
           },
           "returns": "The adapter instance. Vue 3 and React return PlingElement; Vue 2.7 and Vanilla return VanillaPling.",
           "returnsZh": "适配器实例。Vue 3 与 React 返回 PlingElement；Vue 2.7 与原生 JS 返回 VanillaPling。",
-          "defaults": ["No declaration means no action; derive is off by default.", "Presence is on by default.", "revealSensitive is true by default."],
-          "defaultsZh": ["未声明的控件不会成为动作；derive 默认关闭。", "动作高亮默认开启。", "聊天中还原敏感值默认开启。"],
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vue", "name": "createPling"}, {"package": "@plingjs/react", "name": "createPling"}, {"package": "@plingjs/vanilla", "name": "createPling"}, {"package": "@plingjs/vue2", "name": "createPling"}],
+          "defaults": [
+            "No declaration means no action; derive is off by default.",
+            "Presence is on by default.",
+            "revealSensitive is true by default."
+          ],
+          "defaultsZh": [
+            "未声明的控件不会成为动作；derive 默认关闭。",
+            "动作高亮默认开启。",
+            "聊天中还原敏感值默认开启。"
+          ],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "createPling"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "createPling"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createPling"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "createPling"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -39,10 +74,24 @@
           "kind": "component",
           "summary": "Publishes a Pling instance to the React tree. Every React declaration hook reads from this provider.",
           "summaryZh": "把 Pling 实例放入 React 组件树。所有 React 声明 Hook 都从这里取实例。",
-          "imports": ["@plingjs/react"],
-          "signatures": {"react": "PlingProvider({ pling, children }: PlingProviderProps): ReactElement"},
-          "support": {"vue3": "none", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/react", "name": "PlingProvider"}],
+          "imports": [
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "react": "PlingProvider({ pling, children }: PlingProviderProps): ReactElement"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "PlingProvider"
+            }
+          ],
           "ref": "/reference/react-adapter"
         },
         {
@@ -52,14 +101,36 @@
           "kind": "function",
           "summary": "Reads the nearest Pling instance from the framework tree.",
           "summaryZh": "从当前框架组件树中读取最近的 Pling 实例。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "usePling(): PlingElement",
             "react": "usePling(): PlingElement",
             "vue2": "usePling(): Vue2Pling"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "usePling"}, {"package": "@plingjs/react", "name": "usePling"}, {"package": "@plingjs/vue2", "name": "usePling"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "usePling"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "usePling"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "usePling"
+            }
+          ],
           "ref": "/reference/react-adapter"
         },
         {
@@ -69,10 +140,24 @@
           "kind": "function",
           "summary": "Subscribes a React component to the shared locale, theme, CSS variables, and message snapshot.",
           "summaryZh": "让 React 组件订阅共享的语言、主题、CSS 变量与文案快照。",
-          "imports": ["@plingjs/react"],
-          "signatures": {"react": "usePlingUi(): PlingUiSnapshot"},
-          "support": {"vue3": "none", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/react", "name": "usePlingUi"}],
+          "imports": [
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "react": "usePlingUi(): PlingUiSnapshot"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingUi"
+            }
+          ],
           "ref": "/reference/react-adapter"
         },
         {
@@ -82,12 +167,20 @@
           "kind": "plugin",
           "summary": "Installs Vue directives and the runtime injection key. React uses PlingProvider instead.",
           "summaryZh": "安装 Vue 指令与运行时注入键。React 使用 PlingProvider。",
-          "imports": ["@plingjs/vue", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "createApp(App).use(pling.plugin)",
             "vue2": "Vue.use(pling.plugin)"
           },
-          "support": {"vue3": "native", "react": "none", "vue2": "native", "vanilla": "none"},
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "native",
+            "vanilla": "none"
+          },
           "ref": "/reference/vue-2-adapter"
         },
         {
@@ -95,15 +188,32 @@
           "anchor": "plingelement",
           "name": "PlingElement",
           "kind": "interface",
-          "summary": "The Vue 3 and React application runtime: registry, UI controller, page tracker, task routing, coverage, and cleanup.",
-          "summaryZh": "Vue 3 与 React 的应用级运行时：注册表、UI 控制器、页面身份、任务路由、覆盖率与清理。",
-          "imports": ["@plingjs/vue", "@plingjs/react"],
+          "summary": "The Vue 3 and React application runtime: registry, UI controller, page tracker, task routing, coverage, and cleanup. Vue 3 also owns the page guided-task catalog.",
+          "summaryZh": "Vue 3 与 React 的应用级运行时：注册表、UI 控制器、页面身份、任务路由、覆盖率与清理。Vue 3 还持有当前页面的引导任务目录。",
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
           "signatures": {
-            "vue3": "interface PlingElement {\n  registry: Registry;\n  ui: PlingUiController;\n  feedback: FeedbackCollector;\n  page: PageTracker;\n  plugin: { install(app: App): void };\n  ask(prompt: string, options?: PlingAskOptions): Promise<void>;\n  task: PlingTaskController;\n  derived(): DeriveController | null;\n  inspectCoverage(): CoverageReport;\n  scopes: ScopeController;\n  setActiveScopes(scopes: Iterable<string>): void;\n  destroy(): void;\n  agent?: AgentSetup;\n  revealSensitive: boolean;\n}",
+            "vue3": "interface PlingElement {\n  registry: Registry;\n  ui: PlingUiController;\n  feedback: FeedbackCollector;\n  page: PageTracker;\n  plugin: { install(app: App): void };\n  ask(prompt: string, options?: PlingAskOptions): Promise<void>;\n  task: PlingTaskController & TaskCatalog;\n  derived(): DeriveController | null;\n  inspectCoverage(): CoverageReport;\n  scopes: ScopeController;\n  setActiveScopes(scopes: Iterable<string>): void;\n  destroy(): void;\n  agent?: AgentSetup;\n  revealSensitive: boolean;\n}",
             "react": "interface PlingElement {\n  ui: PlingUiController;\n  registry: Registry;\n  feedback: FeedbackCollector;\n  scopes: ScopeController;\n  setActiveScopes(scopes: Iterable<string>): void;\n  presence: PresenceController | null;\n  derived(): DeriveController | null;\n  task: PlingTaskController;\n  ask(prompt: string, options?: PlingAskOptions): Promise<void>;\n  inspectCoverage(root?: Element | null): CoverageReport;\n  destroy(): void;\n  warn(message: string): void;\n  agent?: AgentSetup;\n  revealSensitive: boolean;\n}"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "PlingElement"}, {"package": "@plingjs/react", "name": "PlingElement"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "PlingElement"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "PlingElement"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -111,15 +221,32 @@
           "anchor": "vanillapling",
           "name": "VanillaPling",
           "kind": "interface",
-          "summary": "The DOM-first runtime used by Vanilla JS and Vue 2.7. It exposes tool, action, record, scope, state, dock, derived, and destroy.",
-          "summaryZh": "原生 JS 与 Vue 2.7 共用的 DOM 运行时，暴露 tool、action、record、scope、state、dock、derived 与 destroy。",
-          "imports": ["@plingjs/vanilla", "@plingjs/vue2"],
+          "summary": "The DOM-first runtime used by Vanilla JS and Vue 2.7. It exposes declarations, feedback, task routing, page identity, coverage, the dock, and the Surface gateway.",
+          "summaryZh": "原生 JS 与 Vue 2.7 共用的 DOM 运行时，暴露声明、反馈、任务路由、页面身份、覆盖率、浮窗与 Surface 网关。",
+          "imports": [
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
-            "vanilla": "interface VanillaPling extends VanillaHost {\n  tool(element: Element, options: ToolOptions): () => void;\n  action(options: ActionOptions): () => void;\n  record(element: Element, value: RecordValue | null | undefined): () => void;\n  scope(element: Element, options: ScopeOptions): () => void;\n  state(key: string, source: StateSource, options?: StateOptions | string): () => void;\n  setActiveScopes(scopes: Iterable<string>): void;\n  dock(options?: VanillaDockOptions): VanillaDock;\n  derived(): DeriveController | null;\n  destroy(): void;\n}",
+            "vanilla": "interface VanillaPling extends VanillaHost {\n  feedback: FeedbackCollector;\n  page: PageTracker;\n  task: PlingTaskController;\n  ask(prompt: string, options?: PlingAskOptions): Promise<void>;\n  tool(element: Element, options: ToolOptions): () => void;\n  action(options: ActionOptions): () => void;\n  record(element: Element, value: RecordValue | null | undefined): () => void;\n  scope(element: Element, options: ScopeOptions): () => void;\n  state(key: string, source: StateSource, options?: StateOptions | string): () => void;\n  declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;\n  declareTask(element: HTMLElement, value: TaskValue): () => void;\n  guideTarget(element: Element, id: string): () => void;\n  setActiveScopes(scopes: Iterable<string>): void;\n  dock(options?: VanillaDockOptions): VanillaDock;\n  surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway;\n  inspectCoverage(root?: Element | null): CoverageReport;\n  derived(): DeriveController | null;\n  destroy(): void;\n}",
             "vue2": "interface Vue2Pling extends VanillaPling {\n  plugin: { install(Vue: VueConstructor): void };\n}"
           },
-          "support": {"vue3": "none", "react": "none", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vanilla", "name": "VanillaPling"}, {"package": "@plingjs/vue2", "name": "Vue2Pling"}],
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "VanillaPling"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "Vue2Pling"
+            }
+          ],
           "ref": "/reference/vanilla-jquery-adapter"
         },
         {
@@ -129,14 +256,24 @@
           "kind": "method",
           "summary": "Stops observers, derived actions, scopes, presence, UI subscriptions, and mounted assistant surfaces.",
           "summaryZh": "停止观察器、派生动作、作用域、存在感、UI 订阅与已挂载的助手界面。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "pling.destroy(): void",
             "react": "pling.destroy(): void",
             "vue2": "pling.destroy(): void",
             "vanilla": "pling.destroy(): void"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "native"},
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
           "ref": "/reference/vanilla-jquery-adapter"
         }
       ]
@@ -156,15 +293,30 @@
           "kind": "declaration",
           "summary": "Declares what a control does. The description is the model's only explanation; execution still goes through availability, approval, and expectations.",
           "summaryZh": "声明一个控件能做什么。说明是模型唯一的判断依据；执行仍经过可用性、确认与结果判据。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "v-tool=\"string | ToolOptions | ToolOptions[]\"",
             "react": "usePlingTool<T extends Element = HTMLElement>(options: PlingToolOptions): RefCallback<T>",
             "vue2": "v-tool=\"string | ToolOptions | readonly ToolOptions[]\"",
             "vanilla": "pling.tool(element: Element, options: ToolOptions): () => void"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/react", "name": "usePlingTool"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingTool"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -175,15 +327,34 @@
           "kind": "declaration",
           "summary": "Registers a business operation that has no dedicated DOM control.",
           "summaryZh": "登记一个没有专属 DOM 控件的业务操作。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "useAgentTool(options: AgentToolOptions): void",
             "react": "useAgentTool(options: AgentToolOptions): void",
             "vue2": "pling.action(options: ActionOptions): () => void",
             "vanilla": "pling.action(options: ActionOptions): () => void"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vue", "name": "useAgentTool"}, {"package": "@plingjs/react", "name": "useAgentTool"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "useAgentTool"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "useAgentTool"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -194,15 +365,30 @@
           "kind": "declaration",
           "summary": "Declares a structural region and its reachability. Regions explain context; they are not permission boundaries.",
           "summaryZh": "声明页面的结构区域及其可达性。区域解释上下文，不是权限边界。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "v-scope=\"string | { id; label?; description?; role?; parent? }\"",
             "react": "usePlingScope<T extends Element = HTMLElement>(options: PlingScopeOptions): RefCallback<T>",
             "vue2": "v-scope=\"string | ScopeOptions\"",
             "vanilla": "pling.scope(element: Element, options: ScopeOptions): () => void"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/react", "name": "usePlingScope"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingScope"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -213,15 +399,30 @@
           "kind": "declaration",
           "summary": "Gives one row a stable identity and a bounded set of readable fields. Records are read-only.",
           "summaryZh": "为一行数据提供稳定身份与有界字段。记录是只读的。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "v-record=\"RecordValue | null | undefined\"",
             "react": "usePlingRecord<T extends Element = HTMLElement>(value: RecordValue | null | undefined): RefCallback<T>",
             "vue2": "v-record=\"RecordValue | null | undefined\"",
             "vanilla": "pling.record(element: Element, value: RecordValue | null | undefined): () => void"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/react", "name": "usePlingRecord"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingRecord"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -232,15 +433,38 @@
           "kind": "declaration",
           "summary": "Exposes a derived view of current UI state. State has no setter; writes must be declared as actions.",
           "summaryZh": "暴露当前 UI 状态的只读视图。状态没有 setter；写入必须声明成动作。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "useAgentState(key: string, source: StateSource, options?: AgentStateOptions | string): () => void",
             "react": "usePlingState(key: string, source: PlingStateSource, options?: PlingStateOptions | string): () => void",
             "vue2": "useAgentState(key: string, source: StateSource, options?: AgentStateOptions | string): () => void",
             "vanilla": "pling.state(key: string, source: StateSource, options?: StateOptions | string): () => void"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vue", "name": "useAgentState"}, {"package": "@plingjs/react", "name": "usePlingState"}, {"package": "@plingjs/vue2", "name": "useAgentState"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "useAgentState"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingState"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "useAgentState"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -250,12 +474,24 @@
           "kind": "function",
           "summary": "Registers a read-only state view outside the React component tree. It returns an unregister function.",
           "summaryZh": "在 React 组件树之外登记只读状态视图，并返回注销函数。",
-          "imports": ["@plingjs/react"],
+          "imports": [
+            "@plingjs/react"
+          ],
           "signatures": {
             "react": "exposePlingState(pling: Pick<PlingElement, \"registry\">, key: string, source: PlingStateSource, options?: PlingStateOptions | string): () => void"
           },
-          "support": {"vue3": "none", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/react", "name": "exposePlingState"}],
+          "support": {
+            "vue3": "none",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "exposePlingState"
+            }
+          ],
           "ref": "/reference/react-adapter"
         },
         {
@@ -266,13 +502,30 @@
           "kind": "declaration",
           "summary": "Selects named fields from a Pinia or Vuex store. It never exposes the whole store.",
           "summaryZh": "从 Pinia 或 Vuex 中显式选择字段，不会把整个 store 暴露给模型。",
-          "imports": ["@plingjs/vue", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "useAgentStoreState<S extends object>(key: string, store: S, read: AgentStoreRead<S>, options?: AgentStateOptions | string): () => void",
             "vue2": "useAgentStoreState<S extends object>(key: string, store: S, read: AgentStoreRead<S>, options?: AgentStateOptions | string): () => void"
           },
-          "support": {"vue3": "native", "react": "none", "vue2": "native", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "useAgentStoreState"}, {"package": "@plingjs/vue2", "name": "useAgentStoreState"}],
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "native",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "useAgentStoreState"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "useAgentStoreState"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -283,13 +536,28 @@
           "kind": "declaration",
           "summary": "Publishes user-visible feedback or a short page-level explanation without turning it into an action.",
           "summaryZh": "发布用户可见的反馈或页面级说明，不把它变成动作。",
-          "imports": ["@plingjs/vue", "@plingjs/react"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
           "signatures": {
             "vue3": "v-feedback=\"FeedbackValue | FeedbackValue[]\"",
-            "react": "usePlingFeedback(value: PlingFeedbackInput, options?: PlingFeedbackOptions): void"
+            "react": "usePlingFeedback(value: PlingFeedbackInput, options?: PlingFeedbackOptions): void",
+            "vanilla": "pling.declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/react", "name": "usePlingFeedback"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingFeedback"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -300,12 +568,22 @@
           "kind": "declaration",
           "summary": "Routes a human-authored instruction to the mounted assistant. It is not exposed to the model as an action.",
           "summaryZh": "把人写的任务交给已挂载的助手。它不会作为动作暴露给模型。",
-          "imports": ["@plingjs/vue", "@plingjs/react"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
           "signatures": {
             "vue3": "v-task=\"string | TaskOptions\"\npling.ask(prompt: string, options?: PlingAskOptions): Promise<void>",
-            "react": "pling.ask(prompt: string, options?: PlingAskOptions): Promise<void>"
+            "react": "pling.ask(prompt: string, options?: PlingAskOptions): Promise<void>",
+            "vanilla": "pling.declareTask(element: HTMLElement, value: string | TaskOptions): () => void\npling.ask(prompt: string, options?: PlingAskOptions): Promise<void>"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -316,13 +594,28 @@
           "kind": "declaration",
           "summary": "Highlights a non-action target while a person completes a handoff step.",
           "summaryZh": "人工接力时高亮一个并非动作的目标元素。",
-          "imports": ["@plingjs/vue", "@plingjs/react"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
           "signatures": {
             "vue3": "v-guide-target=\"string\"",
-            "react": "usePlingGuideTarget<T extends Element = HTMLElement>(id: string): RefCallback<T>"
+            "react": "usePlingGuideTarget<T extends Element = HTMLElement>(id: string): RefCallback<T>",
+            "vanilla": "pling.guideTarget(element: Element, id: string): () => void"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/react", "name": "usePlingGuideTarget"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "usePlingGuideTarget"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -332,10 +625,39 @@
           "kind": "function",
           "summary": "Marks a value for outbound masking, tokenization, or a hint while keeping the field name visible.",
           "summaryZh": "标记一个值在出站时隐藏、遮罩、代号化或只给提示，同时保留字段名。",
-          "imports": ["@plingjs/core", "@plingjs/vue", "@plingjs/react"],
-          "signatures": {"core": "sensitive<T>(value: T, options?: SensitivityMode | SensitiveOptions): SensitiveValue<T>"},
-          "support": {"vue3": "native", "react": "native", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "sensitive"}, {"package": "@plingjs/vue", "name": "sensitive"}, {"package": "@plingjs/react", "name": "sensitive"}],
+          "imports": [
+            "@plingjs/core",
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "sensitive<T>(value: T, options?: SensitivityMode | SensitiveOptions): SensitiveValue<T>"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "core",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "sensitive"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "sensitive"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "sensitive"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "sensitive"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         }
       ]
@@ -354,16 +676,44 @@
           "kind": "type",
           "summary": "The action declaration shape shared by every adapter.",
           "summaryZh": "所有适配器共享的动作声明结构。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2", "@plingjs/core"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2",
+            "@plingjs/core"
+          ],
           "signatures": {
             "vue3": "type ToolOptions = AtomicToolOptions | ParamsToolOptions",
             "react": "type PlingToolOptions = AtomicToolOptions | ParamsToolOptions",
             "vue2": "type ToolOptions = AtomicToolOptions | ParamsToolOptions",
             "vanilla": "type ToolOptions = AtomicToolOptions | ParamsToolOptions"
           },
-          "definition": "interface ToolOptionsBase {\n  desc: string;\n  id?: string;\n  kind?: \"read\" | \"write\" | \"danger\";\n  confirm?: boolean | \"always\";\n  action?: \"click\" | \"fill\" | \"select\" | \"press\" | \"hover\";\n  key?: string;\n  scope?: string;\n  fidelity?: Fidelity;\n  target?: string;\n  autoTarget?: boolean;\n  available?: () => boolean | string | undefined;\n  expect?: Expectation;\n  handoff?: boolean | string | { reason?; expect?; steps?; timeout? };\n}\n\ntype ToolOptions =\n  | { params?: undefined; run?: (value?: unknown) => void | Promise<void> }\n  | { params: ParamDeclaration; run?: (args: Record<string, unknown>) => void | Promise<void> };",
-          "support": {"vue3": "native", "react": "alias", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vue", "name": "ToolOptions"}, {"package": "@plingjs/react", "name": "PlingToolOptions"}, {"package": "@plingjs/vanilla", "name": "ToolOptions"}, {"package": "@plingjs/vue2", "name": "ToolOptions"}],
+          "definition": "interface ToolOptionsBase {\n  desc: string;\n  label?: string;\n  summary?: string;\n  examples?: readonly string[];\n  successHint?: string;\n  playbook?: readonly string[];\n  id?: string;\n  kind?: \"read\" | \"write\" | \"danger\";\n  confirm?: boolean | \"always\";\n  modelVisible?: boolean;\n  action?: \"click\" | \"fill\" | \"select\" | \"press\" | \"hover\";\n  key?: string;\n  scope?: string;\n  fidelity?: Fidelity;\n  target?: string;\n  autoTarget?: boolean;\n  available?: () => boolean | string | undefined;\n  expect?: Expectation;\n  handoff?: boolean | string | { reason?; expect?; steps?; timeout? };\n}\n\ntype ToolOptions =\n  | { params?: undefined; run?: (value?: unknown) => void | Promise<void> }\n  | { params: ParamDeclaration; run?: (args: Record<string, unknown>) => void | Promise<void> };",
+          "support": {
+            "vue3": "native",
+            "react": "alias",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "ToolOptions"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "PlingToolOptions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "ToolOptions"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "ToolOptions"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -373,15 +723,42 @@
           "kind": "type",
           "summary": "The region declaration shape. Vue 3 exposes the equivalent value as ScopeValue.",
           "summaryZh": "区域声明结构。Vue 3 以 ScopeValue 暴露等价类型。",
-          "imports": ["@plingjs/vanilla", "@plingjs/vue2", "@plingjs/vue", "@plingjs/react"],
+          "imports": [
+            "@plingjs/vanilla",
+            "@plingjs/vue2",
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
           "signatures": {
             "vue3": "type ScopeValue = string | {\n  id: string;\n  label?: string;\n  description?: string;\n  role?: RegionRole;\n  parent?: string;\n}",
             "react": "interface PlingScopeOptions {\n  id: string;\n  label?: string;\n  description?: string;\n  role?: RegionRole;\n  parent?: string;\n}",
             "vue2": "interface ScopeOptions {\n  id: string;\n  label?: string;\n  description?: string;\n  role?: RegionRole;\n  parent?: string;\n}",
             "vanilla": "interface ScopeOptions {\n  id: string;\n  label?: string;\n  description?: string;\n  role?: RegionRole;\n  parent?: string;\n}"
           },
-          "support": {"vue3": "native", "react": "alias", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vue", "name": "ScopeValue"}, {"package": "@plingjs/react", "name": "PlingScopeOptions"}, {"package": "@plingjs/vanilla", "name": "ScopeOptions"}, {"package": "@plingjs/vue2", "name": "ScopeOptions"}],
+          "support": {
+            "vue3": "native",
+            "react": "alias",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "ScopeValue"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "PlingScopeOptions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "ScopeOptions"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "ScopeOptions"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -391,10 +768,30 @@
           "kind": "type",
           "summary": "A row value or a full record declaration with explicit id, label, and fields.",
           "summaryZh": "一行数据，或带显式 id、label、fields 的完整记录声明。",
-          "imports": ["@plingjs/core", "@plingjs/vue"],
-          "signatures": {"core": "type RecordValue =\n  | object\n  | {\n      data: object;\n      id?: string | number;\n      label?: string;\n      fields?: Record<string, unknown>;\n    }"},
-          "support": {"vue3": "native", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "RecordValue"}, {"package": "@plingjs/vue", "name": "RecordValue"}],
+          "imports": [
+            "@plingjs/core",
+            "@plingjs/vue",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "type RecordValue =\n  | object\n  | {\n      data: object;\n      id?: string | number;\n      label?: string;\n      fields?: Record<string, unknown>;\n    }"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "RecordValue"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "RecordValue"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -404,15 +801,42 @@
           "kind": "type",
           "summary": "Optional description for a read-only state view.",
           "summaryZh": "只读状态视图的可选说明。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "interface AgentStateOptions { description?: string }",
             "react": "interface PlingStateOptions { description?: string }",
             "vue2": "interface AgentStateOptions { description?: string }",
             "vanilla": "interface StateOptions { description?: string }"
           },
-          "support": {"vue3": "native", "react": "alias", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vue", "name": "AgentStateOptions"}, {"package": "@plingjs/react", "name": "PlingStateOptions"}, {"package": "@plingjs/vanilla", "name": "StateOptions"}, {"package": "@plingjs/vue2", "name": "AgentStateOptions"}],
+          "support": {
+            "vue3": "native",
+            "react": "alias",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentStateOptions"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "PlingStateOptions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "StateOptions"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "AgentStateOptions"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -422,15 +846,42 @@
           "kind": "type",
           "summary": "Application-level runtime options: model overrides, hooks, gates, event handling, trace, and continuity.",
           "summaryZh": "应用级运行时选项：模型覆盖、钩子、闸门、事件、跟踪与连续性。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/vanilla", "@plingjs/vue2"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
           "signatures": {
             "vue3": "type AgentSetup = Omit<AgentRuntimeOptions, \"config\" | \"registry\" | \"gate\"> & {\n  config?: AgentConfigOverrides;\n  modelSettings?: ModelSettingsSetting;\n  gate?: () => boolean;\n}",
             "react": "type AgentSetup = Omit<AgentRuntimeOptions, \"config\" | \"registry\" | \"gate\"> & {\n  config?: AgentConfigOverrides;\n  gate?: () => boolean;\n}",
             "vue2": "type AgentSetup = Omit<AgentRuntimeOptions, \"config\" | \"registry\" | \"gate\"> & {\n  config?: AgentConfigOverrides;\n  gate?: () => boolean;\n}",
             "vanilla": "type AgentSetup = Omit<AgentRuntimeOptions, \"config\" | \"registry\" | \"gate\"> & {\n  config?: AgentConfigOverrides;\n  gate?: () => boolean;\n}"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vue", "name": "AgentSetup"}, {"package": "@plingjs/react", "name": "AgentSetup"}, {"package": "@plingjs/vanilla", "name": "AgentSetup"}, {"package": "@plingjs/vue2", "name": "AgentSetup"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentSetup"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "AgentSetup"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "AgentSetup"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "AgentSetup"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -440,10 +891,24 @@
           "kind": "type",
           "summary": "The action risk level used by approval policy.",
           "summaryZh": "动作的风险等级，供确认策略使用。",
-          "imports": ["@plingjs/core"],
-          "signatures": {"core": "type Kind = \"read\" | \"write\" | \"danger\""},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "Kind"}],
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signatures": {
+            "core": "type Kind = \"read\" | \"write\" | \"danger\""
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "Kind"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -453,10 +918,24 @@
           "kind": "type",
           "summary": "Array shorthand or JSON Schema used to validate action arguments.",
           "summaryZh": "用于校验动作参数的数组简写或 JSON Schema。",
-          "imports": ["@plingjs/core"],
-          "signatures": {"core": "type ParamDeclaration = readonly ToolParam[] | JsonSchema"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "ParamDeclaration"}],
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signatures": {
+            "core": "type ParamDeclaration = readonly ToolParam[] | JsonSchema"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "ParamDeclaration"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -466,13 +945,30 @@
           "kind": "type",
           "summary": "The declaration shape for a function-level action: stable id, model-facing description, optional schema, availability, expectation, and implementation.",
           "summaryZh": "函数级动作的声明结构：稳定 id、面向模型的说明、可选参数协议、可用性、成功判据与实现。",
-          "imports": ["@plingjs/vue", "@plingjs/react"],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
           "signatures": {
-            "vue3": "interface AgentToolOptions {\n  id: string;\n  desc: string;\n  kind?: Kind;\n  confirm?: boolean | \"always\";\n  params?: ParamDeclaration;\n  available?: () => boolean | string;\n  expect?: Expectation;\n  run: (args: Record<string, unknown>) => unknown;\n}",
-            "react": "interface AgentToolOptions {\n  id: string;\n  desc: string;\n  kind?: Kind;\n  confirm?: boolean | \"always\";\n  params?: ParamDeclaration;\n  available?: () => boolean | string;\n  expect?: Expectation;\n  run: (args: Record<string, unknown>) => unknown;\n}"
+            "vue3": "interface AgentToolOptions {\n  id: string;\n  desc: string;\n  label?: string;\n  summary?: string;\n  examples?: readonly string[];\n  successHint?: string;\n  playbook?: readonly string[];\n  kind?: Kind;\n  confirm?: boolean | \"always\";\n  modelVisible?: boolean;\n  params?: ParamDeclaration;\n  available?: () => boolean | string;\n  expect?: Expectation;\n  run: (args: Record<string, unknown>) => unknown;\n}",
+            "react": "interface AgentToolOptions {\n  id: string;\n  desc: string;\n  label?: string;\n  summary?: string;\n  examples?: readonly string[];\n  successHint?: string;\n  playbook?: readonly string[];\n  kind?: Kind;\n  confirm?: boolean | \"always\";\n  modelVisible?: boolean;\n  params?: ParamDeclaration;\n  available?: () => boolean | string;\n  expect?: Expectation;\n  run: (args: Record<string, unknown>) => unknown;\n}"
           },
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "AgentToolOptions"}, {"package": "@plingjs/react", "name": "AgentToolOptions"}],
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentToolOptions"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "AgentToolOptions"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -482,10 +978,24 @@
           "kind": "type",
           "summary": "A success condition checked after an action finishes.",
           "summaryZh": "动作结束后检查的成功条件。",
-          "imports": ["@plingjs/core"],
-          "signatures": {"core": "interface Expectation {\n  desc?: string;\n  check(): boolean | Promise<boolean>;\n  timeout?: number;\n}"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "Expectation"}],
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signatures": {
+            "core": "interface Expectation {\n  desc?: string;\n  check(): boolean | Promise<boolean>;\n  timeout?: number;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "Expectation"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -495,10 +1005,24 @@
           "kind": "type",
           "summary": "One instruction shown to a person during human handoff.",
           "summaryZh": "人工接力时展示给用户的一条步骤说明。",
-          "imports": ["@plingjs/core"],
-          "signatures": {"core": "interface HandoffStep {\n  text: string;\n  highlight?: string;\n}"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "HandoffStep"}],
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signatures": {
+            "core": "interface HandoffStep {\n  text: string;\n  highlight?: string;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "HandoffStep"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -508,10 +1032,33 @@
           "kind": "type",
           "summary": "One step in a compound action. Flow steps are not a second execution channel.",
           "summaryZh": "复合动作中的一步。步骤不是第二条执行通道。",
-          "imports": ["@plingjs/core", "@plingjs/vue"],
-          "signatures": {"core": "interface FlowStep {\n  action: string;\n  args?: Record<string, unknown> | ((params: Record<string, unknown>) => Record<string, unknown>);\n  expect?: Expectation;\n  desc?: string;\n  optional?: boolean;\n  idempotent?: boolean;\n}"},
-          "support": {"vue3": "native", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "FlowStep"}, {"package": "@plingjs/vue", "name": "FlowStep"}],
+          "imports": [
+            "@plingjs/core",
+            "@plingjs/vue"
+          ],
+          "signatures": {
+            "core": "interface FlowStep {\n  action: string;\n  args?: Record<string, unknown> | ((params: Record<string, unknown>) => Record<string, unknown>);\n  expect?: Expectation;\n  desc?: string;\n  optional?: boolean;\n  idempotent?: boolean;\n}"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "FlowStep"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "FlowStep"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "FlowStep"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -521,10 +1068,34 @@
           "kind": "type",
           "summary": "The structural role of a region.",
           "summaryZh": "区域的结构角色。",
-          "imports": ["@plingjs/core", "@plingjs/vue"],
-          "signatures": {"core": "type RegionRole =\n  | \"page\"\n  | \"header\"\n  | \"nav\"\n  | \"main\"\n  | \"aside\"\n  | \"section\"\n  | \"form\"\n  | \"dialog\"\n  | \"toolbar\"\n  | \"list\"\n  | \"footer\""},
-          "support": {"vue3": "native", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "RegionRole"}, {"package": "@plingjs/vue", "name": "RegionRole"}],
+          "imports": [
+            "@plingjs/core",
+            "@plingjs/vue",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "type RegionRole =\n  | \"page\"\n  | \"header\"\n  | \"nav\"\n  | \"main\"\n  | \"aside\"\n  | \"section\"\n  | \"form\"\n  | \"dialog\"\n  | \"toolbar\"\n  | \"list\"\n  | \"footer\""
+          },
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "RegionRole"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "RegionRole"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "RegionRole"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -534,10 +1105,34 @@
           "kind": "type",
           "summary": "Locale, theme, message overrides, and class names for the shared assistant UI.",
           "summaryZh": "共享助手界面的语言、主题、文案覆盖与类名。",
-          "imports": ["@plingjs/ui", "@plingjs/vue"],
-          "signatures": {"core": "interface PlingUiOptions {\n  locale?: PlingLocale;\n  theme?: PlingTheme;\n  messages?: PlingCatalogOverrides;\n  classNames?: PlingClassNames;\n}"},
-          "support": {"vue3": "native", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/ui", "name": "PlingUiOptions"}, {"package": "@plingjs/vue", "name": "PlingUiOptions"}],
+          "imports": [
+            "@plingjs/ui",
+            "@plingjs/vue",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "interface PlingUiOptions {\n  locale?: PlingLocale;\n  theme?: PlingTheme;\n  messages?: PlingCatalogOverrides;\n  classNames?: PlingClassNames;\n}"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/ui",
+              "name": "PlingUiOptions"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "PlingUiOptions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "PlingUiOptions"
+            }
+          ],
           "ref": "/reference/ui-messages-theme-locale"
         },
         {
@@ -547,10 +1142,30 @@
           "kind": "type",
           "summary": "Controls whether the activity view exposes application-managed or user-supplied model settings.",
           "summaryZh": "控制运行视图是否展示应用托管或用户自带的模型设置。",
-          "imports": ["@plingjs/vue"],
-          "signatures": {"vue3": "type ModelSettingsSetting =\n  | \"off\"\n  | \"readonly\"\n  | \"byok\"\n  | {\n      mode: \"off\" | \"readonly\" | \"byok\";\n      persist?: \"memory\" | \"session\";\n    }"},
-          "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "ModelSettingsSetting"}],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vue3": "type ModelSettingsSetting =\n  | \"off\"\n  | \"readonly\"\n  | \"byok\"\n  | {\n      mode: \"off\" | \"readonly\" | \"byok\";\n      persist?: \"memory\" | \"session\";\n    }",
+            "vanilla": "type ModelSettingsSetting =\n  | \"off\"\n  | \"readonly\"\n  | \"byok\"\n  | {\n      mode: \"off\" | \"readonly\" | \"byok\";\n      persist?: \"memory\" | \"session\";\n    }"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "ModelSettingsSetting"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "ModelSettingsSetting"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         }
       ]
@@ -569,10 +1184,24 @@
           "kind": "type",
           "summary": "The runtime contract behind AgentSetup: config, registry, model, events, hooks, gates, trace, and continuity.",
           "summaryZh": "AgentSetup 背后的运行时契约：配置、注册表、模型、事件、钩子、闸门、跟踪与连续性。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "interface AgentRuntimeOptions {\n  config: AgentConfig;\n  registry?: Registry;\n  llm?: Llm;\n  responseLocale?: string | (() => string);\n  telemetry?: Telemetry;\n  trace?: boolean | AgentTraceOptions;\n  settle?: () => Promise<void>;\n  hooks?: HookRegistry;\n  onEvent?: SessionEventListener;\n  onApproval?: (pending: PendingApproval | null) => void;\n  onHandoff?: (pending: PendingHandoff | null) => void;\n  gate?: () => boolean;\n  policy?: ConfirmGate;\n  approvalTimeoutMs?: number;\n  handoffTimeoutMs?: number;\n  handoff?: HandoffGate;\n  id?: string;\n  onLeaseLost?: () => void;\n  continuity?: ContinuitySetting;\n}"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "AgentRuntimeOptions"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface AgentRuntimeOptions {\n  config: AgentConfig;\n  registry?: Registry;\n  llm?: Llm;\n  responseLocale?: string | (() => string);\n  telemetry?: Telemetry;\n  trace?: boolean | AgentTraceOptions;\n  settle?: () => Promise<void>;\n  hooks?: HookRegistry;\n  onEvent?: SessionEventListener;\n  onApproval?: (pending: PendingApproval | null) => void;\n  onHandoff?: (pending: PendingHandoff | null) => void;\n  gate?: () => boolean;\n  policy?: ConfirmGate;\n  approvalTimeoutMs?: number;\n  handoffTimeoutMs?: number;\n  handoff?: HandoffGate;\n  id?: string;\n  onLeaseLost?: () => void;\n  continuity?: ContinuitySetting;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "AgentRuntimeOptions"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -582,10 +1211,24 @@
           "kind": "type",
           "summary": "A partial model configuration. Unspecified fields continue to come from environment variables and defaults.",
           "summaryZh": "部分模型配置。未指定的字段继续来自环境变量与默认值。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "type AgentConfigOverrides =\n  Partial<Omit<AgentConfig, \"limits\" | \"retry\">> & {\n    limits?: Partial<AgentLimits>;\n    retry?: Partial<AgentRetryConfig>;\n  };"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "AgentConfigOverrides"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "type AgentConfigOverrides =\n  Partial<Omit<AgentConfig, \"limits\" | \"retry\">> & {\n    limits?: Partial<AgentLimits>;\n    retry?: Partial<AgentRetryConfig>;\n  };"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "AgentConfigOverrides"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -595,10 +1238,24 @@
           "kind": "class",
           "summary": "PreToolUse and PostToolUse hooks for application policy, redaction, and audit without adding a second executor.",
           "summaryZh": "PreToolUse 与 PostToolUse 钩子，用于应用策略、脱敏与审计，不引入第二套执行器。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "class HookRegistry {\n  addPreToolUse(handler: PreToolUseHandler): () => void;\n  addPostToolUse(handler: PostToolUseHandler): () => void;\n  firePreToolUse(payload: PreToolUsePayload): Promise<{ blocked: boolean; reason?: string }>;\n  firePostToolUse(payload: PostToolUsePayload): Promise<ExecResult>;\n}"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "HookRegistry"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "class HookRegistry {\n  addPreToolUse(handler: PreToolUseHandler): () => void;\n  addPostToolUse(handler: PostToolUseHandler): () => void;\n  firePreToolUse(payload: PreToolUsePayload): Promise<{ blocked: boolean; reason?: string }>;\n  firePostToolUse(payload: PostToolUsePayload): Promise<ExecResult>;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "HookRegistry"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -608,10 +1265,24 @@
           "kind": "type",
           "summary": "The single event stream consumed by chat, activity, audit, and evaluation views.",
           "summaryZh": "对话、运行记录、审计与评测视图共同消费的单一事件流。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "type SessionEvent =\n  | { type: \"user\"; text: string }\n  | { type: \"assistant\"; text: string }\n  | { type: \"assistant_delta\"; text: string }\n  | { type: \"tool_call\"; id: string; tool: string; args: Record<string, unknown> }\n  | { type: \"tool_result\"; id: string; tool: string; result: ExecResult }\n  | { type: \"blocked\"; id: string; tool: string; reason: string }\n  | { type: \"handoff\"; id: string; tool: string; status: \"requested\" | \"completed\" | \"cancelled\" | \"timeout\"; reason: string }\n  | { type: \"notice\"; text: string }\n  | { type: \"final\"; text: string }\n  | { type: \"cancelled\" }\n  | { type: \"error\"; code: string; message: string; messageKey?: string; params?: MessageParams };"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "SessionEvent"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "type SessionEvent =\n  | { type: \"user\"; text: string }\n  | { type: \"assistant\"; text: string }\n  | { type: \"assistant_delta\"; text: string }\n  | { type: \"tool_call\"; id: string; tool: string; args: Record<string, unknown> }\n  | { type: \"tool_result\"; id: string; tool: string; result: ExecResult }\n  | { type: \"blocked\"; id: string; tool: string; reason: string }\n  | { type: \"handoff\"; id: string; tool: string; status: \"requested\" | \"completed\" | \"cancelled\" | \"timeout\"; reason: string }\n  | { type: \"notice\"; text: string }\n  | { type: \"final\"; text: string }\n  | { type: \"cancelled\" }\n  | { type: \"error\"; code: string; message: string; messageKey?: string; params?: MessageParams };"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "SessionEvent"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -621,10 +1292,24 @@
           "kind": "type",
           "summary": "Bounds the number of model calls retained by the read-only inspector.",
           "summaryZh": "限制只读调试器保留的模型调用数量。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "interface AgentTraceOptions { maxCalls?: number }"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "AgentTraceOptions"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface AgentTraceOptions { maxCalls?: number }"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "AgentTraceOptions"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -634,10 +1319,34 @@
           "kind": "function",
           "summary": "Waits for an asynchronous UI condition inside a run or expectation.",
           "summaryZh": "在 run 或结果判据中等待异步 UI 条件成立。",
-          "imports": ["@plingjs/core", "@plingjs/vue"],
-          "signatures": {"core": "waitFor(check: () => boolean | Promise<boolean>, options?: WaitForOptions): Promise<boolean>"},
-          "support": {"vue3": "native", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "waitFor"}, {"package": "@plingjs/vue", "name": "waitFor"}],
+          "imports": [
+            "@plingjs/core",
+            "@plingjs/vue",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "waitFor(check: () => boolean | Promise<boolean>, options?: WaitForOptions): Promise<boolean>"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "waitFor"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "waitFor"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "waitFor"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         },
         {
@@ -647,10 +1356,34 @@
           "kind": "function",
           "summary": "Produces a model-readable description of a compound action without executing it.",
           "summaryZh": "生成复合动作的模型可读说明，不执行动作。",
-          "imports": ["@plingjs/core", "@plingjs/vue"],
-          "signatures": {"core": "describeFlow(report: FlowReport): string"},
-          "support": {"vue3": "native", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "describeFlow"}, {"package": "@plingjs/vue", "name": "describeFlow"}],
+          "imports": [
+            "@plingjs/core",
+            "@plingjs/vue",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "describeFlow(report: FlowReport): string"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "describeFlow"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "describeFlow"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "describeFlow"
+            }
+          ],
           "ref": "/reference/core-declarations-actions-records-regions-state"
         }
       ]
@@ -669,10 +1402,30 @@
           "kind": "component",
           "summary": "Floating or sidebar assistant surface. Owns placement, task registration, open state, and the activity view.",
           "summaryZh": "浮动或侧边栏助手界面，负责位置、任务登记、展开状态与运行视图。",
-          "imports": ["@plingjs/vue", "@plingjs/react"],
-          "signatures": {"vue3": "<AgentDock />", "react": "<AgentDock />"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "AgentDock"}, {"package": "@plingjs/react", "name": "AgentDock"}],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "vue3": "<AgentDock />",
+            "react": "<AgentDock />"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentDock"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "AgentDock"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -682,10 +1435,30 @@
           "kind": "component",
           "summary": "Embeds the conversation in a business column instead of a floating surface.",
           "summaryZh": "把对话嵌入业务列，而不是使用浮动界面。",
-          "imports": ["@plingjs/vue", "@plingjs/react"],
-          "signatures": {"vue3": "<AgentInline />", "react": "<AgentInline />"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "AgentInline"}, {"package": "@plingjs/react", "name": "AgentInline"}],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "vue3": "<AgentInline />",
+            "react": "<AgentInline />"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentInline"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "AgentInline"
+            }
+          ],
           "ref": "/reference/react-adapter"
         },
         {
@@ -695,10 +1468,30 @@
           "kind": "component",
           "summary": "Renders a conversation and confirmation state without owning placement or the session.",
           "summaryZh": "渲染对话与确认状态，不负责位置或会话所有权。",
-          "imports": ["@plingjs/vue", "@plingjs/react"],
-          "signatures": {"vue3": "<AgentChat />", "react": "<AgentChat />"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "AgentChat"}, {"package": "@plingjs/react", "name": "AgentChat"}],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "vue3": "<AgentChat />",
+            "react": "<AgentChat />"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentChat"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "AgentChat"
+            }
+          ],
           "ref": "/reference/react-adapter"
         },
         {
@@ -708,10 +1501,24 @@
           "kind": "component",
           "summary": "Development-only snapshot view of what the agent can currently see.",
           "summaryZh": "开发期只读快照视图，用来查看 Agent 当前能看到什么。",
-          "imports": ["@plingjs/vue"],
-          "signatures": {"vue3": "<AgentPanel />"},
-          "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "AgentPanel"}],
+          "imports": [
+            "@plingjs/vue"
+          ],
+          "signatures": {
+            "vue3": "<AgentPanel />"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentPanel"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -721,10 +1528,24 @@
           "kind": "component",
           "summary": "React read-only inspector for the runtime already driving a conversation.",
           "summaryZh": "React 只读调试器，检查当前对话实际使用的运行时。",
-          "imports": ["@plingjs/react"],
-          "signatures": {"react": "<AgentDebug runtime={runtime} registry={registry} />"},
-          "support": {"vue3": "none", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/react", "name": "AgentDebug"}],
+          "imports": [
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "react": "<AgentDebug runtime={runtime} registry={registry} />"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "AgentDebug"
+            }
+          ],
           "ref": "/reference/react-adapter"
         },
         {
@@ -734,10 +1555,30 @@
           "kind": "interface",
           "summary": "The DOM dock controller returned by pling.dock(): element, runtime, open, close, toggle, isOpen, destroy.",
           "summaryZh": "pling.dock() 返回的 DOM 浮窗控制器：element、runtime、open、close、toggle、isOpen、destroy。",
-          "imports": ["@plingjs/vanilla", "@plingjs/vue2"],
-          "signatures": {"vanilla": "pling.dock(options?: VanillaDockOptions): VanillaDock", "vue2": "pling.dock(options?: VanillaDockOptions): VanillaDock"},
-          "support": {"vue3": "none", "react": "none", "vue2": "native", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/vanilla", "name": "VanillaDock"}, {"package": "@plingjs/vue2", "name": "VanillaDock"}],
+          "imports": [
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
+          ],
+          "signatures": {
+            "vanilla": "pling.dock(options?: VanillaDockOptions): VanillaDock",
+            "vue2": "pling.dock(options?: VanillaDockOptions): VanillaDock"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "native",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "VanillaDock"
+            },
+            {
+              "package": "@plingjs/vue2",
+              "name": "VanillaDock"
+            }
+          ],
           "ref": "/reference/vanilla-jquery-adapter"
         },
         {
@@ -745,12 +1586,32 @@
           "anchor": "createplingui",
           "name": "createPlingUi",
           "kind": "function",
-          "summary": "Creates the shared locale, theme, and message controller behind the Vue surface.",
-          "summaryZh": "创建 Vue 界面背后的共享语言、主题与文案控制器。",
-          "imports": ["@plingjs/vue"],
-          "signatures": {"vue3": "createPlingUi(options?: PlingUiOptions, defaultLocale?: string): PlingUiController"},
-          "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "createPlingUi"}],
+          "summary": "Creates the shared locale, theme, and message controller behind a built-in assistant surface.",
+          "summaryZh": "创建内置助手界面背后的共享语言、主题与文案控制器。",
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vue3": "createPlingUi(options?: PlingUiOptions, defaultLocale?: string): PlingUiController",
+            "vanilla": "createPlingUi(options?: PlingUiOptions, defaultLocale?: string): VanillaUiController"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "createPlingUi"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createPlingUi"
+            }
+          ],
           "ref": "/reference/ui-messages-theme-locale"
         }
       ]
@@ -769,10 +1630,24 @@
           "kind": "function",
           "summary": "Creates and owns the page session, WebSocket, Surface bridge, pairing, claim, and revocation lifecycle for one Vue component scope.",
           "summaryZh": "为一个 Vue 组件作用域创建并托管页面会话、WebSocket、Surface 桥接、配对、申领与撤销的生命周期。",
-          "imports": ["@plingjs/vue"],
-          "signatures": {"vue3": "useSurfaceGateway(options: UseSurfaceGatewayOptions): SurfaceGatewayController"},
-          "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "useSurfaceGateway"}],
+          "imports": [
+            "@plingjs/vue"
+          ],
+          "signatures": {
+            "vue3": "useSurfaceGateway(options: UseSurfaceGatewayOptions): SurfaceGatewayController"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "useSurfaceGateway"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -782,11 +1657,168 @@
           "kind": "component",
           "summary": "Optional Vue panel for connection state, pairing, a copyable Agent token, the current scope, and revocation. It renders a controller; it does not create capabilities.",
           "summaryZh": "可选的 Vue 面板：展示连接状态、配对、可复制的 Agent token、当前 scope 与撤销操作。它只渲染控制器，不创建能力。",
-          "imports": ["@plingjs/vue"],
-          "signatures": {"vue3": "<SurfaceAccessPanel :gateway=\"gateway\" title=\"External Agent\" />"},
-          "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "SurfaceAccessPanel"}],
+          "imports": [
+            "@plingjs/vue"
+          ],
+          "signatures": {
+            "vue3": "<SurfaceAccessPanel :gateway=\"gateway\" title=\"External Agent\" />"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "SurfaceAccessPanel"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
+        },
+        {
+          "id": "SurfaceTask",
+          "anchor": "surfacetask",
+          "name": "SurfaceTask",
+          "kind": "interface",
+          "summary": "A business task exposed to external agents. It explains which capabilities belong together, but it is not an authorization grant.",
+          "summaryZh": "向外部 Agent 说明的业务任务。它解释哪些能力配合完成一件事，但不是授权。",
+          "imports": [
+            "@plingjs/surface"
+          ],
+          "signatures": {
+            "core": "interface SurfaceTask {\n  id: string;\n  title: string;\n  description?: string;\n  examples?: readonly string[];\n  risk?: SurfaceEffect;\n  fields?: readonly SurfaceTaskField[];\n  steps?: readonly SurfaceTaskStep[];\n  playbook?: readonly string[];\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/surface",
+              "name": "SurfaceTask"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "SurfaceTaskField",
+          "anchor": "surfacetaskfield",
+          "name": "SurfaceTaskField",
+          "kind": "interface",
+          "summary": "A descriptive field in a Surface task. Agents still send values only through the existing capability input schema.",
+          "summaryZh": "Surface 任务中的描述性字段。Agent 仍只能通过现有能力的输入协议传值。",
+          "imports": [
+            "@plingjs/surface"
+          ],
+          "signatures": {
+            "core": "interface SurfaceTaskField {\n  name: string;\n  label: string;\n  type?: \"text\" | \"textarea\" | \"number\" | \"boolean\" | \"date\" | \"select\" | \"lookup\";\n  description?: string;\n  required?: boolean;\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/surface",
+              "name": "SurfaceTaskField"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "SurfaceTaskStep",
+          "anchor": "surfacetaskstep",
+          "name": "SurfaceTaskStep",
+          "kind": "interface",
+          "summary": "A descriptive step that names an existing capability. It never adds a second execution path.",
+          "summaryZh": "描述性步骤，只引用已有能力，不增加第二套执行路径。",
+          "imports": [
+            "@plingjs/surface"
+          ],
+          "signatures": {
+            "core": "interface SurfaceTaskStep {\n  action: string;\n  label: string;\n  summary?: string;\n  optional?: boolean;\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/surface",
+              "name": "SurfaceTaskStep"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "createSurfaceGateway",
+          "anchor": "createsurfacegateway",
+          "name": "pling.surfaceGateway",
+          "kind": "method",
+          "summary": "Creates the plain-DOM Surface gateway controller for an explicit capability allowlist. It shares the page registry and never infers capabilities from the DOM.",
+          "summaryZh": "为显式能力 allowlist 创建原生 DOM Surface 网关控制器。它复用页面注册表，绝不从 DOM 推断能力。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "pling.surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createSurfaceGateway"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "VanillaSurfaceGateway"
+            }
+          ],
+          "ref": "/reference/vanilla-jquery-adapter"
+        },
+        {
+          "id": "createSurfaceAccessPanel",
+          "anchor": "createsurfaceaccesspanel",
+          "name": "createSurfaceAccessPanel",
+          "kind": "function",
+          "summary": "Mounts the plain-DOM counterpart of the Vue access panel: connection state, pairing, a copyable Agent token, the active scope, and revocation.",
+          "summaryZh": "挂载 Vue 访问面板的原生 DOM 对应物：连接状态、配对、可复制的 Agent token、当前 scope 与撤销。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "createSurfaceAccessPanel(gateway: VanillaSurfaceGateway, options?: SurfaceAccessPanelOptions): SurfaceAccessPanel"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createSurfaceAccessPanel"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "SurfaceAccessPanel"
+            }
+          ],
+          "ref": "/reference/vanilla-jquery-adapter"
         }
       ]
     },
@@ -804,10 +1836,30 @@
           "kind": "type",
           "summary": "Controls automatic page identity, router integration, query allowlisting, hash handling, and title overrides.",
           "summaryZh": "控制自动页面身份、路由集成、query 白名单、hash 处理与标题覆盖。",
-          "imports": ["@plingjs/vue"],
-          "signatures": {"vue3": "interface PageOptions {\n  enabled?: boolean;\n  router?: PageRouterLike;\n  queryKeys?: readonly string[];\n  hash?: boolean;\n  title?: () => string | undefined;\n}"},
-          "support": {"vue3": "native", "react": "none", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/vue", "name": "PageOptions"}],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vue3": "interface PageOptions {\n  enabled?: boolean;\n  router?: PageRouterLike;\n  queryKeys?: readonly string[];\n  hash?: boolean;\n  title?: () => string | undefined;\n}",
+            "vanilla": "interface PageOptions {\n  enabled?: boolean;\n  router?: PageRouterLike;\n  queryKeys?: readonly string[];\n  hash?: boolean;\n  title?: () => string | undefined;\n}"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "PageOptions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "PageOptions"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
         },
         {
@@ -817,10 +1869,39 @@
           "kind": "interface",
           "summary": "A page-level runtime shared by multiple framework islands or same-origin frames.",
           "summaryZh": "由多个框架岛或同源 iframe 共享的页面级运行时。",
-          "imports": ["@plingjs/dom", "@plingjs/vue", "@plingjs/react", "@plingjs/vanilla"],
-          "signatures": {"core": "interface PlingPage {\n  readonly registry: Registry;\n  readonly scopes: ScopeController;\n  readonly feedback: FeedbackCollector;\n  destroy(): void;\n}"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/dom", "name": "PlingPage"}, {"package": "@plingjs/vue", "name": "PlingPage"}, {"package": "@plingjs/react", "name": "PlingPage"}, {"package": "@plingjs/vanilla", "name": "PlingPage"}],
+          "imports": [
+            "@plingjs/dom",
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "interface PlingPage {\n  readonly registry: Registry;\n  readonly scopes: ScopeController;\n  readonly feedback: FeedbackCollector;\n  destroy(): void;\n}"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/dom",
+              "name": "PlingPage"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "PlingPage"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "PlingPage"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "PlingPage"
+            }
+          ],
           "ref": "/reference/continuity-and-projection"
         },
         {
@@ -830,10 +1911,39 @@
           "kind": "function",
           "summary": "Creates the shared registry, scopes, and page identity that adapters can join with shared.",
           "summaryZh": "创建共享注册表、作用域与页面身份，适配器可通过 shared 加入。",
-          "imports": ["@plingjs/dom", "@plingjs/vue", "@plingjs/react", "@plingjs/vanilla"],
-          "signatures": {"core": "createPlingPage(options?: PlingPageOptions): PlingPage"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/dom", "name": "createPlingPage"}, {"package": "@plingjs/vue", "name": "createPlingPage"}, {"package": "@plingjs/react", "name": "createPlingPage"}, {"package": "@plingjs/vanilla", "name": "createPlingPage"}],
+          "imports": [
+            "@plingjs/dom",
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "createPlingPage(options?: PlingPageOptions): PlingPage"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/dom",
+              "name": "createPlingPage"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "createPlingPage"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "createPlingPage"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createPlingPage"
+            }
+          ],
           "ref": "/reference/continuity-and-projection"
         },
         {
@@ -843,10 +1953,39 @@
           "kind": "function",
           "summary": "Shares a page runtime with a same-origin iframe and returns a cleanup function.",
           "summaryZh": "把页面运行时共享给同源 iframe，并返回清理函数。",
-          "imports": ["@plingjs/dom", "@plingjs/vue", "@plingjs/react", "@plingjs/vanilla"],
-          "signatures": {"core": "sharePlingPageWithFrame(frame: HTMLIFrameElement, page: PlingPage): () => void"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/dom", "name": "sharePlingPageWithFrame"}, {"package": "@plingjs/vue", "name": "sharePlingPageWithFrame"}, {"package": "@plingjs/react", "name": "sharePlingPageWithFrame"}, {"package": "@plingjs/vanilla", "name": "sharePlingPageWithFrame"}],
+          "imports": [
+            "@plingjs/dom",
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "sharePlingPageWithFrame(frame: HTMLIFrameElement, page: PlingPage): () => void"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/dom",
+              "name": "sharePlingPageWithFrame"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "sharePlingPageWithFrame"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "sharePlingPageWithFrame"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "sharePlingPageWithFrame"
+            }
+          ],
           "ref": "/reference/continuity-and-projection"
         },
         {
@@ -856,10 +1995,39 @@
           "kind": "function",
           "summary": "Reads a shared page runtime from the parent window when the current document is an embedded frame.",
           "summaryZh": "当前文档是嵌入 frame 时，从父窗口读取共享页面运行时。",
-          "imports": ["@plingjs/dom", "@plingjs/vue", "@plingjs/react", "@plingjs/vanilla"],
-          "signatures": {"core": "plingPageFromParent(win?: Window): PlingPage | undefined"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/dom", "name": "plingPageFromParent"}, {"package": "@plingjs/vue", "name": "plingPageFromParent"}, {"package": "@plingjs/react", "name": "plingPageFromParent"}, {"package": "@plingjs/vanilla", "name": "plingPageFromParent"}],
+          "imports": [
+            "@plingjs/dom",
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "plingPageFromParent(win?: Window): PlingPage | undefined"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/dom",
+              "name": "plingPageFromParent"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "plingPageFromParent"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "plingPageFromParent"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "plingPageFromParent"
+            }
+          ],
           "ref": "/reference/continuity-and-projection"
         },
         {
@@ -869,10 +2037,39 @@
           "kind": "function",
           "summary": "Waits for a parent frame to publish its page runtime.",
           "summaryZh": "等待父 frame 发布页面运行时。",
-          "imports": ["@plingjs/dom", "@plingjs/vue", "@plingjs/react", "@plingjs/vanilla"],
-          "signatures": {"core": "waitForPlingPageFromParent(options?: WaitForFramePageOptions): Promise<PlingPage>"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "native"},
-          "symbols": [{"package": "@plingjs/dom", "name": "waitForPlingPageFromParent"}, {"package": "@plingjs/vue", "name": "waitForPlingPageFromParent"}, {"package": "@plingjs/react", "name": "waitForPlingPageFromParent"}, {"package": "@plingjs/vanilla", "name": "waitForPlingPageFromParent"}],
+          "imports": [
+            "@plingjs/dom",
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "waitForPlingPageFromParent(options?: WaitForFramePageOptions): Promise<PlingPage>"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/dom",
+              "name": "waitForPlingPageFromParent"
+            },
+            {
+              "package": "@plingjs/vue",
+              "name": "waitForPlingPageFromParent"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "waitForPlingPageFromParent"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "waitForPlingPageFromParent"
+            }
+          ],
           "ref": "/reference/continuity-and-projection"
         },
         {
@@ -882,11 +2079,1338 @@
           "kind": "method",
           "summary": "Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.",
           "summaryZh": "扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。",
-          "imports": ["@plingjs/vue", "@plingjs/react", "@plingjs/dom"],
-          "signatures": {"vue3": "pling.inspectCoverage(): CoverageReport", "react": "pling.inspectCoverage(root?: Element | null): CoverageReport", "core": "inspectCoverage(root: Element | null): CoverageReport"},
-          "support": {"vue3": "native", "react": "native", "vue2": "none", "vanilla": "none"},
-          "symbols": [{"package": "@plingjs/dom", "name": "inspectCoverage"}],
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react",
+            "@plingjs/vanilla",
+            "@plingjs/dom"
+          ],
+          "signatures": {
+            "vue3": "pling.inspectCoverage(): CoverageReport",
+            "react": "pling.inspectCoverage(root?: Element | null): CoverageReport",
+            "vanilla": "pling.inspectCoverage(root?: Element | null): CoverageReport",
+            "core": "inspectCoverage(root: Element | null): CoverageReport"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/dom",
+              "name": "inspectCoverage"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "inspectCoverage"
+            }
+          ],
           "ref": "/reference/vue-3-adapter"
+        }
+      ]
+    },
+    {
+      "id": "tasks",
+      "title": "Guided tasks",
+      "titleZh": "引导任务",
+      "summary": "Tasks that collect user decisions, call existing actions in a fixed order, and render one shared run snapshot. The catalog decides which tasks are available in the current context; the guide decides how the active task is explained without duplicating execution or permissions.",
+      "summaryZh": "收集用户决策、按固定顺序调用已有动作，并用同一份运行快照渲染的任务层。任务目录判断当前上下文可用的任务，引导定义决定如何向用户解释当前任务；两者都不复制执行或权限逻辑。",
+      "entries": [
+        {
+          "id": "createTaskController",
+          "anchor": "createtaskcontroller",
+          "name": "createTaskController",
+          "kind": "function",
+          "summary": "Creates a framework-independent task controller. The host supplies the only execution bridge through invoke.",
+          "summaryZh": "创建框架无关的任务控制器。宿主通过 `invoke` 提供唯一的执行桥。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "createTaskController(options: TaskControllerOptions): TaskController"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "createTaskController"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "createTaskCatalog",
+          "anchor": "createtaskcatalog",
+          "name": "createTaskCatalog",
+          "kind": "function",
+          "summary": "Creates the page's guided-task catalog. It selects tasks by route and active scope, activates one guide at a time, and binds the narrow pling_start_task action to the current registry.",
+          "summaryZh": "创建当前页面的引导任务目录。它按路由与活跃作用域筛选任务，同一时刻激活一个引导，并把窄动作 `pling_start_task` 绑定到当前注册表。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "createTaskCatalog(options?: TaskCatalogOptions): TaskCatalog"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "createTaskCatalog"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskCatalog",
+          "anchor": "taskcatalog",
+          "name": "TaskCatalog",
+          "kind": "interface",
+          "summary": "The current page's task directory: register definitions, query what is available now, activate at most one guide, forward guide commands, and notify renderers.",
+          "summaryZh": "当前页面的任务目录：登记定义、查询此刻可用的任务、至多激活一个引导、转发引导命令，并通知渲染方。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskCatalog {\n  readonly actionId: string;\n  readonly updateActionId: string;\n  define(registration: GuidedTaskRegistration): () => void;\n  get(id: string): GuidedTaskRegistration | undefined;\n  list(): readonly GuidedTaskRegistration[];\n  available(): readonly GuidedTaskRegistration[];\n  active(): ActiveGuidedTask | null;\n  activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;\n  deactivate(): void;\n  command(command: TaskGuideCommand): boolean;\n  views(): readonly GuidedTaskView[];\n  refresh(): void;\n  subscribe(listener: () => void): () => void;\n  destroy(): void;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskCatalog"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "GuidedTaskRegistration",
+          "anchor": "guidedtaskregistration",
+          "name": "GuidedTaskRegistration",
+          "kind": "interface",
+          "summary": "One catalog entry: an executable definition, an optional guide, the route and scopes that make it available, whether an explicit run survives context changes, live state, and lifecycle hooks.",
+          "summaryZh": "任务目录中的一项登记：可执行定义、可选引导、决定可用性的路由与作用域、显式运行是否跨上下文保留、实时状态，以及生命周期钩子。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface GuidedTaskRegistration {\n  id?: string;\n  definition: TaskDefinition;\n  guide?: TaskGuideDefinition;\n  controller?: TaskController;\n  route?: GuidedTaskRoute;\n  scope?: string | readonly string[];\n  autoStart?: boolean;\n  keepActive?: boolean;\n  initialValues?: TaskValues | (() => TaskValues);\n  binding?: TaskBinding | (() => TaskBinding);\n  state?: () => TaskGuideState;\n  onActivate?: (task: ActiveGuidedTask) => void | Promise<void>;\n  onDeactivate?: (task: ActiveGuidedTask) => void;\n  onCommand?: (command: TaskGuideCommand, task: ActiveGuidedTask) => void | Promise<void>;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "GuidedTaskRegistration"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "GuidedTaskActivationOptions",
+          "anchor": "guidedtaskactivationoptions",
+          "name": "GuidedTaskActivationOptions",
+          "kind": "interface",
+          "summary": "Optional values already supplied before activation. Unknown fields are rejected before the active state changes.",
+          "summaryZh": "激活前已经拿到的字段值。未知字段会在 active 状态改变前被拒绝。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface GuidedTaskActivationOptions {\n  values?: TaskValues;\n  startedBy?: \"page\" | \"agent\";\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "GuidedTaskActivationOptions"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "ActiveGuidedTask",
+          "anchor": "activeguidedtask",
+          "name": "ActiveGuidedTask",
+          "kind": "interface",
+          "summary": "The one task currently presented to the user: definition, optional guide, optional controller, live render state, and whether the page or the model opened it.",
+          "summaryZh": "当前展示给用户的唯一任务：定义、可选引导、可选控制器、实时渲染状态，以及它由页面还是模型开启。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface ActiveGuidedTask {\n  id: string;\n  definition: TaskDefinition;\n  guide?: TaskGuideDefinition;\n  controller?: TaskController;\n  state: TaskGuideState;\n  startedBy: \"page\" | \"agent\";\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "ActiveGuidedTask"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGuideDefinition",
+          "anchor": "taskguidedefinition",
+          "name": "TaskGuideDefinition",
+          "kind": "interface",
+          "summary": "The human-facing half of a task: welcome copy, ordered steps, read-only summaries, button commands, completion copy, and handoff points.",
+          "summaryZh": "任务面向人的一半：欢迎文案、有序步骤、只读摘要、按钮命令、完成文案与人工接力点。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGuideDefinition {\n  taskId: string;\n  title: string;\n  welcome?: string;\n  footer?: string;\n  cancel?: TaskGuideAction;\n  stepSubtitle?: string;\n  avatar?: string;\n  labels?: TaskGuideLabels;\n  fields?: TaskGuideFields;\n  steps: readonly TaskGuideStep[];\n  done?: TaskGuideDone;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGuideDefinition"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGuideField",
+          "anchor": "taskguidefield",
+          "name": "TaskGuideField",
+          "kind": "interface",
+          "summary": "One node in the compact field rail. It reports which values are filled, suggested, or explicitly skipped, and emits `focus-<field>` unless the business supplies another command.",
+          "summaryZh": "紧凑字段轨道中的一个节点。它报告哪些值已填入、已有建议或被明确跳过；默认发出 `focus-<field>`，业务也可以覆盖命令。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGuideField {\n  field: string;\n  label: string;\n  required?: boolean;\n  filled?: boolean;\n  skipped?: boolean;\n  suggested?: boolean;\n  command?: string;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGuideField"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGuideStep",
+          "anchor": "taskguidestep",
+          "name": "TaskGuideStep",
+          "kind": "interface",
+          "summary": "One guided step. It can show read-only rows, point a person at the page, or emit a business-owned command without gaining a second execution path.",
+          "summaryZh": "一个引导步骤。它可以显示只读摘要、引导用户在页面上操作，或发出业务自有命令，但不会获得第二套执行路径。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGuideStep {\n  id: string;\n  label: string;\n  title: string;\n  description: string;\n  rowsTitle?: string | ((snapshot: TaskRunSnapshot | null) => string);\n  rows?: TaskGuideRows;\n  handoff?: TaskGuideHandoff;\n  primary?: TaskGuideAction;\n  secondary?: TaskGuideAction;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGuideStep"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGuideAction",
+          "anchor": "taskguideaction",
+          "name": "TaskGuideAction",
+          "kind": "interface",
+          "summary": "A guide button label plus a business-owned command name. The renderer forwards the command and never guesses what it means.",
+          "summaryZh": "引导按钮的文案与业务自有命令名。渲染器只转发命令，不猜测它的含义。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGuideAction {\n  label: string;\n  command: string;\n  busyLabel?: string;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGuideAction"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGuideRow",
+          "anchor": "taskguiderow",
+          "name": "TaskGuideRow",
+          "kind": "interface",
+          "summary": "One read-only summary row. It can distinguish an existing page value from a suggestion that has not been written yet, and can carry a row-level business command.",
+          "summaryZh": "一行只读摘要。它可以区分页面当前值与尚未写入的建议值，并可携带行级业务命令。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGuideRow {\n  label: string;\n  value: TaskGuideRowValue;\n  format?: TaskGuideRowFormat;\n  status?: TaskGuideRowStatus;\n  badge?: string;\n  note?: string;\n  action?: TaskGuideAction;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGuideRow"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGuideDone",
+          "anchor": "taskguidedone",
+          "name": "TaskGuideDone",
+          "kind": "interface",
+          "summary": "The completion state shown after the task succeeds, including a final summary and optional follow-up commands.",
+          "summaryZh": "任务成功后的完成状态，包括最终摘要与可选的后续命令。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGuideDone {\n  title: string | ((snapshot: TaskRunSnapshot | null) => string);\n  description: string | ((snapshot: TaskRunSnapshot | null) => string);\n  rows?: TaskGuideRows;\n  actions?: readonly TaskGuideAction[];\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGuideDone"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGuideCommand",
+          "anchor": "taskguidecommand",
+          "name": "TaskGuideCommand",
+          "kind": "interface",
+          "summary": "A command emitted by the guide, with the step and completion context the page needs to decide what to do next.",
+          "summaryZh": "引导发出的命令，并带上页面决定下一步所需的步骤与完成上下文。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGuideCommand {\n  action: TaskGuideAction;\n  step: TaskGuideStep | null;\n  stepIndex: number;\n  done: boolean;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGuideCommand"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGuideState",
+          "anchor": "taskguidestate",
+          "name": "TaskGuideState",
+          "kind": "interface",
+          "summary": "Live render state returned by a registration: the task snapshot, current step, busy state, error, and completion flag.",
+          "summaryZh": "登记项返回的实时渲染状态：任务快照、当前步骤、忙碌状态、错误与完成标记。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGuideState {\n  snapshot?: TaskRunSnapshot | null;\n  step?: number;\n  busy?: boolean;\n  error?: string;\n  completed?: boolean;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGuideState"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "GuidedTaskView",
+          "anchor": "guidedtaskview",
+          "name": "GuidedTaskView",
+          "kind": "interface",
+          "summary": "A compact, read-only task description for model context and task lists. It is derived from the definition and optional guide.",
+          "summaryZh": "供模型上下文与任务列表使用的紧凑只读任务说明，由定义与可选引导派生。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface GuidedTaskView {\n  id: string;\n  title: string;\n  description?: string;\n  examples?: readonly string[];\n  guideTitle?: string;\n  stepTitles?: readonly string[];\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "GuidedTaskView"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskDefinition",
+          "anchor": "taskdefinition",
+          "name": "TaskDefinition",
+          "kind": "interface",
+          "summary": "A guided task as a goal, constraints, success criteria, working-memory fields, and optional deterministic steps or an agent prompt.",
+          "summaryZh": "一个引导任务：目标、约束、成功判据、工作记忆字段，以及可选的确定性步骤或 Agent 提示词。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskDefinition {\n  id: string;\n  title: string;\n  description?: string;\n  objective?: string;\n  constraints?: readonly string[];\n  successCriteria?: readonly string[];\n  requiresRecord?: boolean;\n  examples?: readonly string[];\n  fields?: readonly TaskField[];\n  risk?: Kind;\n  steps?: readonly TaskStep[];\n  prompt?: string | ((values: TaskValues) => string);\n  confirm?: boolean | \"always\";\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskDefinition"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskBinding",
+          "anchor": "taskbinding",
+          "name": "TaskBinding",
+          "kind": "interface",
+          "summary": "Page facts supplied when a task starts. They are separate from user-editable values so a record id never becomes a form field.",
+          "summaryZh": "任务启动时由页面提供的上下文。它与用户可编辑的字段分开，避免记录 id 意外变成表单字段。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskBinding {\n  record?: TaskRecordBinding;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskBinding"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskRecordBinding",
+          "anchor": "taskrecordbinding",
+          "name": "TaskRecordBinding",
+          "kind": "interface",
+          "summary": "The record already selected by the page, such as a lesson row or a detail page. The task uses its id but does not ask the user to type it.",
+          "summaryZh": "页面已经选中的记录，例如课表的一行或详情页。任务直接使用它的 id，不再要求用户输入。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskRecordBinding {\n  id: string;\n  label?: string;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskRecordBinding"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskField",
+          "anchor": "taskfield",
+          "name": "TaskField",
+          "kind": "interface",
+          "summary": "One item in task working memory: a decision the user may need to make, a recommendation, or a page-only value the agent cannot write.",
+          "summaryZh": "任务工作记忆中的一项：可能需要用户做出的决定、推荐值，或 Agent 不可写的页面专属值。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskField {\n  name: string;\n  label: string;\n  type?: \"text\" | \"textarea\" | \"number\" | \"boolean\" | \"date\" | \"select\" | \"lookup\";\n  optional?: boolean;\n  placeholder?: string;\n  help?: string;\n  defaultValue?: TaskValue;\n  values?: readonly TaskChoice[];\n  recommended?: TaskValue;\n  lookup?: TaskLookup;\n  searchAction?: string;\n  minChars?: number;\n  agentWritable?: boolean;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskField"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskLookup",
+          "anchor": "tasklookup",
+          "name": "TaskLookup",
+          "kind": "type",
+          "summary": "The search implementation shared by the task UI and the automatically registered search action.",
+          "summaryZh": "任务界面与自动注册的搜索动作共用的搜索实现。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "type TaskLookup = (query: string, context: TaskLookupContext) => Promise<readonly TaskChoice[]> | readonly TaskChoice[]"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskLookup"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskLookupContext",
+          "anchor": "tasklookupcontext",
+          "name": "TaskLookupContext",
+          "kind": "interface",
+          "summary": "Optional cancellation signal for an asynchronous lookup.",
+          "summaryZh": "异步查找可使用的取消信号。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskLookupContext {\n  signal?: AbortSignal;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskLookupContext"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskStep",
+          "anchor": "taskstep",
+          "name": "TaskStep",
+          "kind": "interface",
+          "summary": "One existing action call in a deterministic task. Arguments can be static, come from collected values, or use the record selected before the task opened.",
+          "summaryZh": "确定性任务中的一次已有动作调用。参数可以是静态值、来自已填字段，或使用打开任务前选中的页面记录。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskStep {\n  id?: string;\n  label: string;\n  summary?: string;\n  action: string;\n  args?: Record<string, unknown> | ((values: TaskValues, binding: TaskBinding) => Record<string, unknown>);\n  optional?: boolean;\n  handoff?: boolean | string;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskStep"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskStepSnapshot",
+          "anchor": "taskstepsnapshot",
+          "name": "TaskStepSnapshot",
+          "kind": "interface",
+          "summary": "One rendered step: its action, status, optional handoff marker, failure, and result.",
+          "summaryZh": "一个渲染步骤：动作、状态、可选的人工接力标记、失败与结果。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskStepSnapshot {\n  index: number;\n  id: string;\n  label: string;\n  summary?: string;\n  action: string;\n  status: \"pending\" | \"running\" | \"ok\" | \"skipped\" | \"failed\";\n  optional: boolean;\n  handoff?: boolean | string;\n  error?: TaskRunError;\n  result?: unknown;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskStepSnapshot"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskRunStatus",
+          "anchor": "taskrunstatus",
+          "name": "TaskRunStatus",
+          "kind": "type",
+          "summary": "The run lifecycle. planned, running, and verifying separate an approved plan, active work, and the check after an action returns.",
+          "summaryZh": "任务运行的生命周期。`planned`、`running` 与 `verifying` 分别表示已确定的计划、正在执行，以及动作返回后的检查。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "type TaskRunStatus = \"collecting\" | \"ready\" | \"planned\" | \"running\" | \"waiting\" | \"verifying\" | \"done\" | \"failed\" | \"cancelled\""
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskRunStatus"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskWaitingFor",
+          "anchor": "taskwaitingfor",
+          "name": "TaskWaitingFor",
+          "kind": "type",
+          "summary": "Why a run is waiting: a task-level confirmation, or a step the user must complete in person.",
+          "summaryZh": "运行在等待什么：任务级确认，或必须由用户亲自完成的步骤。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "type TaskWaitingFor = \"confirmation\" | \"handoff\""
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskWaitingFor"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskRunContext",
+          "anchor": "taskruncontext",
+          "name": "TaskRunContext",
+          "kind": "interface",
+          "summary": "Context passed to invoke and to the optional progress reporter. report() can mark a long step as verifying or waiting for handoff.",
+          "summaryZh": "传给 `invoke` 与可选进度上报器的上下文。`report()` 可把长步骤标记为核对中或等待人工接力。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskRunContext {\n  taskId: string;\n  values: TaskValues;\n  binding: TaskBinding;\n  signal: AbortSignal;\n  report(status: \"running\" | \"waiting\" | \"verifying\", waitingFor?: TaskWaitingFor): void;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskRunContext"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskRunSnapshot",
+          "anchor": "taskrunsnapshot",
+          "name": "TaskRunSnapshot",
+          "kind": "interface",
+          "summary": "The complete render state of one task run: values, bound page record, status, step progress, prompt, confirmation, error, and timestamps.",
+          "summaryZh": "一次任务运行的完整渲染状态：字段值、绑定的页面记录、状态、步骤进度、提示词、确认、错误与时间戳。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskRunSnapshot {\n  taskId: string;\n  title: string;\n  mode: TaskMode;\n  status: TaskRunStatus;\n  fields: readonly TaskField[];\n  values: TaskValues;\n  binding?: TaskBinding;\n  steps: readonly TaskStepSnapshot[];\n  prompt?: string;\n  waitingFor?: TaskWaitingFor;\n  confirmation?: { required: true; confirmed: boolean };\n  error?: TaskRunError;\n  startedAt?: number;\n  finishedAt?: number;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskRunSnapshot"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskController",
+          "anchor": "taskcontroller",
+          "name": "TaskController",
+          "kind": "interface",
+          "summary": "Registers definitions and owns one active run. Start another task to cancel the previous run.",
+          "summaryZh": "注册任务定义并持有一个活动运行。启动另一个任务会取消前一个运行。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskController {\n  register(definition: TaskDefinition): () => void;\n  get(id: string): TaskDefinition | undefined;\n  list(): readonly TaskDefinition[];\n  start(id: string, values?: TaskValues, binding?: TaskBinding): TaskRunSnapshot;\n  setValue(name: string, value: TaskValue): TaskRunSnapshot;\n  plan(): TaskRunSnapshot;\n  confirm(): TaskRunSnapshot;\n  run(): Promise<TaskRunSnapshot>;\n  cancel(): TaskRunSnapshot;\n  reset(): void;\n  snapshot(): TaskRunSnapshot | null;\n  subscribe(listener: (snapshot: TaskRunSnapshot) => void): () => void;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskController"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskChoice",
+          "anchor": "taskchoice",
+          "name": "TaskChoice",
+          "kind": "interface",
+          "summary": "A selectable reference. The value is what the action needs; the label and description are what the user sees.",
+          "summaryZh": "一个可选项。`value` 是动作真正需要的引用，`label` 与 `description` 是用户看到的内容。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskChoice {\n  value: string;\n  label: string;\n  description?: string;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskChoice"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "QuickTask",
+          "anchor": "quicktask",
+          "name": "QuickTask",
+          "kind": "interface",
+          "summary": "The structured form of a recommended task button; a plain string remains the one-line shorthand.",
+          "summaryZh": "推荐任务按钮的结构化写法；普通字符串仍是单行简写。",
+          "imports": [
+            "@plingjs/ui"
+          ],
+          "signatures": {
+            "core": "interface QuickTask {\n  label: string;\n  prompt: string;\n  description?: string;\n  disabled?: boolean;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/ui",
+              "name": "QuickTask"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "QuickTaskItem",
+          "anchor": "quicktaskitem",
+          "name": "QuickTaskItem",
+          "kind": "type",
+          "summary": "A quick-task entry accepted by assistant surfaces: either a string prompt or a structured QuickTask.",
+          "summaryZh": "助手入口接受的快捷任务项：字符串提示词，或结构化的 `QuickTask`。",
+          "imports": [
+            "@plingjs/ui"
+          ],
+          "signatures": {
+            "core": "type QuickTaskItem = string | QuickTask"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/ui",
+              "name": "QuickTaskItem"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskInvoke",
+          "anchor": "taskinvoke",
+          "name": "TaskInvoke",
+          "kind": "type",
+          "summary": "The host execution bridge. It should call the existing executor, Surface, or business service and may return void, { ok }, or ExecResult.",
+          "summaryZh": "宿主执行桥。它应调用现有执行器、Surface 或业务服务，可返回 `void`、`{ ok }` 或 `ExecResult`。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "type TaskInvoke = (action: string, args: Record<string, unknown>, context: TaskRunContext) => unknown | Promise<unknown>"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskInvoke"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "registerTaskLookupActions",
+          "anchor": "registertasklookupactions",
+          "name": "registerTaskLookupActions",
+          "kind": "function",
+          "summary": "Registers every lookup field as a narrow read action so the model can search by a human name instead of inventing ids. The UI and model call the same lookup.",
+          "summaryZh": "把每个 lookup 字段注册成窄范围只读动作，让模型按人可读的名称搜索，而不是猜 id。界面与模型调用同一份查找实现。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "registerTaskLookupActions(host: Pick<VanillaHost, \"registry\" | \"warn\">, definitions: readonly TaskDefinition[], options?: TaskLookupActionOptions): () => void"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "registerTaskLookupActions"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskLookupActionOptions",
+          "anchor": "tasklookupactionoptions",
+          "name": "TaskLookupActionOptions",
+          "kind": "interface",
+          "summary": "Result limit, action-id override, description override, and warning hook for generated lookup actions.",
+          "summaryZh": "生成搜索动作时的结果上限、动作 id 覆盖、描述覆盖与告警钩子。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "interface TaskLookupActionOptions {\n  maxResults?: number;\n  actionId?: (field: TaskField, task: TaskDefinition) => string;\n  description?: (field: TaskField, task: TaskDefinition) => string;\n  onWarning?: (message: string) => void;\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "TaskLookupActionOptions"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskLookupResult",
+          "anchor": "tasklookupresult",
+          "name": "TaskLookupResult",
+          "kind": "interface",
+          "summary": "The normalized result of a lookup action: the query, the minimum length when it was too short, and at most maxResults choices.",
+          "summaryZh": "查找动作的规范化结果：查询、命中最小长度限制时的要求，以及最多 `maxResults` 个候选。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "interface TaskLookupResult {\n  query: string;\n  minChars?: number;\n  choices: TaskChoice[];\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "TaskLookupResult"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "createTaskPanel",
+          "anchor": "createtaskpanel",
+          "name": "createTaskPanel",
+          "kind": "function",
+          "summary": "Renders a task controller as a standalone framework-independent DOM workspace. Agent-mode prompts are handed back through onPrompt or a DOM event.",
+          "summaryZh": "把任务控制器渲染成独立的框架无关 DOM 工作区。Agent 模式生成的提示词通过 `onPrompt` 或 DOM 事件交还宿主。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "createTaskPanel(controller: TaskController, options?: GuidedTaskPanelOptions): GuidedTaskPanel"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createTaskPanel"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "createTaskCard",
+          "anchor": "createtaskcard",
+          "name": "createTaskCard",
+          "kind": "function",
+          "summary": "Renders a task controller as a compact DOM card for the assistant transcript. It shares the same run controller as createTaskPanel.",
+          "summaryZh": "把任务控制器渲染成助手消息流里的紧凑 DOM 任务卡，与 `createTaskPanel` 共用同一份运行控制器。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "createTaskCard(controller: TaskController, options?: Omit<GuidedTaskPanelOptions, \"variant\">): GuidedTaskPanel"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createTaskCard"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "createTaskGuide",
+          "anchor": "createtaskguide",
+          "name": "createTaskGuide",
+          "kind": "function",
+          "summary": "Creates the reference DOM renderer for a TaskGuideDefinition. It renders steps, read-only summaries, handoff copy, and command buttons; it never executes a business action itself.",
+          "summaryZh": "为 `TaskGuideDefinition` 创建参考 DOM 渲染器。它渲染步骤、只读摘要、人工接力说明与命令按钮，自身不执行任何业务动作。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "createTaskGuide(options: CreateTaskGuideOptions): GuidedTaskGuide"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createTaskGuide"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "GuidedTaskGuide",
+          "anchor": "guidedtaskguide",
+          "name": "GuidedTaskGuide",
+          "kind": "interface",
+          "summary": "The mounted guide, with methods to update the snapshot, step, busy state, error, completion state, and to destroy its DOM.",
+          "summaryZh": "已挂载的引导，提供更新快照、步骤、忙碌状态、错误、完成状态以及销毁 DOM 的方法。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "interface GuidedTaskGuide {\n  readonly element: HTMLElement;\n  setSnapshot(snapshot: TaskRunSnapshot | null): void;\n  setStep(step: number): void;\n  setBusy(busy: boolean): void;\n  setError(message: string): void;\n  complete(): void;\n  reset(): void;\n  refresh(): void;\n  destroy(): void;\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "GuidedTaskGuide"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "AgentTaskGuide",
+          "anchor": "agenttaskguide",
+          "name": "AgentTaskGuide",
+          "kind": "component",
+          "summary": "Vue lifecycle shell around the shared DOM task guide. Built-in assistant surfaces render it automatically; use it directly only when replacing the default task presentation.",
+          "summaryZh": "共享 DOM 任务引导的 Vue 生命周期外壳。内置助手界面会自动渲染它；只有替换默认任务展示时才需要直接使用。",
+          "imports": [
+            "@plingjs/vue"
+          ],
+          "signatures": {
+            "vue3": "<AgentTaskGuide\n  :definition=\"guide\"\n  :snapshot=\"snapshot\"\n  :step=\"step\"\n  :busy=\"busy\"\n  :error=\"error\"\n  :completed=\"completed\"\n  @command=\"handleCommand\"\n/>"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentTaskGuide"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "AgentTaskCard",
+          "anchor": "agenttaskcard",
+          "name": "AgentTaskCard",
+          "kind": "component",
+          "summary": "Vue and React shell around the shared DOM task card for products that deliberately replace the default guide. Built-in assistant surfaces now render the active TaskGuideDefinition automatically.",
+          "summaryZh": "共享 DOM 任务卡的 Vue 与 React 外壳，供有意替换默认引导的产品使用。内置助手界面现在会自动渲染 active 的 `TaskGuideDefinition`。",
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "vue3": "<AgentTaskCard ref=\"card\" :controller=\"tasks\" />",
+            "react": "<AgentTaskCard ref={card} controller={tasks} />"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentTaskCard"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "AgentTaskCard"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "createGuideActions",
+          "anchor": "createguideactions",
+          "name": "createGuideActions",
+          "kind": "function",
+          "summary": "Renders the compact guided-task action row used by every adapter. A short verb carries the action; a long recommendation becomes a one-line ellipsised preview with the full value in title and aria-label.",
+          "summaryZh": "渲染所有适配器共用的紧凑引导任务操作行。按钮只保留短动作；长推荐变成单行省略预览，完整值保留在 `title` 与 `aria-label` 中。",
+          "imports": [
+            "@plingjs/dom",
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "core": "createGuideActions(options: GuideActionsOptions): GuideActions",
+            "vanilla": "createGuideActions(options: GuideActionsOptions): GuideActions"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/dom",
+              "name": "createGuideActions"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "createGuideActions"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "AgentGuideActions",
+          "anchor": "agentguideactions",
+          "name": "AgentGuideActions",
+          "kind": "component",
+          "summary": "Vue and React lifecycle shell around the shared compact action row. The host supplies items and handles commands; the renderer never writes a field.",
+          "summaryZh": "共享紧凑操作行的 Vue 与 React 生命周期外壳。宿主提供选项并处理命令；渲染器从不写入字段。",
+          "imports": [
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "vue3": "<AgentGuideActions\n  :items=\"items\"\n  hint=\"保存前再核对一次\"\n  aria-label=\"任务操作\"\n  @command=\"handleCommand\"\n/>",
+            "react": "<AgentGuideActions\n  items={items}\n  hint=\"Check once before saving\"\n  ariaLabel=\"Task actions\"\n  onCommand={handleCommand}\n/>"
+          },
+          "support": {
+            "vue3": "native",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vue",
+              "name": "AgentGuideActions"
+            },
+            {
+              "package": "@plingjs/react",
+              "name": "AgentGuideActions"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "GuideActionItem",
+          "anchor": "guideactionitem",
+          "name": "GuideActionItem",
+          "kind": "interface",
+          "summary": "One action in the compact row: a short label, an opaque business command, an optional kind, and the long recommendation kept as a preview rather than a label.",
+          "summaryZh": "紧凑操作行中的一项：短标签、业务自定义命令、可选类型，以及作为预览而不是标签的长推荐。",
+          "imports": [
+            "@plingjs/dom",
+            "@plingjs/vanilla",
+            "@plingjs/vue",
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "core": "interface GuideActionItem {\n  id: string;\n  label: string;\n  command: string;\n  kind?: \"primary\" | \"secondary\" | \"suggestion\" | \"skip\";\n  preview?: string;\n  ariaLabel?: string;\n  disabled?: boolean;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/dom",
+              "name": "GuideActionItem"
+            },
+            {
+              "package": "@plingjs/vanilla",
+              "name": "GuideActionItem"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "AgentTaskCardHandle",
+          "anchor": "agenttaskcardhandle",
+          "name": "AgentTaskCardHandle",
+          "kind": "interface",
+          "summary": "React imperative handle exposed by AgentTaskCard: open a task with a page binding, switch the catalog, refresh, or close. Vue uses the component ref with the same methods.",
+          "summaryZh": "React `AgentTaskCard` 暴露的命令式句柄：带页面绑定打开任务、切换任务目录、刷新或关闭。Vue 通过组件 ref 使用同名方法。",
+          "imports": [
+            "@plingjs/react"
+          ],
+          "signatures": {
+            "react": "interface AgentTaskCardHandle {\n  open(taskId: string, values?: TaskValues, binding?: TaskBinding): void;\n  close(): void;\n  refresh(): void;\n  setCatalog(visible: boolean): void;\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "native",
+            "vue2": "none",
+            "vanilla": "none"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/react",
+              "name": "AgentTaskCardHandle"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "GuidedTaskPanelOptions",
+          "anchor": "guidedtaskpaneloptions",
+          "name": "GuidedTaskPanelOptions",
+          "kind": "interface",
+          "summary": "Locale, presentation variant, catalog visibility, task entry, prompt handoff, and completion callbacks for the reference DOM renderer.",
+          "summaryZh": "参考 DOM 渲染器的语言、外观形态、目录可见性、初始任务、提示词回传与完成回调。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "interface GuidedTaskPanelOptions {\n  locale?: string;\n  t?: (key: string, params?: MessageParams) => string;\n  title?: string;\n  variant?: \"panel\" | \"card\";\n  catalog?: boolean;\n  initialTask?: string;\n  onPrompt?: (prompt: string, snapshot: TaskRunSnapshot) => void;\n  onComplete?: (snapshot: TaskRunSnapshot) => void;\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "GuidedTaskPanelOptions"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "GuidedTaskPanel",
+          "anchor": "guidedtaskpanel",
+          "name": "GuidedTaskPanel",
+          "kind": "interface",
+          "summary": "The mounted DOM renderer and its open, close, refresh, catalog, and destroy lifecycle.",
+          "summaryZh": "已挂载的 DOM 渲染器，以及打开、关闭、刷新、目录切换与销毁生命周期。",
+          "imports": [
+            "@plingjs/vanilla"
+          ],
+          "signatures": {
+            "vanilla": "interface GuidedTaskPanel {\n  readonly element: HTMLElement;\n  open(taskId: string, values?: TaskValues, binding?: TaskBinding): void;\n  close(): void;\n  refresh(): void;\n  setCatalog(visible: boolean): void;\n  destroy(): void;\n}"
+          },
+          "support": {
+            "vue3": "none",
+            "react": "none",
+            "vue2": "none",
+            "vanilla": "native"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/vanilla",
+              "name": "GuidedTaskPanel"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
         }
       ]
     },
@@ -904,11 +3428,33 @@
           "kind": "function",
           "summary": "Creates a deterministic model from scripted turns. It exercises the real loop, tool dispatch, approvals, and failure path without a network call.",
           "summaryZh": "用预先写好的轮次创建确定性模型。它走真实的循环、工具分发、确认与失败路径，但不需要网络。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "createReplayLlm(turns: readonly ReplayTurn[]): ReplayLlm"},
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "createReplayLlm(turns: readonly ReplayTurn[]): ReplayLlm"
+          },
           "definition": "interface ReplayCall {\n  tool: string;\n  args?: Record<string, unknown>;\n  id?: string;\n}\n\ninterface ReplayTurn {\n  content?: string;\n  calls?: readonly ReplayCall[];\n}\n\ninterface ReplayLlm extends Llm {\n  readonly received: readonly (readonly LlmMessage[])[];\n  readonly toolsSeen: readonly (readonly LlmToolSchema[])[];\n  readonly turn: number;\n  reset(): void;\n}",
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "createReplayLlm"}, {"package": "@plingjs/agent", "name": "ReplayTurn"}, {"package": "@plingjs/agent", "name": "ReplayLlm"}],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "createReplayLlm"
+            },
+            {
+              "package": "@plingjs/agent",
+              "name": "ReplayTurn"
+            },
+            {
+              "package": "@plingjs/agent",
+              "name": "ReplayLlm"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -918,10 +3464,24 @@
           "kind": "type",
           "summary": "One evaluation case: input, expected and forbidden actions, an optional tool-error budget, and a business-state check.",
           "summaryZh": "一条评测用例：输入、期望与禁止调用的动作、可选工具错误预算，以及业务状态检查。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "interface EvalCase {\n  name?: string;\n  input: string;\n  expectIncludes?: readonly string[];\n  expectTools?: readonly string[];\n  expectNotTools?: readonly string[];\n  maxToolErrors?: number;\n  verify?: () => boolean | Promise<boolean>;\n}"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "EvalCase"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface EvalCase {\n  name?: string;\n  input: string;\n  expectIncludes?: readonly string[];\n  expectTools?: readonly string[];\n  expectNotTools?: readonly string[];\n  maxToolErrors?: number;\n  verify?: () => boolean | Promise<boolean>;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "EvalCase"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -931,11 +3491,29 @@
           "kind": "function",
           "summary": "Runs a set of EvalCase entries through one host callback, resets state between cases, and returns a pass/fail report.",
           "summaryZh": "通过同一个宿主回调运行一组 EvalCase，在用例之间重置状态，并返回通过/失败报告。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "runEvaluation(options: EvaluateOptions): Promise<EvalReport>"},
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "runEvaluation(options: EvaluateOptions): Promise<EvalReport>"
+          },
           "definition": "interface EvaluateOptions {\n  run: (input: string) => Promise<string>;\n  hooks: HookRegistry;\n  cases: readonly EvalCase[];\n  reset?: () => void | Promise<void>;\n  measure?: () => EvalMetrics;\n  events?: () => readonly SessionEvent[];\n}",
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "runEvaluation"}, {"package": "@plingjs/agent", "name": "EvalReport"}],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "runEvaluation"
+            },
+            {
+              "package": "@plingjs/agent",
+              "name": "EvalReport"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -945,10 +3523,28 @@
           "kind": "function",
           "summary": "Creates the lower-level conversation loop for tests and custom hosts. Most applications should use AgentSetup or createAgentRuntime instead.",
           "summaryZh": "为测试与自定义宿主创建较低层的对话循环。大多数应用应使用 AgentSetup 或 createAgentRuntime。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "createAgentLoop(options: LoopOptions): AgentLoop"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "createAgentLoop"}, {"package": "@plingjs/agent", "name": "AgentLoop"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "createAgentLoop(options: LoopOptions): AgentLoop"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "createAgentLoop"
+            },
+            {
+              "package": "@plingjs/agent",
+              "name": "AgentLoop"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -958,10 +3554,24 @@
           "kind": "function",
           "summary": "Waits for DOM updates, one browser frame, and a short idle window before the next page snapshot is read.",
           "summaryZh": "在读取下一份页面快照前，等待 DOM 更新、一个浏览器帧与短暂的静默窗口。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "defaultSettle(): Promise<void>"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "defaultSettle"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "defaultSettle(): Promise<void>"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "defaultSettle"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -971,10 +3581,24 @@
           "kind": "function",
           "summary": "Renders the bounded page context sent to the model: regions, actions, records, state, feedback, and page identity.",
           "summaryZh": "渲染发给模型的有界页面上下文：区域、动作、记录、状态、反馈与页面身份。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "renderPageContext(snapshot: Snapshot, options?: ContextOptions): string"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "renderPageContext"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "renderPageContext(snapshot: Snapshot, options?: ContextOptions): string"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "renderPageContext"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         },
         {
@@ -984,11 +3608,29 @@
           "kind": "function",
           "summary": "Creates the shared executor used by the in-page agent and external Surface hosts. It is the only path that applies policy, availability, execution, and success checks.",
           "summaryZh": "创建页面内 Agent 与外部 Surface 宿主共用的执行器。只有这条路径会统一应用权限、可用性、执行与成功判据。",
-          "imports": ["@plingjs/core"],
-          "signatures": {"core": "createExecutor(options: ExecutorOptions): Executor"},
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signatures": {
+            "core": "createExecutor(options: ExecutorOptions): Executor"
+          },
           "definition": "interface ExecutorOptions {\n  registry: Registry;\n  policy: ConfirmGate;\n  handoff?: HandoffGate;\n  observe?: (id: string, args: Record<string, unknown>) => void | Promise<void>;\n  evidence?: boolean;\n  settle?: () => Promise<void>;\n  betweenSteps?: () => Promise<void>;\n}",
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "createExecutor"}, {"package": "@plingjs/core", "name": "Executor"}],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "createExecutor"
+            },
+            {
+              "package": "@plingjs/core",
+              "name": "Executor"
+            }
+          ],
           "ref": "/reference/surface-protocol"
         },
         {
@@ -998,10 +3640,28 @@
           "kind": "function",
           "summary": "Creates a confirmation policy. With no confirmation channel it fails closed and denies actions that require approval.",
           "summaryZh": "创建确认策略。没有确认通道时按 fail-closed 处理，拒绝需要批准的动作。",
-          "imports": ["@plingjs/core"],
-          "signatures": {"core": "createPolicy(confirm?: Confirm | null): Policy"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/core", "name": "createPolicy"}, {"package": "@plingjs/core", "name": "Policy"}],
+          "imports": [
+            "@plingjs/core"
+          ],
+          "signatures": {
+            "core": "createPolicy(confirm?: Confirm | null): Policy"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/core",
+              "name": "createPolicy"
+            },
+            {
+              "package": "@plingjs/core",
+              "name": "Policy"
+            }
+          ],
           "ref": "/reference/surface-protocol"
         }
       ]
@@ -1020,10 +3680,24 @@
           "kind": "function",
           "summary": "Renders a Pling error through the shared message catalog while preserving the machine-readable code.",
           "summaryZh": "通过共享文案目录渲染 Pling 错误，同时保留机器可读错误码。",
-          "imports": ["@plingjs/ui"],
-          "signatures": {"core": "describePlingError(error: PlingErrorText, t: PlingTranslator): string"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/ui", "name": "describePlingError"}],
+          "imports": [
+            "@plingjs/ui"
+          ],
+          "signatures": {
+            "core": "describePlingError(error: PlingErrorText, t: PlingTranslator): string"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/ui",
+              "name": "describePlingError"
+            }
+          ],
           "ref": "/reference/error-codes-and-diagnostics"
         },
         {
@@ -1033,10 +3707,24 @@
           "kind": "function",
           "summary": "Renders a structured configuration diagnostic, including missing model fields and invalid limits.",
           "summaryZh": "渲染结构化配置诊断，包括缺失的模型字段与无效限额。",
-          "imports": ["@plingjs/ui"],
-          "signatures": {"core": "describePlingDiagnostic(diagnostic: PlingDiagnosticText, t: PlingTranslator): string"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/ui", "name": "describePlingDiagnostic"}],
+          "imports": [
+            "@plingjs/ui"
+          ],
+          "signatures": {
+            "core": "describePlingDiagnostic(diagnostic: PlingDiagnosticText, t: PlingTranslator): string"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/ui",
+              "name": "describePlingDiagnostic"
+            }
+          ],
           "ref": "/reference/error-codes-and-diagnostics"
         },
         {
@@ -1046,10 +3734,24 @@
           "kind": "function",
           "summary": "Merges defaults, environment variables, and explicit overrides into the final model configuration.",
           "summaryZh": "合并默认值、环境变量与显式覆盖，得到最终模型配置。",
-          "imports": ["@plingjs/agent"],
-          "signatures": {"core": "resolveAgentConfig(options?: { env?; config? }): AgentConfig"},
-          "support": {"vue3": "core", "react": "core", "vue2": "core", "vanilla": "core"},
-          "symbols": [{"package": "@plingjs/agent", "name": "resolveAgentConfig"}],
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "resolveAgentConfig(options?: { env?; config? }): AgentConfig"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "resolveAgentConfig"
+            }
+          ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
         }
       ]

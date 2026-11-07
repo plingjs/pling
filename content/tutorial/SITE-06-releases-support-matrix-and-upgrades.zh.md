@@ -24,6 +24,7 @@ Pling 的软件包使用语义化版本，Surface 能力协议使用独立版本
 | `@plingjs/agent` | 循环、上下文、工具与连续性契约 | `0.1.0-alpha.3` |
 | `@plingjs/surface` | Agent Surface 投影与 `describe` / `invoke` | `0.1.0-alpha.3` |
 | `@plingjs/surface-browser` | 页面侧 Surface 会话、WebSocket、桥接与重连 | `0.1.0-alpha.3` |
+| `@plingjs/surface-gateway` | Surface 的 Node 传输与控制面：页面会话、配对、MCP、作用域、撤销与审计 | `0.1.0-alpha.3` |
 | `@plingjs/delegation` | 可选委托凭证生命周期 | `0.1.0-alpha.3` |
 | `@plingjs/continuity-http` | 可选远程连续性 HTTP 集成 | `0.1.0-alpha.3` |
 | `@plingjs/server` | OpenAI 兼容模型网关 | `0.1.0-alpha.3` |
@@ -40,7 +41,7 @@ Pling 的软件包使用语义化版本，Surface 能力协议使用独立版本
 | 环境 | 支持范围 | 实际边界 |
 | --- | --- | --- |
 | Vue 3 | peer 依赖 `^3`；文档面向 3.4+ | 示例使用对象形式 `v-bind` 与组合式 API |
-| React | peer 依赖 `>=18` | 示例使用 React 19；不对其他旧主版本作兼容承诺 |
+| React | peer 依赖 `>=16.3` | Hooks 入口要求 React 16.8+；React 16.3–16.7 使用 `@plingjs/react/legacy` |
 | Vue 2 | `@plingjs/vue2` 仅支持 `^2.7.0`；2.6 及更早可使用 `@plingjs/vanilla` 手动接入 | 2.6 及更早版本缺少状态辅助函数需要的组合式 API，没有指令与自动清理 |
 | 原生 JS | 无框架 peer 依赖 | 仍需要 DOM 与现代浏览器 API |
 | Node | 仓库开发与网关示例要求 20+ | 这不是对无关应用服务端的限制 |

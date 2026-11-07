@@ -28,6 +28,7 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
   const [layout, setLayout] = useState<"dock" | "sidebar">("dock");
   const [side, setSide] = useState<"right" | "left">("right");
   const [launcherPlacement, setLauncherPlacement] = useState<"bottom" | "center">("bottom");
+  const [assistantOpen, setAssistantOpen] = useState(false);
   tasksRef.current = tasks;
 
   useEffect(() => {
@@ -95,7 +96,7 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
   }
 
   return (
-    <main className="page">
+    <main className={`page${assistantOpen ? " page--assistant-open" : ""}`}>
       <PublishPanel locale={locale} />
 
       <section className="surface-settings" aria-labelledby="surface-settings-title">
@@ -206,6 +207,7 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
       <AppRoutes
         tasks={tasks}
         copy={copy}
+        locale={locale}
         addTask={addTask}
         toggleTask={toggleTask}
         updateTaskText={updateTaskText}
@@ -221,6 +223,7 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
         side={side}
         launcherPlacement={launcherPlacement}
         launcherLabel={copy.launcherText}
+        onOpenChange={setAssistantOpen}
         surfaceId="dock"
       />
     </main>

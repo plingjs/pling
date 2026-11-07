@@ -66,6 +66,23 @@ describe("V3-13 · assistant surfaces and task entries", () => {
     expect(dock.attributes("data-launcher-placement")).toBe("center");
   });
 
+  it("switches a sidebar between overlay and fused layouts without a second runtime", async () => {
+    const { wrapper } = await mountApp();
+
+    await wrapper.find('input[value="sidebar"]').setValue();
+    const dock = wrapper.findComponent(AgentDock);
+    expect(dock.props("sidebarMode")).toBe("overlay");
+    expect(dock.attributes("data-sidebar-mode")).toBe("overlay");
+    expect(wrapper.find(".workspace").classes()).not.toContain("workspace--fused");
+
+    await wrapper.find('input[value="fused"]').setValue();
+    expect(dock.props("sidebarMode")).toBe("fused");
+    expect(dock.attributes("data-sidebar-mode")).toBe("fused");
+    expect(dock.classes()).toContain("dock--fused");
+    expect(wrapper.find(".workspace").classes()).toContain("workspace--fused");
+    expect(wrapper.findAllComponents(AgentDock)).toHaveLength(1);
+  });
+
   it("keeps human task buttons out of the agent action registry", async () => {
     const { pling, wrapper } = await mountApp();
     const snapshot = pling.registry.snapshot();

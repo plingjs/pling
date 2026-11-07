@@ -17,11 +17,25 @@ The public demos send model requests through a server-side gateway. The browser 
 
 Every tutorial chapter also has a complete runnable page. To inspect the result before reading the code, open the <a href="/demos/tutorials/" target="_blank" rel="noopener noreferrer">chapter preview gallery</a>. Each tutorial page repeats its own live preview and local command at the top.
 
-## Five classic examples
+## Six classic examples
 
-These five cover the product from different angles: the smallest working integration, a business workspace, a task that crosses client-side routes, a task that survives a full page navigation, and a capability surface for an agent outside the page.
+These six cover the product from different angles: the smallest working integration, a business workspace, a task that crosses client-side routes, a task that survives a full page navigation, a capability surface for an agent outside the page, and a guided task that completes a real create flow.
 
 <DemoGallery />
+
+## Guided task example
+
+The guided task example starts from a business outcome instead of an empty prompt. It shows how a page collects the few choices a task cannot infer, keeps lookup results unambiguous, and reports each step as it runs.
+
+<DemoGallery group="tasks" />
+
+## React 16.3 compatibility example
+
+This separate example runs on real `react@16.3.0` and uses the pre-Hooks
+`@plingjs/react/legacy` entry. It proves the old-version path with runnable Todo
+behavior, source, and the same model-backed assistant as the modern adapter.
+
+<DemoGallery group="compatibility" />
 
 ## Fourteen runnable recipes
 

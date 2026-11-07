@@ -30,6 +30,28 @@ existing executor and business backend
 
 The page remains open because it is the source of the capability projection and the human approval surface. The gateway is not allowed to invent context or execute business logic when the page is absent.
 
+## Run the reference package
+
+`@plingjs/surface-gateway` is the reference Node implementation. It ships the HTTP and WebSocket transport, the MCP facade, session and pairing storage, scope checks, revocation, and audit callbacks. It is a library and a small CLI, not a hosted multi-tenant service.
+
+```bash
+npm install @plingjs/surface-gateway
+SURFACE_ADMIN_TOKEN="$(openssl rand -hex 32)" npx pling-surface-gateway
+```
+
+The CLI listens on `127.0.0.1:5219` and uses the bundled `config.example.json`. For a real deployment, provide your own tenant and Origin allowlist:
+
+```bash
+SURFACE_CONFIG=/etc/pling/surface.json \
+SURFACE_ADMIN_TOKEN=<server-side-secret> \
+SURFACE_PUBLIC_BASE_URL=https://surface.example.com \
+SURFACE_HOST=127.0.0.1 \
+SURFACE_PORT=5219 \
+npx pling-surface-gateway
+```
+
+Set `SURFACE_TRUST_PROXY=1` only behind a reverse proxy that overwrites `X-Forwarded-For`. The repository's `services/surface-gateway` directory is only the compatible deployment wrapper; the implementation and public API live in the package.
+
 ## Credential separation
 
 | Credential | Holder | Purpose |

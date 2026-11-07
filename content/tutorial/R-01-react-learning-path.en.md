@@ -44,7 +44,7 @@ The hooks return React refs. Attach the ref to the element that already performs
 
 ## Requirements and scope
 
-The adapter supports React 18 and newer and is intended for client-rendered React applications. Next.js and server rendering require explicit attention to where refs and browser APIs run; that belongs to a later chapter, not the installation path.
+The Hooks API supports React 16.8 and newer. React 16.3–16.7 applications use the separate `@plingjs/react/legacy` entry, which provides the same page concepts through class components and render props. Both entries target client-rendered applications. Next.js and server rendering require explicit attention to where refs and browser APIs run; that belongs to a later chapter, not the installation path.
 
 The examples use Vite. Pling itself does not require Vite. On another build system, pass model configuration explicitly instead of relying on the `VITE_AGENT_*` shortcut.
 

@@ -226,6 +226,7 @@ export function App() {
           config={connection}
           title={copy.listTitle}
           quick={copy.quick}
+          debug={{ maxCalls: 8 }}
           onSessionEvent={onSessionEvent}
         />
       </main>
@@ -310,6 +311,7 @@ export function App() {
         config={connection}
         title={copy.listTitle}
         quick={copy.quick}
+        debug={{ maxCalls: 8 }}
         onSessionEvent={onSessionEvent}
       />
     </main>

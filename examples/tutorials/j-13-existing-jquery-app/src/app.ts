@@ -148,7 +148,7 @@ export function mountQuickstart(root: HTMLElement, options: QuickstartOptions = 
 
   tasks.forEach(mountRow);
   syncSummary();
-  const dock = pling.dock({ title: copy.dockTitle, quick: copy.quick });
+  const dock = pling.dock({ title: copy.dockTitle, quick: copy.quick, debug: { maxCalls: 8 } });
 
   return {
     pling,

@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type ReactNode,
 } from "react";
 import {
   compactAt,
@@ -22,7 +23,13 @@ import {
 } from "@plingjs/agent";
 import type { Llm, Registry } from "@plingjs/core";
 import { PLING_UI_Z_INDEX, sameOriginUrl, type PlingAskOptions } from "@plingjs/dom";
-import { describePlingDiagnostic, diagnosticMessageKey, type PlingUiController } from "@plingjs/ui";
+import {
+  describePlingDiagnostic,
+  diagnosticMessageKey,
+  quickTaskOf,
+  type PlingUiController,
+  type QuickTaskItem,
+} from "@plingjs/ui";
 import { AgentChat } from "./AgentChat";
 import { AgentDebug } from "./AgentDebug";
 import { usePling, usePlingUi } from "./context";
@@ -32,10 +39,12 @@ export interface AgentDockProps {
   /** Extra class for the shell, typically for page-grid sizing. */
   className?: string;
   title?: string;
+  /** Optional task card rendered inside the conversation, after its messages. */
+  task?: ReactNode;
   placeholder?: string;
   emptyHint?: string;
   /** 推荐指令：点一下等于把这句话发出去。 */
-  quick?: readonly string[];
+  quick?: readonly QuickTaskItem[];
   defaultOpen?: boolean;
   /** 覆盖模型配置（只写想改的字段；其余从 `.env.local` 读）。 */
   config?: AgentConfigOverrides;
@@ -56,6 +65,8 @@ export interface AgentDockProps {
   navigate?: (href: string) => void;
   /** `dock` follows the page in a floating corner. `sidebar` uses a viewport edge. */
   layout?: "dock" | "sidebar" | "inline";
+  /** `overlay` keeps the sidebar above the page; `fused` lets it occupy a grid column. */
+  sidebarMode?: "overlay" | "fused";
   /** Edge used by `layout="sidebar"`. Ignored by the default dock. */
   side?: "right" | "left";
   /** Where the collapsed sidebar launcher sits. */
@@ -67,6 +78,8 @@ export interface AgentDockProps {
 }
 
 export interface AgentDockHandle {
+  open(): void;
+  close(): void;
   send(prompt: string): Promise<void>;
   ask(prompt: string, options?: PlingAskOptions): Promise<void>;
 }
@@ -81,6 +94,7 @@ export interface AgentDockHandle {
 export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function AgentDock({
   className,
   title,
+  task,
   placeholder,
   emptyHint,
   quick = [],
@@ -95,6 +109,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
   onOpenChange,
   navigate,
   layout = "dock",
+  sidebarMode = "overlay",
   side = "right",
   launcherPlacement = "bottom",
   launcherLabel,
@@ -108,6 +123,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
   const placeholderText = placeholder ?? t("chat.placeholder");
   const emptyHintText = emptyHint ?? t("chat.empty");
   const launcherOpenText = launcherLabel?.trim() || t("dock.launcher.open");
+  const quickItems = quick.map(quickTaskOf);
   const registry = registryProp ?? pling.registry;
   const setup = pling.agent ?? {};
   const traceOption = debug !== undefined ? debug : setup.trace;
@@ -169,6 +185,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
       ...(traceOption ? { trace: traceOption } : {}),
       config: resolved,
       registry,
+      taskCatalog: pling.task,
       responseLocale: setup.responseLocale ?? (() => ui.locale),
       ...(llm ?? setup.llm ? { llm: llm ?? setup.llm } : {}),
       ...(gate ?? setup.gate ? { gate: gate ?? setup.gate } : {}),
@@ -290,6 +307,8 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
   }), [pling, surfaceId]);
 
   useImperativeHandle(ref, () => ({
+    open: () => toggle(true),
+    close: () => toggle(false),
     send: (prompt) => sendRef.current(prompt),
     ask: (prompt) => sendRef.current(prompt),
   }), []);
@@ -322,6 +341,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
     "pling-dock",
     `pling-dock--${layout}`,
     ...(layout === "sidebar" ? [`pling-dock--${side}`, `pling-dock--launcher-${launcherPlacement}`] : []),
+    ...(layout === "sidebar" && sidebarMode === "fused" ? ["pling-dock--fused"] : []),
     ...(open ? ["is-open"] : []),
     ...(ui.classNames.dock ? [ui.classNames.dock] : []),
     ...(className ? [className] : []),
@@ -333,6 +353,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
       data-pling-ui
       data-layout={layout}
       data-side={layout === "sidebar" ? side : undefined}
+      data-sidebar-mode={layout === "sidebar" ? sidebarMode : undefined}
       data-launcher-placement={layout === "sidebar" ? launcherPlacement : undefined}
       style={{ ...uiSnapshot.cssVars, zIndex: PLING_UI_Z_INDEX } as CSSProperties}
     >
@@ -344,11 +365,17 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
         >
           {notReadyText ? <p className="pling-dock__warn">{notReadyText}</p> : null}
 
-          {quick.length && tab === "chat" ? (
+          {quickItems.length && tab === "chat" ? (
             <div className="pling-dock__quick">
-              {quick.map((task) => (
-                <button key={task} type="button" disabled={running} onClick={() => void send(task)}>
-                  {task}
+              {quickItems.map((task, index) => (
+                <button
+                  key={`${task.prompt}:${index}`}
+                  type="button"
+                  disabled={running || task.disabled}
+                  title={task.description}
+                  onClick={() => void send(task.prompt)}
+                >
+                  {task.label}
                 </button>
               ))}
             </div>
@@ -441,6 +468,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
           ) : (
             <AgentChat
               title={titleText}
+              task={task}
               placeholder={placeholderText}
               emptyHint={emptyHintText}
               ui={ui}
@@ -559,6 +587,12 @@ const DOCK_STYLES = `
 .pling-dock--sidebar.pling-dock--right.pling-dock--launcher-center .pling-dock__launcher{right:0}
 .pling-dock--sidebar.pling-dock--left.pling-dock--launcher-center .pling-dock__launcher{left:0}
 .pling-dock--sidebar.is-open .pling-dock__launcher{display:none}
+.pling-dock--sidebar.pling-dock--fused{position:relative;inset:auto;width:max-content;height:auto;min-height:520px;align-self:stretch;gap:12px;align-items:stretch;pointer-events:auto}
+.pling-dock--sidebar.pling-dock--fused:not(.is-open){width:auto;min-height:0;align-self:flex-start}
+.pling-dock--sidebar.pling-dock--fused.pling-dock--left{order:-1}
+.pling-dock--sidebar.pling-dock--fused .pling-dock__panel{width:var(--pling-sidebar-width,min(380px,100vw));height:auto;flex:1 1 auto;min-height:0;border:1px solid var(--pling-color-border,#e3e8f0);border-radius:var(--pling-radius-lg,14px);box-shadow:var(--pling-shadow-panel,0 18px 40px rgb(15 23 42 / 10%))}
+.pling-dock--sidebar.pling-dock--fused .pling-dock__launcher{position:relative;inset:auto;transform:none;padding:10px 16px;writing-mode:horizontal-tb}
+.pling-dock--sidebar.pling-dock--fused.is-open .pling-dock__launcher{display:none}
 .pling-dock--inline{position:relative;right:auto;bottom:auto;width:100%;align-items:stretch;gap:0}
 .pling-dock--inline .pling-dock__panel{width:100%;height:var(--pling-inline-height,min(640px,calc(100vh - 96px)))}
 @media (max-width:720px){
@@ -567,6 +601,8 @@ const DOCK_STYLES = `
   .pling-dock--sidebar.pling-dock--left{right:auto;left:12px}
   .pling-dock--sidebar .pling-dock__panel{width:min(400px,calc(100vw - 24px));height:min(640px,calc(100dvh - 72px));border:1px solid var(--pling-color-border,#e3e8f0);border-radius:var(--pling-radius-lg,12px);box-shadow:var(--pling-shadow-panel,0 18px 40px rgb(15 23 42 / 16%))}
   .pling-dock--sidebar .pling-dock__launcher{position:relative;top:auto;bottom:auto;left:auto;right:auto;transform:none;padding:10px 16px;writing-mode:horizontal-tb}
+  .pling-dock--sidebar.pling-dock--fused{position:fixed;right:12px;bottom:12px;left:auto;width:auto;min-height:0}
+  .pling-dock--sidebar.pling-dock--fused .pling-dock__panel{width:min(400px,calc(100vw - 24px));height:min(640px,calc(100dvh - 72px))}
 }
 @keyframes pling-dock-pulse{50%{opacity:.3}}
 @media (prefers-reduced-motion:reduce){.pling-dock__dot{animation:none}}

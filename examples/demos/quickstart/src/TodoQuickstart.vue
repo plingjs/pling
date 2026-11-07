@@ -223,6 +223,7 @@ function setFilter(value: "all" | "open" | "completed"): void {
       :placeholder="copy.dockPlaceholder"
       default-open
       :quick="props.quick"
+      :debug="{ maxCalls: 8 }"
       @open="sidebarOpen = $event"
     />
   </main>

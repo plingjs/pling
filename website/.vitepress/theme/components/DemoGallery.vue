@@ -19,7 +19,10 @@ interface FlagshipCard extends DemoCopy {
 const { lang } = useData();
 const isZh = computed(() => lang.value.startsWith("zh"));
 const localePrefix = computed(() => (isZh.value ? "/zh" : ""));
-const props = withDefaults(defineProps<{ group?: "flagship" | "recipes" }>(), { group: "flagship" });
+const props = withDefaults(defineProps<{ group?: "flagship" | "tasks" | "recipes" | "compatibility" }>(), { group: "flagship" });
+const COMPATIBILITY_IDS = new Set(["react16-legacy-todo"]);
+const GUIDED_TASK_IDS = new Set(["course-workspace", "course-workspace-vue3", "course-workspace-react", "course-workspace-react16", "course-workspace-vue2"]);
+const TASK_ORDER = ["course-workspace", "course-workspace-vue3", "course-workspace-react", "course-workspace-react16", "course-workspace-vue2"];
 
 const COPY: Record<string, { en: DemoCopy; zh: DemoCopy }> = {
   quickstart: {
@@ -44,6 +47,66 @@ const COPY: Record<string, { en: DemoCopy; zh: DemoCopy }> = {
       eyebrow: "业务操作",
       title: "案例02：订单工作台",
       summary: "让真实模型操作业务队列，包含筛选、订单详情、可编辑回访备注、记录级动作与确认闸门。",
+    },
+  },
+  "course-workspace": {
+    en: {
+      eyebrow: "Guided workflow",
+      title: "Guided tasks: Course workspace",
+      summary: "A course desk where the user starts from a task, resolves duplicate names and missing choices, then watches business steps run through the existing executor.",
+    },
+    zh: {
+      eyebrow: "引导式业务",
+      title: "引导任务：约课工作台",
+      summary: "一个约课工作台：用户从任务开始，处理重名与缺失选择，再看着业务步骤通过现有执行器完成。",
+    },
+  },
+  "course-workspace-vue3": {
+    en: {
+      eyebrow: "Example 06 · Guided workflow",
+      title: "Example 06: Create a course with a guided task",
+      summary: "One realistic page, one job. A sentence fills the fields it can infer, the assistant asks only for real gaps, long recommendations stay one-line previews, and the saved record is read back.",
+    },
+    zh: {
+      eyebrow: "案例06 · 引导式任务",
+      title: "案例06：引导任务创建课程",
+      summary: "一个真实页面只做一件事：一句话填写可推断的字段，助手只追问真正的缺口；长推荐保持单行预览，保存后回读课程列表。",
+    },
+  },
+  "course-workspace-react": {
+    en: {
+      eyebrow: "React 19 · Guided workflow",
+      title: "Guided tasks: Course workspace (React 19)",
+      summary: "React 19 Hooks expose bounded page context while guided tasks keep using the existing business executor.",
+    },
+    zh: {
+      eyebrow: "React 19 · 引导式业务",
+      title: "引导任务：约课工作台（React 19）",
+      summary: "用 React 19 Hooks 暴露有边界的页面上下文，引导任务继续走已有业务执行器。",
+    },
+  },
+  "course-workspace-react16": {
+    en: {
+      eyebrow: "React 16.3 · Guided workflow",
+      title: "Guided tasks: Course workspace (React 16.3)",
+      summary: "A real React 16.3 class-component path through the legacy adapter, with no Hooks and no reduced workflow.",
+    },
+    zh: {
+      eyebrow: "React 16.3 · 引导式业务",
+      title: "引导任务：约课工作台（React 16.3）",
+      summary: "真实运行在 React 16.3 的 class 组件路径，使用 legacy 适配器，不依赖 Hooks，也不缩减业务能力。",
+    },
+  },
+  "course-workspace-vue2": {
+    en: {
+      eyebrow: "Vue 2.7 · Guided workflow",
+      title: "Guided tasks: Course workspace (Vue 2.7)",
+      summary: "Vue 2.7 render functions, Pling directives, and the shared DOM task panel running the same three tasks.",
+    },
+    zh: {
+      eyebrow: "Vue 2.7 · 引导式业务",
+      title: "引导任务：约课工作台（Vue 2.7）",
+      summary: "用 Vue 2.7 渲染函数、Pling 指令与共享 DOM 任务面板完成同样三项任务。",
     },
   },
 };
@@ -85,7 +148,7 @@ const cards = computed<FlagshipCard[]>(() => {
       detailHref: hrefFor(example),
     };
   });
-  const ordered = ["quickstart", "orders", "vue3-spa-routing", "multi-page-continuity", "external-agent-surface"];
+  const ordered = ["quickstart", "orders", "vue3-spa-routing", "multi-page-continuity", "external-agent-surface", "course-workspace-vue3"];
   if (props.group === "recipes") {
     return all
       .filter((card) => card.id.startsWith("recipe-"))
@@ -95,10 +158,18 @@ const cards = computed<FlagshipCard[]>(() => {
         return leftRank - rightRank || left.id.localeCompare(right.id);
       });
   }
+  if (props.group === "compatibility") {
+    return all.filter((card) => COMPATIBILITY_IDS.has(card.id));
+  }
+  if (props.group === "tasks") {
+    return TASK_ORDER
+      .map((id) => all.find((card) => card.id === id))
+      .filter((card): card is FlagshipCard => Boolean(card));
+  }
   return ordered
     .map((id) => all.find((card) => card.id === id))
     .filter((card): card is FlagshipCard => Boolean(card))
-    .concat(all.filter((card) => !ordered.includes(card.id) && !card.id.startsWith("recipe-")));
+    .concat(all.filter((card) => !ordered.includes(card.id) && !card.id.startsWith("recipe-") && !COMPATIBILITY_IDS.has(card.id) && !GUIDED_TASK_IDS.has(card.id)));
 });
 </script>
 

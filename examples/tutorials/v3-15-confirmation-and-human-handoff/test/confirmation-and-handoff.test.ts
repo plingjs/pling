@@ -67,6 +67,16 @@ describe("V3-15 · confirmation and human handoff", () => {
     expect(pling.registry.snapshot().actions.some((action) => action.id === "archive_workspace")).toBe(true);
   });
 
+  it("verifies an approved archive against page state", async () => {
+    const { pling, wrapper } = await mountApp();
+    const result = await executorFor(pling, { allow: true }).execute("archive_workspace", "{}");
+
+    expect("error" in result).toBe(false);
+    if ("error" in result) throw new Error(result.error.message);
+    expect(result.result).toMatchObject({ expect: "The workspace is archived" });
+    expect(wrapper.find(".release__archived").text()).toBe("Workspace archived.");
+  });
+
   it("does not simulate a handoff when the user cancels", async () => {
     const { pling } = await mountApp();
     const result = await executorFor(pling, { allow: true, handoff: async () => "cancelled" }).execute(
@@ -80,6 +90,10 @@ describe("V3-15 · confirmation and human handoff", () => {
 
   it("returns a successful receipt after the user completes the handoff", async () => {
     const { pling, wrapper } = await mountApp();
+    const publishAction = pling.registry
+      .snapshot()
+      .actions.find((action) => action.id === "publish_changes");
+    expect(publishAction?.handoff?.reason).toBeTruthy();
     const executor = executorFor(pling, {
       allow: true,
       handoff: async () => {
@@ -94,7 +108,7 @@ describe("V3-15 · confirmation and human handoff", () => {
     expect("error" in result).toBe(false);
     if ("error" in result) throw new Error(result.error.message);
     expect(result.result).toMatchObject({
-      handoff: { reason: "The user must confirm the verification code before publishing." },
+      handoff: { reason: publishAction?.handoff?.reason },
     });
     expect(wrapper.find(".release__status").text()).toBe("Published");
   });

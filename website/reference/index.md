@@ -26,6 +26,7 @@ Exact declarations, options, defaults, protocol shapes, error codes, and adapter
 - [Continuity and projection](/reference/continuity-and-projection)
 - [Surface conformance and interoperability](/reference/surface-conformance-and-interoperability)
 - [Protocol schemas and registries](/reference/protocol-schemas-and-registries)
+- [Guided task API](/reference/guided-task-api)
 
 ## API reference
 

@@ -11,18 +11,20 @@ import {
 import { BulkMenu } from "./BulkMenu";
 import { SearchBox } from "./SearchBox";
 import { TaskFilters, type TaskFilter } from "./TaskFilters";
-import type { DemoCopy, Priority } from "../copy";
+import type { DemoCopy, DemoLocale, Priority } from "../copy";
 import { mergeRefs } from "../refs";
 import { MAX_TASKS, type Task, type TaskActions } from "../tasks";
 
 export interface TaskListPageProps extends TaskActions {
   tasks: Task[];
   copy: DemoCopy;
+  locale: DemoLocale;
 }
 
 export function TaskListPage({
   tasks,
   copy,
+  locale,
   addTask,
   toggleTask,
   updateTaskText,
@@ -368,6 +370,7 @@ export function TaskListPage({
             key={task.id}
             task={task}
             copy={copy}
+            locale={locale}
             onToggle={toggleTask}
             onEdit={openEdit}
             onRemove={removeTask}
@@ -460,12 +463,14 @@ export function TaskListPage({
 function TaskRow({
   task,
   copy,
+  locale,
   onToggle,
   onEdit,
   onRemove,
 }: {
   task: Task;
   copy: DemoCopy;
+  locale: DemoLocale;
   onToggle: (id: string) => void;
   onEdit: (id: string) => void;
   onRemove: (id: string) => void;
@@ -516,7 +521,7 @@ function TaskRow({
       <Link
         ref={openRef}
         className="task__body"
-        to={`/tasks/${task.id}?from=tasks`}
+        to={locale === "zh" ? `/tasks/${task.id}?from=tasks&lang=zh` : `/tasks/${task.id}?from=tasks`}
         aria-label={copy.openTaskAria(task.text)}
       >
         <span className="task__text">{task.text}</span>

@@ -1,5 +1,5 @@
 import Vue, { type CreateElement } from "vue";
-import { createPling, type AgentSetup, type Vue2Pling } from "@plingjs/vue2";
+import { createPling, type AgentSetup, type VanillaDock, type Vue2Pling } from "@plingjs/vue2";
 import { copyFor, resolveDemoLocale, type DemoLocale, type DemoTask } from "./copy";
 
 interface Task extends DemoTask {
@@ -15,6 +15,7 @@ export interface DirectiveAppOptions {
 
 export interface DirectiveApp {
   pling: Vue2Pling;
+  dock: VanillaDock | null;
   vm: Vue;
   tasks: readonly Task[];
   destroy(): void;
@@ -47,7 +48,19 @@ export function mountDirectiveApp(root: HTMLElement, options: DirectiveAppOption
         tasks: copy.seedTasks.map((task, index) => ({ id: `t${index + 1}`, ...task })) as Task[],
         draft: "",
         sequence: copy.seedTasks.length,
+        dock: null as VanillaDock | null,
       };
+    },
+    mounted() {
+      this.dock = pling.dock({
+        title: copy.dockTitle,
+        quick: [...copy.quick],
+        debug: { maxCalls: 8 },
+      });
+    },
+    beforeDestroy() {
+      this.dock?.destroy();
+      this.dock = null;
     },
     methods: {
       addTask(this: { tasks: Task[]; draft: string; sequence: number }): void {
@@ -161,6 +174,7 @@ export function mountDirectiveApp(root: HTMLElement, options: DirectiveAppOption
 
   return {
     pling,
+    get dock() { return (vm as unknown as { dock: VanillaDock | null }).dock; },
     vm,
     get tasks() { return (vm as unknown as { tasks: Task[] }).tasks; },
     destroy() {

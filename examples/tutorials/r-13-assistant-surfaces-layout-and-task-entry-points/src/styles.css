@@ -23,6 +23,26 @@ select {
   padding: 56px 24px 160px;
 }
 
+.page--fused {
+  max-width: 1120px;
+}
+
+.workspace,
+.workspace__main {
+  min-width: 0;
+}
+
+.workspace--fused {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.workspace--fused .workspace__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
 .surface-settings {
   display: grid;
   gap: 20px;
@@ -620,5 +640,15 @@ h1 {
 
   .composer button {
     min-height: 44px;
+  }
+}
+
+@media (max-width: 980px) {
+  .page--fused {
+    max-width: 780px;
+  }
+
+  .workspace--fused {
+    flex-direction: column;
   }
 }

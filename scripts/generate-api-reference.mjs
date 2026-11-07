@@ -14,6 +14,7 @@ const PACKAGE_ROOTS = {
   "@plingjs/dom": { directory: "packages/dom", entry: "src/index.ts" },
   "@plingjs/agent": { directory: "packages/agent", entry: "src/index.ts" },
   "@plingjs/ui": { directory: "packages/ui", entry: "src/index.ts" },
+  "@plingjs/surface": { directory: "packages/surface", entry: "src/index.ts" },
   "@plingjs/vanilla": { directory: "packages/vanilla", entry: "src/index.ts" },
   "@plingjs/react": { directory: "packages/react", entry: "src/index.ts" },
   "@plingjs/vue": { directory: "packages/vue", entry: "src/index.ts" },
@@ -21,7 +22,13 @@ const PACKAGE_ROOTS = {
 };
 
 const ADAPTER_PACKAGES = new Set(["@plingjs/vue", "@plingjs/react", "@plingjs/vue2", "@plingjs/vanilla"]);
-const SHARED_PACKAGES = new Set(["@plingjs/core", "@plingjs/agent", "@plingjs/dom", "@plingjs/ui"]);
+const SHARED_PACKAGES = new Set([
+  "@plingjs/core",
+  "@plingjs/agent",
+  "@plingjs/dom",
+  "@plingjs/ui",
+  "@plingjs/surface",
+]);
 
 const ADAPTER_IDS = {
   vue3: { en: "Vue 3", zh: "Vue 3", commentZh: "Vue 3" },
@@ -58,10 +65,14 @@ const ADAPTER_PAGES = [
     title: "React API",
     titleZh: "React API",
     intro:
-      "The complete React surface: provider setup, declaration hooks, components, and the shared option types they use. Every signature below is the React form.",
+      "The complete React Hooks surface: provider setup, declaration hooks, components, and the shared option types they use. The pre-Hooks entry for React 16.3–16.7 is covered in the React adapter reference.",
     introZh:
-      "React 的完整 API：Provider、声明 Hook、组件，以及它们使用的共享选项类型。下面出现的签名都按 React 的写法给出。",
-    peer: { react: ">=18" },
+      "React Hooks 的完整 API：Provider、声明 Hook、组件，以及它们使用的共享选项类型。React 16.3–16.7 的 pre-Hooks 入口见 React 适配器参考。",
+    peer: { react: ">=16.3" },
+    compat:
+      "The Hooks API on this page requires React 16.8+. React 16.3–16.7 use `@plingjs/react/legacy`, a class/render-prop entry documented in the [React adapter reference](/reference/react-adapter#react-163-167-legacy-entry).",
+    compatZh:
+      "本页的 Hooks API 要求 React 16.8+。React 16.3–16.7 使用 `@plingjs/react/legacy`，这是一套 class/render-prop 入口，详见 [React 适配器参考](/zh/reference/react-adapter#react-163-167-legacy-entry)。",
     example: `import { createPling, PlingProvider, AgentDock } from "@plingjs/react";\n\nconst pling = createPling({ namespace: "todo" });\n\n<PlingProvider pling={pling}>\n  <AgentDock />\n</PlingProvider>;`,
   },
   {
@@ -107,7 +118,7 @@ const SHARED_PAGE = {
 };
 
 const PAGES = [...ADAPTER_PAGES, SHARED_PAGE];
-const FRAMEWORK_CATEGORIES = new Set(["entry", "declarations", "types", "ui", "external", "page"]);
+const FRAMEWORK_CATEGORIES = new Set(["entry", "declarations", "types", "tasks", "ui", "external", "page"]);
 const NO_PARAMETER_ENTRIES = new Set(["usePling", "usePlingUi", "plugin", "destroy", "defaultSettle"]);
 
 const SUPPORT = {
@@ -639,8 +650,9 @@ function pageBody(manifest, info, page, locale, categories) {
     })
     .join("\n\n");
   const peer = Object.entries(page.peer).map(([name, range]) => `${name} ${range}`).join(", ") || "—";
+  const compatibility = page.compat ? `\n${isZh ? page.compatZh : page.compat}\n` : "";
 
-  return `---\ntitle: ${JSON.stringify(title)}\nstatus: navigation\nrelease: 0.1\nlocale: ${locale}\n---\n<!-- generated:api-index -->\n\n# ${title}\n\n${intro}\n\n${packageLine}\n\n${nav}\n\n| ${isZh ? "包" : "Package"} | ${isZh ? "对等依赖" : "Peer dependencies"} | ${isZh ? "版本" : "Version"} |\n| --- | --- | --- |\n| \`${page.package}\` | ${peer} | \`${info.version}\` |\n\n${stabilityBlock(manifest, locale)}\n\n## ${isZh ? "最小示例" : "Minimal example"}\n\n\`\`\`ts\n${page.example}\n\`\`\`\n\n${categorySections}\n\n## ${isZh ? "版本与兼容性" : "Version and compatibility"}\n\n${versionTable(info, locale)}\n\n| ${isZh ? "项目" : "Item"} | ${isZh ? "值" : "Value"} |\n| --- | --- |\n| ${isZh ? "引入版本" : "Introduced"} | \`${manifest.since}\` |\n| ${isZh ? "稳定性" : "Stability"} | ${isZh ? "pre-1.0 alpha；次要版本可能改变 API" : "Pre-1.0 alpha; a minor release may change the API"} |\n\n## ${isZh ? "机器可读副本" : "Machine-readable copy"}\n\n- [${isZh ? "本页 JSON" : "JSON for this page"}](${pageJsonRoute(page, locale)})\n- [${isZh ? "API 总览 JSON" : "API overview JSON"}](${overviewJsonRoute(locale)})\n`;
+  return `---\ntitle: ${JSON.stringify(title)}\nstatus: navigation\nrelease: 0.1\nlocale: ${locale}\n---\n<!-- generated:api-index -->\n\n# ${title}\n\n${intro}\n\n${packageLine}\n\n${nav}\n\n| ${isZh ? "包" : "Package"} | ${isZh ? "对等依赖" : "Peer dependencies"} | ${isZh ? "版本" : "Version"} |\n| --- | --- | --- |\n| \`${page.package}\` | ${peer} | \`${info.version}\` |\n${compatibility}\n${stabilityBlock(manifest, locale)}\n\n## ${isZh ? "最小示例" : "Minimal example"}\n\n\`\`\`ts\n${page.example}\n\`\`\`\n\n${categorySections}\n\n## ${isZh ? "版本与兼容性" : "Version and compatibility"}\n\n${versionTable(info, locale)}\n\n| ${isZh ? "项目" : "Item"} | ${isZh ? "值" : "Value"} |\n| --- | --- |\n| ${isZh ? "引入版本" : "Introduced"} | \`${manifest.since}\` |\n| ${isZh ? "稳定性" : "Stability"} | ${isZh ? "pre-1.0 alpha；次要版本可能改变 API" : "Pre-1.0 alpha; a minor release may change the API"} |\n\n## ${isZh ? "机器可读副本" : "Machine-readable copy"}\n\n- [${isZh ? "本页 JSON" : "JSON for this page"}](${pageJsonRoute(page, locale)})\n- [${isZh ? "API 总览 JSON" : "API overview JSON"}](${overviewJsonRoute(locale)})\n`;
 }
 
 function overviewPage(manifest, info, locale) {
@@ -661,7 +673,65 @@ function overviewPage(manifest, info, locale) {
     ? "参数表是这里的重点。遇到某个选项时，先查它在当前框架页中的类型、必填性、默认值与适用场景；需要字段级语义或错误码时，再进入对应参考页。"
     : "The parameter tables are the main contract here. Look up a field's type, required status, default, and applicable scenario on the current framework page; follow the linked reference only when you need field-level semantics or error codes.";
   const categoryCount = manifest.categories.length;
-  return `---\ntitle: ${JSON.stringify(title)}\nstatus: navigation\nrelease: 0.1\nlocale: ${locale}\n---\n<!-- generated:api-index -->\n\n# ${title}\n\n${intro}\n\n${reading}\n\n${isZh ? `共 **${PAGES.length}** 个 API 页面，覆盖 **${categoryCount}** 类能力；当前版本 \`${info.version}\`，稳定性为 **preview**。` : `There are **${PAGES.length}** API pages covering **${categoryCount}** capability groups; the current version is \`${info.version}\` with **preview** stability.`}\n\n## ${isZh ? "按框架查阅" : "Choose by framework"}\n\n| ${isZh ? "框架" : "Framework"} | ${isZh ? "包" : "Package"} | ${isZh ? "条目" : "Entries"} | ${isZh ? "页面" : "Page"} |\n| --- | --- | --- | --- |\n${rows}\n\n## ${isZh ? "共享包 API" : "Shared package API"}\n\n${isZh ? `运行时、页面连续性、测试与诊断 API 共用一套实现，共 **${sharedCount}** 个条目。` : `Runtime, page continuity, testing, and diagnostic APIs share one implementation: **${sharedCount}** entries.`}\n\n[${isZh ? "打开共享包 API" : "Open the shared package API"}](${pageRoute(SHARED_PAGE, locale)})\n\n## ${isZh ? "版本与兼容性" : "Version and compatibility"}\n\n${versionTable(info, locale)}\n\n| ${isZh ? "项目" : "Item"} | ${isZh ? "值" : "Value"} |\n| --- | --- |\n| ${isZh ? "引入版本" : "Introduced"} | \`${manifest.since}\` |\n| ${isZh ? "运行时" : "Runtime"} | ${isZh ? "ES 模块；Vue 3、React 18+、Vue 2.7 或原生浏览器环境" : "ES modules for Vue 3, React 18+, Vue 2.7, or a browser"} |\n| ${isZh ? "稳定性" : "Stability"} | ${isZh ? "pre-1.0 alpha；次要版本可能改变 API" : "Pre-1.0 alpha; a minor release may change the API"} |\n\n## ${isZh ? "机器可读副本" : "Machine-readable copies"}\n\n- [${isZh ? "API 总览 JSON" : "API overview JSON"}](${overviewJsonRoute(locale)})\n${PAGES.map((page) => `- [${pageName(page, locale)} JSON](${pageJsonRoute(page, locale)})`).join("\n")}\n\n## ${isZh ? "不在本页范围内" : "Out of scope"}\n\n${isZh ? "- Surface 协议、委托、Node 网关与协议 Schema 分别见各自专题参考。\n- 适配器的支持矩阵不代表四个框架的行为完全相同。\n- 包内工具函数、组件内部接口与未导出类型不在这里承诺兼容。" : "- Surface, delegation, the Node gateway, and protocol schemas have their own references.\n- Adapter support does not imply that all four frameworks behave identically.\n- Internal helpers, component internals, and non-exported types are not compatibility promises here."}\n`;
+  const runtime = isZh
+    ? "ES 模块；Vue 3、React 16.3+（Hooks 入口 16.8+）、Vue 2.7 或原生浏览器环境"
+    : "ES modules for Vue 3, React 16.3+ (Hooks entry 16.8+), Vue 2.7, or a browser";
+  const stability = isZh ? "pre-1.0 alpha；次要版本可能改变 API" : "Pre-1.0 alpha; a minor release may change the API";
+  return [
+    "---",
+    `title: ${JSON.stringify(title)}`,
+    "status: navigation",
+    "release: 0.1",
+    `locale: ${locale}`,
+    "---",
+    "<!-- generated:api-index -->",
+    "",
+    `# ${title}`,
+    "",
+    intro,
+    "",
+    reading,
+    "",
+    isZh
+      ? `共 **${PAGES.length}** 个 API 页面，覆盖 **${categoryCount}** 类能力；当前版本 \`${info.version}\`，稳定性为 **preview**。`
+      : `There are **${PAGES.length}** API pages covering **${categoryCount}** capability groups; the current version is \`${info.version}\` with **preview** stability.`,
+    "",
+    `## ${isZh ? "按框架查阅" : "Choose by framework"}`,
+    "",
+    `| ${isZh ? "框架" : "Framework"} | ${isZh ? "包" : "Package"} | ${isZh ? "条目" : "Entries"} | ${isZh ? "页面" : "Page"} |`,
+    "| --- | --- | --- | --- |",
+    rows,
+    "",
+    `## ${isZh ? "共享包 API" : "Shared package API"}`,
+    "",
+    isZh
+      ? `运行时、页面连续性、测试与诊断 API 共用一套实现，共 **${sharedCount}** 个条目。`
+      : `Runtime, page continuity, testing, and diagnostic APIs share one implementation: **${sharedCount}** entries.`,
+    "",
+    `[${isZh ? "打开共享包 API" : "Open the shared package API"}](${pageRoute(SHARED_PAGE, locale)})`,
+    "",
+    `## ${isZh ? "版本与兼容性" : "Version and compatibility"}`,
+    "",
+    versionTable(info, locale),
+    "",
+    `| ${isZh ? "项目" : "Item"} | ${isZh ? "值" : "Value"} |`,
+    "| --- | --- |",
+    `| ${isZh ? "引入版本" : "Introduced"} | \`${manifest.since}\` |`,
+    `| ${isZh ? "运行时" : "Runtime"} | ${runtime} |`,
+    `| ${isZh ? "稳定性" : "Stability"} | ${stability} |`,
+    "",
+    `## ${isZh ? "机器可读副本" : "Machine-readable copies"}`,
+    "",
+    `- [${isZh ? "API 总览 JSON" : "API overview JSON"}](${overviewJsonRoute(locale)})`,
+    ...PAGES.map((page) => `- [${pageName(page, locale)} JSON](${pageJsonRoute(page, locale)})`),
+    "",
+    `## ${isZh ? "不在本页范围内" : "Out of scope"}`,
+    "",
+    isZh
+      ? "- Surface 协议、委托、Node 网关与协议 Schema 分别见各自专题参考。\n- 适配器的支持矩阵不代表四个框架的行为完全相同。\n- 包内工具函数、组件内部接口与未导出类型不在这里承诺兼容。"
+      : "- Surface, delegation, the Node gateway, and protocol schemas have their own references.\n- Adapter support does not imply that all four frameworks behave identically.\n- Internal helpers, component internals, and non-exported types are not compatibility promises here.",
+    "",
+  ].join("\n");
 }
 
 function pageJson(manifest, info, page, locale) {
@@ -700,6 +770,7 @@ function pageJson(manifest, info, page, locale) {
       version: info.version,
       since: manifest.since,
       stability: manifest.stability,
+      compatibility: page.compat ? (locale === "zh" ? page.compatZh : page.compat) : null,
       categories,
     },
     null,

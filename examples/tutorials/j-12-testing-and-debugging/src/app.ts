@@ -69,7 +69,6 @@ export function mountQuickstart(root: HTMLElement, options: QuickstartOptions = 
     presence: options.presence ?? true,
     onWarn: options.onWarn ?? ((message) => console.warn(message)),
     agent: options.agent ?? {
-      trace: { maxCalls: 8 },
       config: {
         systemPrompt: copy.systemPrompt,
         limits: { maxTurns: 100 },
@@ -168,7 +167,7 @@ export function mountQuickstart(root: HTMLElement, options: QuickstartOptions = 
 
   tasks.forEach(mountRow);
   syncSummary();
-  const dock = pling.dock({ title: copy.dockTitle, quick: copy.quick });
+  const dock = pling.dock({ title: copy.dockTitle, quick: copy.quick, debug: { maxCalls: 8 } });
 
   return {
     pling,

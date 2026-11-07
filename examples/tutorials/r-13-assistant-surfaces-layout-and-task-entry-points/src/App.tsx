@@ -25,6 +25,7 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
   const tasksRef = useRef(tasks);
   const sequence = useRef(copy.seedTasks.length);
   const [layout, setLayout] = useState<"dock" | "sidebar">("dock");
+  const [sidebarMode, setSidebarMode] = useState<"overlay" | "fused">("overlay");
   const [side, setSide] = useState<"right" | "left">("right");
   const [launcherPlacement, setLauncherPlacement] = useState<"bottom" | "center">("bottom");
   tasksRef.current = tasks;
@@ -94,7 +95,7 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
   }
 
   return (
-    <main className="page">
+    <main className={`page${layout === "sidebar" && sidebarMode === "fused" ? " page--fused" : ""}`}>
       <section className="surface-settings" aria-labelledby="surface-settings-title">
         <div className="surface-settings__intro">
           <p className="surface-settings__eyebrow">{copy.surfaceEyebrow}</p>
@@ -129,6 +130,30 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
 
           {layout === "sidebar" ? (
             <>
+              <fieldset>
+                <legend>{copy.sidebarModeLabel}</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="surface-sidebar-mode"
+                    value="overlay"
+                    checked={sidebarMode === "overlay"}
+                    onChange={() => setSidebarMode("overlay")}
+                  />
+                  {copy.sidebarOverlay}
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="surface-sidebar-mode"
+                    value="fused"
+                    checked={sidebarMode === "fused"}
+                    onChange={() => setSidebarMode("fused")}
+                  />
+                  {copy.sidebarFused}
+                </label>
+              </fieldset>
+
               <fieldset>
                 <legend>{copy.sideLabel}</legend>
                 <label>
@@ -200,26 +225,32 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
         </div>
       </section>
 
-      <AppRoutes
-        tasks={tasks}
-        copy={copy}
-        addTask={addTask}
-        toggleTask={toggleTask}
-        updateTaskText={updateTaskText}
-        removeTask={removeTask}
-        clearCompleted={clearCompleted}
-        completeOpenTasks={completeOpenTasks}
-      />
-      <AgentDock
-        title={copy.dockTitle}
-        quick={copy.quick}
-        debug={{ maxCalls: 8 }}
-        layout={layout}
-        side={side}
-        launcherPlacement={launcherPlacement}
-        launcherLabel={copy.launcherText}
-        surfaceId="dock"
-      />
+      <div className={`workspace${layout === "sidebar" && sidebarMode === "fused" ? " workspace--fused" : ""}`}>
+        <div className="workspace__main">
+          <AppRoutes
+            tasks={tasks}
+            copy={copy}
+            locale={locale}
+            addTask={addTask}
+            toggleTask={toggleTask}
+            updateTaskText={updateTaskText}
+            removeTask={removeTask}
+            clearCompleted={clearCompleted}
+            completeOpenTasks={completeOpenTasks}
+          />
+        </div>
+        <AgentDock
+          title={copy.dockTitle}
+          quick={copy.quick}
+          debug={{ maxCalls: 8 }}
+          layout={layout}
+          sidebarMode={sidebarMode}
+          side={side}
+          launcherPlacement={launcherPlacement}
+          launcherLabel={copy.launcherText}
+          surfaceId="dock"
+        />
+      </div>
     </main>
   );
 }

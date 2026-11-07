@@ -55,7 +55,7 @@ export function mountSetup(root: HTMLElement, options: SetupAppOptions = {}): Se
     },
   });
 
-  const dock = pling.dock({ title: copy.dockTitle, quick: copy.quick });
+  const dock = pling.dock({ title: copy.dockTitle, quick: copy.quick, debug: { maxCalls: 8 } });
 
   return {
     pling,

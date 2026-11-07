@@ -1,0 +1,51 @@
+{
+  "id": "course-workspace-vue2",
+  "title": "Course management back office (Vue 2.7)",
+  "titleZh": "冰草约课 · 课程管理后台（Vue 2.7）",
+  "eyebrow": "Vue 2.7 · Guided workflow",
+  "eyebrowZh": "Vue 2.7 · 引导式业务",
+  "summary": "The Bingcao Studio course back office built with Vue 2.7 render functions, Pling directives, and a shared task card inside a fused assistant sidebar, proving the workflow does not require Vue 3.",
+  "summaryZh": "用 Vue 2.7 渲染函数实现的冰草约课课程管理后台，通过 Pling 指令和融合侧栏中的共享任务卡完成同一套业务流程。",
+  "url": "/demos/course-workspace-vue2/",
+  "open": "src/CourseWorkspace.ts",
+  "files": [
+    { "path": "src/CourseWorkspace.ts", "label": "CourseWorkspace.ts", "role": "Vue 2.7 render tree and directives", "roleZh": "Vue 2.7 渲染树与指令", "lang": "ts" },
+    { "path": "src/main.ts", "label": "main.ts", "role": "Vue 2.7 entry and Pling setup", "roleZh": "Vue 2.7 入口与 Pling 初始化", "lang": "ts" },
+    { "path": "src/vue2-runtime.js", "label": "vue2-runtime.js", "role": "Vue 2 module boundary", "roleZh": "Vue 2 模块边界", "lang": "js" },
+    { "path": "shared/course-workspace/runtime.ts", "scope": "workspace", "label": "runtime.ts", "role": "Shared actions and task runtime", "roleZh": "共享动作与任务运行时", "lang": "ts" },
+    { "path": "shared/course-workspace/tasks.ts", "scope": "workspace", "label": "tasks.ts", "role": "Guided task definitions", "roleZh": "引导任务定义", "lang": "ts" },
+    { "path": "shared/course-workspace/course-service.ts", "scope": "workspace", "label": "course-service.ts", "role": "Business rules and mock data", "roleZh": "业务规则与模拟数据", "lang": "ts" },
+    { "path": "shared/course-workspace/copy.ts", "scope": "workspace", "label": "copy.ts", "role": "Bilingual copy", "roleZh": "双语文案", "lang": "ts" },
+    { "path": "shared/course-workspace/styles.css", "scope": "workspace", "label": "styles.css", "role": "Shared workspace styles", "roleZh": "共享工作台样式", "lang": "css" },
+    { "path": "index.html", "label": "index.html", "role": "Page shell", "roleZh": "页面外壳", "lang": "html" },
+    { "path": "README.md", "label": "README.md", "role": "Run steps and source map", "roleZh": "运行步骤与源码导览", "lang": "markdown" }
+  ],
+  "focus": {
+    "plugin": { "selector": "src/main.ts", "match": "Vue.use(pling.plugin)" },
+    "scope": { "selector": "#students-panel", "match": "directives: [{ name: \"scope\"" },
+    "record": { "selector": ".course-student", "match": "directives: [{ name: \"record\"" },
+    "task-runtime": { "selector": "createCourseTaskRuntime", "match": "createCourseTaskRuntime({" },
+    "task-card": { "selector": ".pling-chat__transcript", "match": "createTaskCard(taskRuntime.controller" },
+    "assistant-dock": { "selector": ".pling-dock", "match": "pling.dock({" }
+  },
+  "guide": {
+    "title": "The same task contract on Vue 2.7",
+    "titleZh": "同一份任务契约也能跑在 Vue 2.7 上",
+    "intro": [
+      "Vue 2.7 has the Composition API but not Vue 3's template/runtime stack. This example uses a render function, the Vue 2 adapter, and the shared DOM task card.",
+      "The interesting part is what does not change: student lookup, required-field blocking, scheduling conflicts, and activity evidence remain the same."
+    ],
+    "introZh": [
+      "Vue 2.7 有组合式 API，但没有 Vue 3 的模板与运行时栈。这个示例使用渲染函数、Vue 2 适配器和共享 DOM 任务卡。",
+      "真正重要的是哪些东西没有变：学员查找、必填阻断、排课冲突和操作证据都保持一致。"
+    ],
+    "steps": [
+      { "title": "Install the Vue 2 plugin", "titleZh": "安装 Vue 2 插件", "body": "The entry creates one runtime and registers the Vue 2.7 plugin before mounting the page.", "bodyZh": "入口创建一个运行时，并在挂载页面前注册 Vue 2.7 插件。", "file": "src/main.ts", "match": "Vue.use(pling.plugin)", "lines": 8 },
+      { "title": "Declare through render functions", "titleZh": "用渲染函数声明能力", "body": "The render tree applies Pling's scope and record directives explicitly. The declarations describe business regions, not DOM selectors for the agent to guess.", "bodyZh": "渲染树显式应用 Pling 的范围与记录指令。声明描述的是业务区域，而不是让 Agent 猜 DOM 选择器。", "file": "src/CourseWorkspace.ts", "match": "directives: [{ name: \"scope\"", "lines": 10 },
+      { "title": "Reuse the DOM task card", "titleZh": "复用 DOM 任务卡", "body": "Vue 2.7 mounts the same @plingjs/vanilla card as the standalone example and passes it to the dock, so task progress and failures do not need a second implementation.", "bodyZh": "Vue 2.7 挂载的是与独立示例相同的 @plingjs/vanilla 任务卡，并把它交给 Dock，因此任务进度与失败处理不需要第二套实现。", "file": "src/CourseWorkspace.ts", "match": "createTaskCard(taskRuntime.controller", "lines": 20 },
+      { "title": "Keep the shared dock", "titleZh": "复用共享助手入口", "body": "pling.dock opens the same Activity and Debug surfaces as the other adapters.", "bodyZh": "pling.dock 打开与其他适配器相同的最近操作与调试界面。", "file": "src/CourseWorkspace.ts", "match": "pling.dock({", "lines": 10 }
+    ],
+    "note": "Try the duplicate-name lookup and then schedule a conflicting slot. Both should fail or resume exactly as they do in Vue 3.",
+    "noteZh": "先试重名查找，再安排一个冲突时段；两者的失败与恢复行为都应与 Vue 3 一致。"
+  }
+}

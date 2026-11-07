@@ -107,6 +107,16 @@ export interface ActionDescriptor {
   primitive: Primitive;
   /** 自然语言语义：这个元素是什么、做什么（喂给模型的提示工程所在） */
   description: string;
+  /** 面向人的短名称；省略时由界面回退到 description。 */
+  label?: string;
+  /** 面向人的一句解释：为什么存在、会改变什么。 */
+  summary?: string;
+  /** 任务卡或调试面板可展示的示例说法。 */
+  examples?: readonly string[];
+  /** 成功后可以展示给用户的判定说明，不是给模型的执行协议。 */
+  successHint?: string;
+  /** 外部 Agent 可按顺序阅读的操作提示；不替代权限与审批。 */
+  playbook?: readonly string[];
   /** 风险等级。fail-closed：省略视为 write。 */
   kind?: Kind;
   /**
@@ -129,6 +139,14 @@ export interface ActionDescriptor {
   fidelity?: Fidelity;
   /** 这条动作是谁给的（省略视为 `declared`）。自动派生（L1）必须标 `derived`。 */
   source?: DeclarationSource;
+  /**
+   * 是否进入模型的工具清单（默认 true）。
+   *
+   * `false` 的动作仍可由页面代码 / 任务执行器通过 `registry.get()` 调用，
+   * 但不会出现在快照与 tool schema 里。用于「任务步骤动作」这类只应由引导流程
+   * 调用的写操作，避免模型绕过可见的任务步骤直接执行。
+   */
+  modelVisible?: boolean;
 }
 
 /**

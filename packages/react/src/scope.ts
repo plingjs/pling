@@ -16,7 +16,7 @@ import {
   scrollElementIntoView,
   SCOPE_ATTR,
 } from "@plingjs/dom";
-import { usePling } from "./context";
+import { usePling, usePlingUi } from "./context";
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
@@ -51,6 +51,7 @@ function slug(id: string): string {
  */
 export function usePlingScope<T extends Element = HTMLElement>(options: PlingScopeOptions): RefCallback<T> {
   const pling = usePling();
+  const { locale } = usePlingUi();
   const optionsRef = useRef(options);
   optionsRef.current = options;
   const [element, setElement] = useState<T | null>(null);
@@ -86,7 +87,7 @@ export function usePlingScope<T extends Element = HTMLElement>(options: PlingSco
     const label = current.label ?? current.id;
     unbinds.push(bindExplore(pling.registry, {
       id: revealId,
-      description: `Scroll the page to the "${label}" region (use when the region is outside the viewport)`,
+      description: pling.ui.t("scroll.reveal", { label }),
       isAvailable: () =>
         scopes.isScopeInView(scopeId)
           ? {
@@ -102,14 +103,14 @@ export function usePlingScope<T extends Element = HTMLElement>(options: PlingSco
     }));
     unbinds.push(bindExplore(pling.registry, {
       id: scrollId,
-      description: `Scroll inside the "${label}" region to reveal more content`,
+      description: pling.ui.t("scroll.inside", { label }),
       params: {
         type: "object",
         properties: {
           direction: {
             type: "string",
             enum: ["next", "prev"],
-            description: "Scroll direction; defaults to next (forward / down)",
+            description: pling.ui.t("scroll.direction"),
           },
         },
         required: [],
@@ -149,7 +150,7 @@ export function usePlingScope<T extends Element = HTMLElement>(options: PlingSco
       for (const unbind of unbinds.reverse()) unbind();
       if (element.getAttribute(SCOPE_ATTR) === scopeId) element.removeAttribute(SCOPE_ATTR);
     };
-  }, [pling, element, signature]);
+  }, [pling, element, signature, locale]);
 
   return useCallback<RefCallback<T>>((node) => setElement(node), []);
 }

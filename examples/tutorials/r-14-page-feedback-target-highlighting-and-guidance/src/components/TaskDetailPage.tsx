@@ -6,16 +6,17 @@ import {
   usePlingState,
   usePlingTool,
 } from "@plingjs/react";
-import type { DemoCopy } from "../copy";
+import type { DemoCopy, DemoLocale } from "../copy";
 import type { Task } from "../tasks";
 
 export interface TaskDetailPageProps {
   tasks: Task[];
   copy: DemoCopy;
+  locale: DemoLocale;
   onToggleTask: (id: string) => void;
 }
 
-export function TaskDetailPage({ tasks, copy, onToggleTask }: TaskDetailPageProps) {
+export function TaskDetailPage({ tasks, copy, locale, onToggleTask }: TaskDetailPageProps) {
   const { id = "" } = useParams();
   const task = tasks.find((item) => item.id === id) ?? null;
   const detailScope = usePlingScope<HTMLElement>({
@@ -45,7 +46,7 @@ export function TaskDetailPage({ tasks, copy, onToggleTask }: TaskDetailPageProp
 
   return (
     <section className="todo detail" ref={detailScope}>
-      <Link className="back-link" ref={backRef} to="/tasks">
+      <Link className="back-link" ref={backRef} to={locale === "zh" ? "/tasks?lang=zh" : "/tasks"}>
         ← {copy.backToTasks}
       </Link>
 

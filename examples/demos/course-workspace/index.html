@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2328a66d'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white'%3E%CF%80%3C/text%3E%3C/svg%3E" />
+    <title>Pling · Course workspace</title>
+  </head>
+  <body>
+    <header class="pling-demo-chrome">
+      <a href="/examples/course-workspace" data-source="/examples/course-workspace" target="_blank" rel="noopener noreferrer">
+        <span class="pling-demo-chrome__mark" aria-hidden="true">&lt;/&gt;</span>
+        <span data-en="Source &amp; integration" data-zh="源码与接入">Source &amp; integration</span>
+        <span aria-hidden="true">↗</span>
+      </a>
+      <span class="pling-demo-chrome__mode"><i aria-hidden="true"></i><span data-en="Live business example" data-zh="在线业务案例">Live business example</span></span>
+    </header>
+
+    <div class="course-app">
+      <aside class="course-sidebar">
+        <div class="course-brand">
+          <span class="course-brand__mark" aria-hidden="true">冰</span>
+          <span data-en="Bingcao Studio" data-zh="冰草约课">Bingcao Studio</span>
+        </div>
+
+        <nav class="course-nav" aria-label="主导航">
+          <p class="course-nav-group" data-en="Settings" data-zh="基本设置">Settings</p>
+          <a class="course-nav-item" href="#overview"><span class="course-nav-icon">⌑</span><span data-en="Studio profile" data-zh="店铺信息设置">Studio profile</span></a>
+          <a class="course-nav-item" href="#teachers-panel"><span class="course-nav-icon">♙</span><span data-en="Administrators" data-zh="添加管理员">Administrators</span></a>
+          <a class="course-nav-item" href="#activity-panel"><span class="course-nav-icon">↗</span><span data-en="WeChat Pay" data-zh="开通微信支付通道">WeChat Pay</span></a>
+          <a class="course-nav-item" href="#overview"><span class="course-nav-icon">▣</span><span data-en="Studio homepage" data-zh="店铺主页配置">Studio homepage</span></a>
+
+          <p class="course-nav-group" data-en="Scheduling" data-zh="排课设置">Scheduling</p>
+          <a class="course-nav-item is-active" href="#overview" aria-current="page"><span class="course-nav-icon">▤</span><span data-en="Courses" data-zh="课程管理">Courses</span></a>
+          <a class="course-nav-item" href="#schedule-panel"><span class="course-nav-icon">▦</span><span data-en="Group classes" data-zh="团课排课">Group classes</span></a>
+          <a class="course-nav-item" href="#schedule-panel"><span class="course-nav-icon">▥</span><span data-en="Private lessons" data-zh="私教课排课">Private lessons</span></a>
+
+          <p class="course-nav-group" data-en="Memberships" data-zh="卡片管理">Memberships</p>
+          <a class="course-nav-item" href="#students-panel"><span class="course-nav-icon">▭</span><span data-en="Card templates" data-zh="卡片模板">Card templates</span></a>
+          <a class="course-nav-item" href="#students-panel"><span class="course-nav-icon">▤</span><span data-en="Issue cards" data-zh="批量发卡">Issue cards</span></a>
+          <a class="course-nav-item" href="#activity-panel"><span class="course-nav-icon">▧</span><span data-en="Issue history" data-zh="发卡记录">Issue history</span></a>
+        </nav>
+
+        <div class="course-sidebar-foot">
+          <span class="course-store-avatar">冰</span>
+          <div>
+            <strong data-en="Bingcao Studio" data-zh="冰草约课">Bingcao Studio</strong>
+            <span data-en="Shanghai · Xuhui" data-zh="上海 · 徐汇店">Shanghai · Xuhui</span>
+          </div>
+        </div>
+      </aside>
+
+      <section class="course-main">
+        <header class="course-topbar">
+          <div class="course-breadcrumb">
+            <span data-en="Home" data-zh="首页">Home</span><span>/</span><span data-en="Scheduling" data-zh="排课设置">Scheduling</span><span>/</span><strong data-en="Courses" data-zh="课程管理">Courses</strong>
+          </div>
+          <div class="course-top-actions">
+            <div class="course-user">
+              <span class="course-user-avatar" data-en="JL" data-zh="林">JL</span>
+              <span data-en="Jia Lin · Owner" data-zh="林佳 · 负责人">Jia Lin · Owner</span>
+            </div>
+            <div class="course-lang" aria-label="Language">
+              <a href="?lang=en" data-locale="en">EN</a>
+              <a href="?lang=zh" data-locale="zh">中文</a>
+            </div>
+          </div>
+        </header>
+
+        <main class="course-page">
+          <div class="course-page-head" id="overview">
+            <div>
+              <p class="course-eyebrow">COURSE LIBRARY</p>
+              <h1 data-en="Courses" data-zh="课程管理">Courses</h1>
+              <p class="course-lead" data-en="Manage the studio catalogue, eligible cards and default scheduling rules." data-zh="管理门店课程、可用卡片与默认排课规则。">Manage the studio catalogue, eligible cards and default scheduling rules.</p>
+            </div>
+              <button class="course-primary-button" id="create-course" type="button">
+              <span aria-hidden="true">＋</span>
+              <span data-en="New course" data-zh="新建课程">New course</span>
+            </button>
+          </div>
+
+          <div class="course-stat-row" aria-label="Course summary">
+            <div class="course-stat"><strong id="stat-courses">0</strong><span data-en="courses" data-zh="课程总数">courses</span></div>
+            <div class="course-stat"><strong id="stat-scheduled">0</strong><span data-en="scheduled this week" data-zh="本周有排课">scheduled this week</span></div>
+            <div class="course-stat"><strong id="stat-drafts">0</strong><span data-en="need attention" data-zh="待完善信息">need attention</span></div>
+          </div>
+
+          <section class="course-grid" id="course-list" aria-label="Course catalogue"></section>
+
+          <section class="course-section" id="schedule-panel">
+            <header class="course-section__head">
+              <div>
+                <p class="course-eyebrow" data-en="SCHEDULE" data-zh="排课">SCHEDULE</p>
+                <h2 data-en="Upcoming lessons" data-zh="近期排课">Upcoming lessons</h2>
+                <p class="course-section__lead" data-en="Teacher availability and student bookings from the live timetable." data-zh="老师时段与学员安排来自当前门店课表。">Teacher availability and student bookings from the live timetable.</p>
+              </div>
+              <span class="course-pill" id="schedule-count">0 lessons</span>
+            </header>
+            <div id="schedule-list" class="course-schedule-list"></div>
+          </section>
+
+          <div class="course-panels">
+            <section class="course-panel" id="students-panel">
+              <header class="course-panel__head">
+                <div>
+                  <p class="course-eyebrow" data-en="STUDENTS" data-zh="学员">STUDENTS</p>
+                  <h2 data-en="Students and memberships" data-zh="学员与会员卡">Students and memberships</h2>
+                </div>
+                <span class="course-pill" id="student-count">0 students</span>
+              </header>
+              <div class="course-panel__body"><div id="student-list" class="course-student-list"></div></div>
+            </section>
+
+            <section class="course-panel" id="teachers-panel">
+              <header class="course-panel__head">
+                <div>
+                  <p class="course-eyebrow" data-en="TEACHERS" data-zh="老师">TEACHERS</p>
+                  <h2 data-en="Teaching team" data-zh="授课老师">Teaching team</h2>
+                </div>
+                <span class="course-pill" id="teacher-count">0 teachers</span>
+              </header>
+              <div class="course-panel__body"><div id="teacher-list" class="course-teacher-list"></div></div>
+            </section>
+          </div>
+
+          <section class="course-section" id="activity-panel">
+            <header class="course-section__head">
+              <div>
+                <p class="course-eyebrow" data-en="RECENT OPERATIONS" data-zh="最近操作">RECENT OPERATIONS</p>
+                <h2 data-en="Latest changes" data-zh="最近变更">Latest changes</h2>
+              </div>
+            </header>
+            <ol id="activity-list" class="course-activity"></ol>
+          </section>
+        </main>
+      </section>
+
+      <aside class="course-dock" id="dock-mount" aria-label="Pling assistant"></aside>
+    </div>
+
+    <script type="module" src="./src/main.ts"></script>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const zh = params.get("lang") === "zh";
+      const docsBase = ["5191", "5276"].includes(location.port)
+        ? `${location.protocol}//${location.hostname}:5190`
+        : "";
+      const source = document.querySelector("[data-source]");
+      source.href = `${docsBase}${zh ? "/zh" : ""}${source.dataset.source}`;
+      if (zh) {
+        document.documentElement.lang = "zh-CN";
+        document.querySelectorAll("[data-en][data-zh]").forEach((node) => {
+          node.textContent = node.dataset.zh;
+        });
+      }
+      document.querySelector(`[data-locale="${zh ? "zh" : "en"}"]`)?.classList.add("is-active");
+    </script>
+    <style>
+      .pling-demo-chrome {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 42px;
+        padding: 0 16px;
+        border-bottom: 1px solid #dbe6f2;
+        background: #fff;
+        color: #64748b;
+        font: 12px/1.4 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .pling-demo-chrome a {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        color: #0b6db7;
+        font-weight: 650;
+        text-decoration: none;
+      }
+      .pling-demo-chrome a:hover { color: #2e9df7; }
+      .pling-demo-chrome__mark {
+        color: #2e9df7;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 10px;
+      }
+      .pling-demo-chrome__mode { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; }
+      .pling-demo-chrome__mode i { width: 6px; height: 6px; border-radius: 50%; background: #22a06b; }
+      @media (max-width: 560px) {
+        .pling-demo-chrome__mode { display: none; }
+      }
+    </style>
+  </body>
+</html>

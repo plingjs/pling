@@ -94,7 +94,7 @@ let dataPromise: Promise<readonly DemoExample[]> | undefined;
 function getHighlighter(): Promise<Highlighter> {
   highlighterPromise ??= createHighlighter({
     themes: ["github-dark"],
-    langs: ["vue", "ts", "js", "html", "css", "json", "ini", "markdown"],
+    langs: ["vue", "ts", "tsx", "js", "html", "css", "json", "ini", "markdown"],
   });
   return highlighterPromise;
 }
@@ -104,7 +104,7 @@ function classify(line: string): DemoCodeLine["kind"] | undefined {
   if (!value) return undefined;
   if (/^import\b.*@plingjs\//.test(value) || /\bfrom\s+["']@plingjs\//.test(value)) return "import";
   if (/\bcreatePling\b|\.use\(pling\.plugin\)/.test(value)) return "setup";
-  if (/\bv-(tool|record|scope|task)\b/.test(value)) return "declare";
+  if (/\bv-(tool|record|scope|task)\b|<Pling(?:Tool|Record|Scope|Task|State|Action)\b/.test(value)) return "declare";
   if (/<Agent(?:Dock|Inline)\b/.test(value)) return "entry";
   return undefined;
 }

@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/agent",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "Framework-neutral agent loop, context, confirmation, continuity, and telemetry for Pling.",
+  "description": "Pling agent runtime: session loop, context assembly, confirmation gates, hooks, observability, and evaluation.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

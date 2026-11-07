@@ -46,6 +46,14 @@ const copy = computed(() =>
         stepOpen: "打开目标订单",
         stepFill: "填写新的备注",
         stepSave: "保存备注并等待列表更新",
+        recordLabel: (id: string) => `订单 ${id}`,
+        closeDesc: "不保存，关闭备注编辑框。",
+        seedNotes: {
+          "SO-1001": "确认交付时间",
+          "SO-1002": "发送修订报价",
+          "SO-1003": "发票已发送",
+          "SO-1004": "等待采购单号",
+        },
       }
     : {
         eyebrow: "Order desk",
@@ -78,14 +86,22 @@ const copy = computed(() =>
         stepOpen: "Open the target order",
         stepFill: "Fill in the new note",
         stepSave: "Save the note and wait for the list to update",
+        recordLabel: (id: string) => `Order ${id}`,
+        closeDesc: "Close the editor without saving.",
+        seedNotes: {
+          "SO-1001": "Confirm delivery window",
+          "SO-1002": "Send revised quote",
+          "SO-1003": "Invoice sent",
+          "SO-1004": "Waiting for PO number",
+        },
       },
 );
 
 const orders = ref<Order[]>([
-  { id: "SO-1001", customer: "Northwind", status: "open", note: "Confirm delivery window" },
-  { id: "SO-1002", customer: "Lakeside Studio", status: "open", note: "Send revised quote" },
-  { id: "SO-1003", customer: "Mori Bakehouse", status: "done", note: "Invoice sent" },
-  { id: "SO-1004", customer: "Aster Lab", status: "open", note: "Waiting for PO number" },
+  { id: "SO-1001", customer: "Northwind", status: "open", note: copy.value.seedNotes["SO-1001"] },
+  { id: "SO-1002", customer: "Lakeside Studio", status: "open", note: copy.value.seedNotes["SO-1002"] },
+  { id: "SO-1003", customer: "Mori Bakehouse", status: "done", note: copy.value.seedNotes["SO-1003"] },
+  { id: "SO-1004", customer: "Aster Lab", status: "open", note: copy.value.seedNotes["SO-1004"] },
 ]);
 const filter = ref<"all" | "open">("all");
 const editingId = ref<string | null>(null);
@@ -241,7 +257,7 @@ const updateNoteFlow = computed<ToolOptions>(() => {
           v-record="{
             data: order,
             id: order.id,
-            label: `Order ${order.id}`,
+            label: copy.recordLabel(order.id),
             fields: { customer: order.customer, status: order.status, note: order.note },
           }"
         >
@@ -283,7 +299,7 @@ const updateNoteFlow = computed<ToolOptions>(() => {
           />
         </label>
         <div class="editor__actions">
-          <button type="button" class="orders__button" v-tool="{ id: 'close_note_editor', action: 'click', desc: 'Close the editor without saving.', kind: 'read', run: closeEditor }" @click="closeEditor">
+          <button type="button" class="orders__button" v-tool="{ id: 'close_note_editor', action: 'click', desc: copy.closeDesc, kind: 'read', run: closeEditor }" @click="closeEditor">
             {{ copy.cancel }}
           </button>
           <button

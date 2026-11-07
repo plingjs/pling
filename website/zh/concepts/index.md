@@ -26,3 +26,4 @@ locale: zh
 - [版本与兼容性](/zh/concepts/versioning-and-compatibility)
 - [跨页面与标签页的任务连续性](/zh/concepts/task-continuity-across-pages-and-tabs)
 - [投影：Shadow DOM 与 iframe](/zh/concepts/projection-shadow-dom-and-iframes)
+- [任务、引用与引导式执行](/zh/concepts/tasks-references-and-guided-execution)

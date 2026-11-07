@@ -16,7 +16,7 @@ const COPY = {
     nameLabel: "Workspace name",
     namePlaceholder: "For example: Product operations",
     nameDesc: "Enter the workspace name. It cannot contain only spaces.",
-    saveLabel: "Save name",
+    saveLabel: "Save workspace name",
     saveDesc: "Save the shared workspace settings. This write asks for confirmation once.",
     saveExpect: "The workspace name is saved",
     codeLabel: "Release verification code",
@@ -30,6 +30,7 @@ const COPY = {
     publishExpect: "The workspace changes are published",
     archiveLabel: "Archive workspace",
     archiveDesc: "Archive the current workspace. This destructive action asks every time.",
+    archiveExpect: "The workspace is archived",
     resetLabel: "Reset workspace",
     resetDesc: "Clear the workspace settings. This dangerous action asks every time.",
     errorEmpty: "Enter a workspace name. It cannot contain only spaces.",
@@ -48,7 +49,7 @@ const COPY = {
     nameLabel: "工作区名称",
     namePlaceholder: "例如：产品运营",
     nameDesc: "填写工作区名称。名称不能只包含空格。",
-    saveLabel: "保存名称",
+    saveLabel: "保存工作区名称",
     saveDesc: "保存共享的工作区设置。这个写操作首次执行时需要确认。",
     saveExpect: "工作区名称已经保存",
     codeLabel: "发布验证码",
@@ -62,6 +63,7 @@ const COPY = {
     publishExpect: "工作区变更已经发布",
     archiveLabel: "归档工作区",
     archiveDesc: "归档当前工作区。这个危险操作每次都需要确认。",
+    archiveExpect: "工作区已经归档",
     resetLabel: "重置工作区",
     resetDesc: "清空工作区设置。这个危险操作每次都需要确认。",
     errorEmpty: "请先填写工作区名称，名称不能只包含空格。",
@@ -89,10 +91,12 @@ export function PublishPanel({ locale }: { locale: DemoLocale }) {
   const lastSavedName = useRef("");
   const nameRef = useRef(name);
   const publishedRef = useRef(published);
+  const archivedRef = useRef(archived);
   const nameInput = useRef<HTMLInputElement | null>(null);
   const codeInput = useRef<HTMLInputElement | null>(null);
   nameRef.current = name;
   publishedRef.current = published;
+  archivedRef.current = archived;
 
   const scopeRef = usePlingScope<HTMLElement>({
     id: "release_check",
@@ -137,6 +141,7 @@ export function PublishPanel({ locale }: { locale: DemoLocale }) {
     kind: "danger",
     confirm: true,
     run: archiveWorkspace,
+    expect: { desc: copy.archiveExpect, check: () => archivedRef.current },
   });
   const resetToolRef = usePlingTool<HTMLButtonElement>({
     id: "reset_workspace",
@@ -203,6 +208,7 @@ export function PublishPanel({ locale }: { locale: DemoLocale }) {
   }
 
   function archiveWorkspace(): void {
+    archivedRef.current = true;
     setArchived(true);
     setFeedbackText("");
     setFeedbackField(undefined);

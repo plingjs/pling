@@ -26,6 +26,7 @@ locale: zh
 - [连续性与投影](/zh/reference/continuity-and-projection)
 - [Surface 一致性与互操作](/zh/reference/surface-conformance-and-interoperability)
 - [协议 Schema 与注册表](/zh/reference/protocol-schemas-and-registries)
+- [引导任务 API](/zh/reference/guided-task-api)
 
 ## API 参考
 

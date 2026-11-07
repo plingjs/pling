@@ -18,7 +18,8 @@ const server = createServer(async (request, response) => {
       const locale = url.searchParams.get("lang") === "zh" ? "zh" : "en";
       const { renderTodoSsr } = await vite.ssrLoadModule("/src/ssr.tsx");
       const appHtml = renderTodoSsr(locale);
-      const html = template
+      const transformed = await vite.transformIndexHtml(`${url.pathname}${url.search}`, template);
+      const html = transformed
         .replace('<html lang="en">', `<html lang="${locale === "zh" ? "zh-CN" : "en"}">`)
         .replace(
           "<title>Next.js and SSR · Pling</title>",

@@ -76,6 +76,7 @@ export function mountAssistantDock(root: HTMLElement, options: AssistantDockOpti
         placeholder: copy.placeholder,
         emptyHint: copy.regionDescription,
         quick: [...copy.quick],
+        debug: { maxCalls: 8 },
         defaultOpen: true,
         onOpenChange: (open: boolean) => { this.assistantOpen = open; },
       });

@@ -62,7 +62,8 @@ const artifacts = files.map((file) => ({ file, text: readFileSync(file, "utf8") 
 const exampleEnvFiles = [".env", ".env.local", ".env.production", ".env.production.local"]
   .map((name) => join(examples, name));
 const tutorialEnvFiles = envFilesUnder(join(examples, "tutorials"));
-const envValues = [...exampleEnvFiles, ...tutorialEnvFiles].flatMap((path) => valuesFromEnvFile(path));
+const rootModelEnv = join(root, ".llm");
+const envValues = [...exampleEnvFiles, ...tutorialEnvFiles, rootModelEnv].flatMap((path) => valuesFromEnvFile(path));
 
 for (const secret of envValues) {
   for (const artifact of artifacts) {

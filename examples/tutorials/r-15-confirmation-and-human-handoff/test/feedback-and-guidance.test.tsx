@@ -109,6 +109,16 @@ describe("R-15 · confirmation and human handoff", () => {
     expect(document.querySelector(".release__archived")).toBeNull();
   });
 
+  it("verifies an approved archive against page state", async () => {
+    const pling = await mountApp();
+    const result = await executorFor(pling).execute("archive_workspace", "{}");
+
+    expect("error" in result).toBe(false);
+    if ("error" in result) throw new Error(result.error.message);
+    expect(result.result).toMatchObject({ expect: "The workspace is archived" });
+    expect(document.querySelector(".release__archived")?.textContent).toBe("Workspace archived.");
+  });
+
   it("does not simulate the handoff when the user cancels", async () => {
     const pling = await mountApp();
     const result = await executorFor(pling, {
@@ -216,7 +226,7 @@ describe("R-15 · confirmation and human handoff", () => {
     await mountApp("zh");
 
     expect(document.body.textContent).toContain("工作区设置");
-    expect(document.querySelector("[data-save-name]")?.textContent).toBe("保存名称");
+    expect(document.querySelector("[data-save-name]")?.textContent).toBe("保存工作区名称");
     expect(document.querySelector("[data-publish]")?.textContent).toBe("发布变更");
   });
 });

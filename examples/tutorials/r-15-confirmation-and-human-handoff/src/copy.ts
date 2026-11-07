@@ -189,7 +189,7 @@ const COPY: Record<DemoLocale, DemoCopy> = {
     quick: [
       "Save the workspace name as Product operations.",
       "Archive the workspace, then explain whether it completed.",
-      "Walk me through how a person should publish the workspace changes.",
+      "Publish the workspace changes. If a person must enter the verification code, hand the steps to me.",
     ],
     surfaceEyebrow: "Pling tutorial · React",
     surfaceHeading: "One assistant, several entrances",
@@ -332,7 +332,7 @@ const COPY: Record<DemoLocale, DemoCopy> = {
     quick: [
       "把工作区名称保存为“产品运营”。",
       "归档工作区，然后说明是否完成。",
-      "告诉我一个人应当如何完成发布。",
+      "发布工作区变更；如果需要本人输入验证码，请把步骤交给我。",
     ],
     surfaceEyebrow: "Pling 教程 · React",
     surfaceHeading: "一个助手，多个入口",

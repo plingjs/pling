@@ -114,7 +114,7 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
         {tasks.length === 0 ? <p className="tasks__empty">{copy.empty}</p> : null}
       </section>
 
-      <AgentDock title={copy.dockTitle} quick={copy.quick} />
+      <AgentDock title={copy.dockTitle} quick={copy.quick} debug={{ maxCalls: 8 }} />
     </main>
   );
 }

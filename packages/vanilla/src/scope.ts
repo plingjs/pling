@@ -76,7 +76,7 @@ export function bindScope(host: VanillaHost, element: Element, options: ScopeOpt
 
   unbinds.push(bindExplore(host.registry, {
     id: revealId,
-    description: `Scroll the page to the "${label}" region (use when the region is outside the viewport)`,
+    description: host.ui.t("scroll.reveal", { label }),
     isAvailable: () =>
       host.scopes.isScopeInView(scopeId)
         ? {
@@ -93,14 +93,14 @@ export function bindScope(host: VanillaHost, element: Element, options: ScopeOpt
 
   unbinds.push(bindExplore(host.registry, {
     id: scrollId,
-    description: `Scroll inside the "${label}" region to reveal more content`,
+    description: host.ui.t("scroll.inside", { label }),
     params: {
       type: "object",
       properties: {
         direction: {
           type: "string",
           enum: ["next", "prev"],
-          description: "Scroll direction; defaults to next (forward / down)",
+            description: host.ui.t("scroll.direction"),
         },
       },
       required: [],

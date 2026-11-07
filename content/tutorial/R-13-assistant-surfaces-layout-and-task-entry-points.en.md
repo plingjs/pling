@@ -51,13 +51,14 @@ The important shared property is that changing the shell does not recreate the r
 
 ## Floating dock and sidebar
 
-The example keeps the floating entrance and also allows an edge sidebar:
+The example keeps the floating entrance and also allows an edge sidebar. The sidebar can either `overlay` the page or use `fused` mode to become a grid column:
 
 ```tsx{4-8}
 <AgentDock
   title={copy.dockTitle}
   debug={{ maxCalls: 8 }}
   layout={layout}
+  sidebarMode={sidebarMode}
   side={side}
   launcherPlacement={launcherPlacement}
   launcherLabel={copy.launcherText}
@@ -70,12 +71,37 @@ The placement props are:
 | Prop | Values | Effect |
 | --- | --- | --- |
 | `layout` | `"dock"` / `"sidebar"` | A floating corner or a viewport-edge work surface |
+| `sidebarMode` | `"overlay"` / `"fused"` | Cover the page or join its grid |
 | `side` | `"right"` / `"left"` | Which viewport edge the sidebar uses |
 | `launcherPlacement` | `"bottom"` / `"center"` | A bottom-corner launcher or a centered edge tab while collapsed |
 | `launcherLabel` | string | Copy for the collapsed launcher; defaults to the localized “Ask Pling” |
 | `surfaceId` | string | Stable task-routing identifier; defaults to `"dock"` |
 
-`side`, `launcherPlacement`, and `launcherLabel` only apply to the sidebar layout. The default dock ignores those placement details. Layout can follow a user preference or viewport change without unmounting and remounting the assistant.
+`side`, `sidebarMode`, `launcherPlacement`, and `launcherLabel` only apply to the sidebar layout. `launcherPlacement` only affects overlay mode. Layout can follow a user preference or viewport change without unmounting and remounting the assistant.
+
+Fused mode expects the application to provide a column. `AgentDock` still owns the open state, launcher, and one conversation history:
+
+```tsx
+<div className="workspace">
+  <OrderTable />
+  <AgentDock layout="sidebar" sidebarMode="fused" side="right" title="Order copilot" />
+</div>
+```
+
+```css
+.workspace {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.workspace__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+```
+
+Use `fused` when a table, editor, or dashboard must remain visible while the assistant is open. Keep `overlay` when temporary coverage is acceptable. On narrow screens, the component returns to a floating panel.
 
 On narrow screens the sidebar degrades to a floating panel. A full-height sidebar would leave no usable work area on a phone. Keeping the entrance and changing its form is more useful than preserving a desktop layout at all costs. The component owns that fallback; application code does not need a separate mobile branch.
 
@@ -206,12 +232,13 @@ The source is in `examples/tutorials/r-13-assistant-surfaces-layout-and-task-ent
 Open `http://127.0.0.1:5253/?lang=en` and check:
 
 1. Switch between the floating entrance and the page sidebar. Existing replies remain.
-2. In sidebar mode, change the edge and the collapsed launcher position.
-3. Collapse the assistant, then click “Summarize open tasks.” The assistant should expand and start the request.
-4. Click “Ask from page code.” The second request should appear in the same conversation.
-5. Inspect the model tools. The two task buttons should not appear.
+2. In sidebar mode, switch between **Overlay the page** and **Fuse with the page**. The business content should stay visible in fused mode.
+3. Change the edge and the collapsed launcher position. With the left edge, the fused assistant column moves before the main content.
+4. Collapse the assistant, then click “Summarize open tasks.” The assistant should expand and start the request.
+5. Click “Ask from page code.” The second request should appear in the same conversation.
+6. Inspect the model tools. The two task buttons should not appear.
 
-The deterministic check covers placement props, automatic expansion, shared history, both locales, and the “never an action” rule:
+The deterministic check covers placement props, overlay and fused modes, automatic expansion, shared history, both locales, and the “never an action” rule:
 
 ```bash
 pnpm tutorial:check r-13

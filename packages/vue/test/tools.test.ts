@@ -64,6 +64,20 @@ describe("useAgentTool：注册", () => {
     wrapper.unmount();
     expect(pi.registry.get("temp")).toBeUndefined();
   });
+
+  it("modelVisible: false 只隐藏模型入口，不删除可执行动作", async () => {
+    const run = vi.fn(() => ({ ok: true }));
+    const { pi, wrapper } = mountTool(() => {
+      useAgentTool({ id: "create_course", desc: "创建课程", kind: "write", modelVisible: false, run });
+    });
+
+    expect(pi.registry.snapshot().actions.map((action) => action.id)).not.toContain("create_course");
+    expect(pi.registry.get("create_course")).toBeTruthy();
+    await pi.registry.get("create_course")!.run!({});
+    expect(run).toHaveBeenCalledOnce();
+
+    wrapper.unmount();
+  });
 });
 
 describe("useAgentTool：available", () => {

@@ -351,6 +351,7 @@ useAgentTool(completeOpenTasksAction);
     <AgentDock
       :title="copy.dockTitle"
       :quick="copy.quick"
+      :debug="{ maxCalls: 8 }"
     />
   </main>
 </template>

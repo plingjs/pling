@@ -6,6 +6,7 @@ import { createReplayLlm, renderPageContext } from "@plingjs/agent";
 import { createExecutor, createPolicy, modelActions } from "@plingjs/core";
 import { createPling, PlingProvider } from "@plingjs/react";
 import { App } from "../src/App";
+import mainSource from "../src/main.tsx?raw";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
 
@@ -76,6 +77,11 @@ async function execute(
 }
 
 describe("R-12 · page identity and routing", () => {
+  it("uses the Vite base path so deep links work in tutorial previews", () => {
+    expect(mainSource).toContain('import.meta.env.BASE_URL.replace(/\\/$/, "")');
+    expect(mainSource).toContain("<BrowserRouter basename={routerBase}>");
+  });
+
   it("starts on the list route with only whitelisted URL data", async () => {
     const { pling, warnings } = await mountApp(
       "/tasks?tab=active&token=secret&lang=zh",
@@ -195,6 +201,16 @@ describe("R-12 · page identity and routing", () => {
     });
     expect(document.querySelector(".todo__eyebrow")?.textContent).toBe("待办详情");
     expect(document.documentElement.lang).toBe("zh-CN");
+    expect(document.querySelector("a.back-link")?.getAttribute("href")).toBe("/tasks?lang=zh");
+    expect(warnings).toEqual([]);
+  });
+
+  it("keeps the Chinese locale through the root redirect and row links", async () => {
+    const { warnings } = await mountApp("/", "zh");
+    await act(async () => {});
+
+    expect(document.querySelector("a.task__body")?.getAttribute("href"))
+      .toBe("/tasks/t1?from=tasks&lang=zh");
     expect(warnings).toEqual([]);
   });
 

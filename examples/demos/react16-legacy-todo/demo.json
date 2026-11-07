@@ -1,0 +1,140 @@
+{
+  "id": "react16-legacy-todo",
+  "title": "React 16.3 legacy Todo",
+  "titleZh": "React 16.3 兼容 Todo",
+  "eyebrow": "Compatibility example",
+  "eyebrowZh": "兼容性示例",
+  "summary": "A complete class-component Todo on real React 16.3.0, connected through render props to the same Pling runtime and assistant as the modern React entry.",
+  "summaryZh": "一个真正运行在 React 16.3.0 上的 class 组件 Todo，通过 render props 接入与现代 React 入口相同的 Pling 运行时和助手。",
+  "url": "/demos/react16-legacy-todo/",
+  "open": "src/App.tsx",
+  "files": [
+    {
+      "path": "src/App.tsx",
+      "label": "App.tsx",
+      "role": "Class component, Todo handlers, render-prop declarations",
+      "roleZh": "class 组件、Todo 处理函数与 render-prop 声明",
+      "lang": "tsx"
+    },
+    {
+      "path": "src/main.tsx",
+      "label": "main.tsx",
+      "role": "Classic JSX entry and Pling setup",
+      "roleZh": "经典 JSX 入口与 Pling 初始化",
+      "lang": "tsx"
+    },
+    {
+      "path": "src/copy.ts",
+      "label": "copy.ts",
+      "role": "Bilingual copy and suggested prompts",
+      "roleZh": "双语文案与推荐任务",
+      "lang": "ts"
+    },
+    {
+      "path": "src/styles.css",
+      "label": "styles.css",
+      "role": "Page layout and responsive assistant sidebar",
+      "roleZh": "页面布局与响应式助手侧栏",
+      "lang": "css"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Purpose, run command, and source map",
+      "roleZh": "用途、运行命令与源码导览",
+      "lang": "markdown"
+    },
+    {
+      "path": ".env.example",
+      "scope": "workspace",
+      "label": ".env.example",
+      "role": "Browser + gateway config",
+      "roleZh": "浏览器与网关配置",
+      "lang": "ini"
+    },
+    {
+      "path": "index.html",
+      "label": "index.html",
+      "role": "Standalone Vite entry",
+      "roleZh": "独立 Vite 入口",
+      "lang": "html"
+    }
+  ],
+  "focus": {
+    "todo-input": { "selector": "#todo-input", "match": "id=\"todo-input\"" },
+    "add-todo": { "selector": "#add-todo", "match": "id=\"add-todo\"" },
+    "todo-list": { "selector": "#todo-list", "match": "id=\"todo-list\"" },
+    "agent-dock": { "selector": ".todo-sidebar", "match": "<AgentDock" },
+    "legacy-entry": { "selector": "body", "match": "from \"@plingjs/react/legacy\"" }
+  },
+  "guide": {
+    "title": "Use the same runtime without Hooks",
+    "titleZh": "不用 Hooks，也能接同一套运行时",
+    "intro": [
+      "React 16.3 has context, refs, and fragments, but no Hooks. The default Pling React entry therefore requires React 16.8+.",
+      "This example keeps the application on React 16.3.0 and imports the legacy entry. The page still gets actions, records, scoped data, read-only state, the agent loop, and the shared assistant dock."
+    ],
+    "introZh": [
+      "React 16.3 有 context、ref 和 Fragment，但没有 Hooks，所以 Pling 的默认 React 入口要求 React 16.8+。",
+      "这个示例把应用留在 React 16.3.0，并改用 legacy 入口。页面依然拥有动作、记录、区域、只读状态、Agent 循环和共享助手 Dock。"
+    ],
+    "steps": [
+      {
+        "title": "Import the pre-Hooks entry",
+        "titleZh": "引入 pre-Hooks 入口",
+        "body": "The legacy entry exposes class/render-prop components. It does not import the Hooks implementation or a second agent loop.",
+        "bodyZh": "legacy 入口提供 class/render-prop 组件，不导入 Hooks 实现，也没有第二套 Agent 循环。",
+        "file": "src/main.tsx",
+        "match": "from \"@plingjs/react/legacy\"",
+        "lines": 8
+      },
+      {
+        "title": "Mount with ReactDOM.render",
+        "titleZh": "用 ReactDOM.render 挂载",
+        "body": "React 16.3 does not have createRoot. The Provider and page mount through the React 16 API, while the Pling runtime is created once outside render.",
+        "bodyZh": "React 16.3 没有 createRoot。Provider 和页面通过 React 16 API 挂载，Pling 运行时在 render 之外只创建一次。",
+        "file": "src/main.tsx",
+        "match": "ReactDOM.render(",
+        "lines": 8
+      },
+      {
+        "title": "Declare a scope and records",
+        "titleZh": "声明区域与记录",
+        "body": "PlingScope and PlingRecord use render props. Their only child receives the ref that binds the real DOM element; business state stays in the class.",
+        "bodyZh": "PlingScope 和 PlingRecord 使用 render props。唯一子节点接收 ref，把它绑定到真实 DOM；业务状态仍留在 class 中。",
+        "file": "src/App.tsx",
+        "match": "<PlingScope options={{ id: \"todos\"",
+        "lines": 14
+      },
+      {
+        "title": "Declare controls where they already live",
+        "titleZh": "在原有控件旁声明动作",
+        "body": "Each PlingTool wraps the real input or button. People and the agent execute the same React handler; there is no parallel automation path.",
+        "bodyZh": "每个 PlingTool 包住真实输入框或按钮。人和 Agent 执行同一个 React 处理函数，没有平行的自动化路径。",
+        "file": "src/App.tsx",
+        "match": "<PlingTool options={{ id: \"todo_text\"",
+        "lines": 16
+      },
+      {
+        "title": "Expose a compact state view",
+        "titleZh": "暴露精简的状态视图",
+        "body": "PlingState exposes totals and the active filter, not the entire component state. Writes still go through declared actions and their approval rules.",
+        "bodyZh": "PlingState 只暴露总数和当前筛选，不倾倒整个组件状态。写操作仍必须经过声明的动作和审批规则。",
+        "file": "src/App.tsx",
+        "match": "<PlingState name=\"summary\"",
+        "lines": 10
+      },
+      {
+        "title": "Mount the shared assistant",
+        "titleZh": "挂载共享助手",
+        "body": "AgentDock is the same shared DOM dock used by the Vanilla adapter. This example enables the read-only Activity inspector and model settings.",
+        "bodyZh": "AgentDock 与 Vanilla 适配器使用同一个 DOM Dock。这个示例开启了只读的最近操作检查器和模型设置。",
+        "file": "src/App.tsx",
+        "match": "<AgentDock",
+        "lines": 12
+      }
+    ],
+    "note": "This is a compatibility path, not a recommendation to start new React work on 16.3. New applications should use the Hooks entry on React 16.8+.",
+    "noteZh": "这是兼容路径，不是建议新的 React 项目从 16.3 起步。新项目应在 React 16.8+ 上使用 Hooks 入口。"
+  }
+}

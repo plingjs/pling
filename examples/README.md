@@ -9,6 +9,19 @@ application: page assistant, BFF-owned sessions, Surface pairing, external-agent
 access, and page-side approval. It is also the deployment reference for the
 public `todo.plingjs.dev` service.
 
+Two retrofit labs show the same application before and after Pling:
+
+| Folder | Baseline | Integrated | Purpose |
+| --- | --- | --- | --- |
+| `apps/retrofit-starter/` | `:5230/baseline/` | `:5230/` | Smallest useful retrofit: scopes, actions, records, state, assistant |
+| `apps/retrofit-full/` | `:5231/baseline/` | `:5231/` | Order desk with one business tool and a narrowed external Surface |
+
+The baseline pages import no `@plingjs/*` code. The integrated pages share the
+same business functions, copy, and CSS, so the diff stays reviewable. Each
+README contains the step-by-step retrofit, a change map, verification, and the
+automation boundary. The reusable process lives in
+`skills/retrofit-pling/SKILL.md`.
+
 Each folder under `demos/` is a standalone HTML entry. It owns its business UI,
 the minimal Pling integration, and the local model connection used by the live
 example. The documentation site reads these same source files into its code

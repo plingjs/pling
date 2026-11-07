@@ -11,7 +11,7 @@
  * 注意（踩过的坑）：面板类 UI 不能参与文档高度，否则「滚动 → 内容变少 → 文档变矮 →
  * scrollTop 被夹回」会形成自咬回路。这里固定视口高度 + 自己滚动。
  */
-import { computed, inject, ref } from "vue";
+import { computed, inject, nextTick, onMounted, onUnmounted, ref, useSlots, watch } from "vue";
 import MarkdownIt from "markdown-it";
 import { supportsAlwaysAllow } from "@plingjs/core";
 import { toTranscriptLines, type PendingApproval, type PendingHandoff, type SessionEvent } from "@plingjs/agent";
@@ -62,12 +62,35 @@ const props = withDefaults(
     reveal?: (text: string) => string;
     /** MPA 恢复入口：有值时在对话顶部显示「继续上次任务」。 */
     resume?: { goal?: string; interrupted?: boolean } | null;
+    /** Opt-in two-line composer for workspace layouts. */
+    multiline?: boolean;
+    /**
+     * Keep task content above the scrolling transcript instead of appending it
+     * to the message flow. `none` lets a host own all guidance without the
+     * built-in task card reserving space.
+     */
+    taskPlacement?: "inline" | "pinned" | "none";
+    /** Whether the task slot currently has content. Keeps an empty pinned area from occupying space. */
+    hasTask?: boolean;
+    /**
+     * Where slotted guidance belongs. `end` renders it as the newest message in
+     * the transcript (use this for a live next-step prompt); `top` keeps the
+     * legacy positioned block for pinned layouts.
+     */
+    guidePlacement?: "top" | "end";
+    /** Render a speaker header (name + time) above each chat message. */
+    speakers?: boolean;
   }>(),
   {
     events: () => [],
     running: false,
     pending: null,
     tools: false,
+    multiline: false,
+    taskPlacement: "inline",
+    hasTask: true,
+    guidePlacement: "top",
+    speakers: false,
   },
 );
 
@@ -82,7 +105,12 @@ const emit = defineEmits<{
 }>();
 
 const draft = ref("");
+const transcriptEl = ref<HTMLElement | null>(null);
+const composerEl = ref<HTMLInputElement | HTMLTextAreaElement | null>(null);
+const SCROLL_FOLLOW_THRESHOLD = 64;
+const followLatest = ref(true);
 const pi = inject(PLING_KEY, null);
+const slots = useSlots();
 const ui = pi?.ui ?? STANDALONE_UI;
 const t = ui.t;
 const titleText = computed(() => props.title ?? t("chat.title"));
@@ -91,17 +119,86 @@ const emptyText = computed(() => props.emptyHint ?? t("chat.empty"));
 const lines = computed(() =>
   toTranscriptLines(props.events, { tools: props.tools, locale: ui.locale, translate: t }),
 );
+const lineTimes = ref<string[]>([]);
+const timeFormatter = computed(
+  () => new Intl.DateTimeFormat(ui.locale ?? "zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }),
+);
+function stampLines(count: number): void {
+  const next = lineTimes.value.slice(0, Math.max(0, count));
+  while (next.length < count) next.push(timeFormatter.value.format(new Date()));
+  if (next.length !== lineTimes.value.length) lineTimes.value = next;
+}
+watch(
+  () => lines.value.length,
+  (count) => stampLines(count),
+  { immediate: true },
+);
 const shown = (text: string): string => (props.reveal ? props.reveal(text) : text);
 const handoffSteps = computed(() => props.pendingHandoff?.request.steps ?? []);
 const handoffStep = computed(() => props.pendingHandoff?.step ?? 0);
 const handoffLast = computed(() => handoffStep.value >= handoffSteps.value.length - 1);
+const transcriptEmpty = computed(
+  () =>
+    !lines.value.length &&
+    !props.resume &&
+    !slots.guide &&
+    !(props.taskPlacement === "inline" && props.hasTask && slots.task),
+);
 
 function submit(): void {
   const text = draft.value.trim();
   if (!text || props.running) return;
   draft.value = "";
+  followLatest.value = true;
   emit("send", text);
 }
+
+function resizeComposer(): void {
+  const element = composerEl.value;
+  if (!element || element.tagName !== "TEXTAREA") return;
+  element.style.height = "auto";
+  const height = Math.min(150, Math.max(46, element.scrollHeight));
+  element.style.height = `${height}px`;
+  element.style.overflowY = element.scrollHeight > 150 ? "auto" : "hidden";
+}
+
+function onComposerKeydown(event: KeyboardEvent): void {
+  if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+  event.preventDefault();
+  submit();
+}
+
+watch(draft, () => void nextTick(resizeComposer));
+
+// Task cards and other slotted content grow independently of the event list.
+// Follow new output only while the reader is already near the bottom; scrolling
+// up must remain stable while an answer is still streaming.
+let transcriptObserver: MutationObserver | null = null;
+
+function syncScrollIntent(): void {
+  const box = transcriptEl.value;
+  if (!box) return;
+  followLatest.value = box.scrollHeight - box.scrollTop - box.clientHeight <= SCROLL_FOLLOW_THRESHOLD;
+}
+
+onMounted(() => {
+  if (!transcriptEl.value || typeof MutationObserver === "undefined") return;
+  transcriptEl.value.addEventListener("scroll", syncScrollIntent, { passive: true });
+  if (followLatest.value) transcriptEl.value.scrollTop = transcriptEl.value.scrollHeight;
+  transcriptObserver = new MutationObserver(() => {
+    const box = transcriptEl.value;
+    if (box && followLatest.value) box.scrollTop = box.scrollHeight;
+  });
+  transcriptObserver.observe(transcriptEl.value, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+});
+onUnmounted(() => {
+  transcriptEl.value?.removeEventListener("scroll", syncScrollIntent);
+  transcriptObserver?.disconnect();
+});
 </script>
 
 <template>
@@ -114,7 +211,14 @@ function submit(): void {
       <button v-if="running" type="button" class="stop" @click="emit('stop')">{{ t("chat.stop") }}</button>
     </header>
 
-    <div class="transcript">
+    <div v-if="taskPlacement === 'pinned' && hasTask && $slots.task" class="task-pinned">
+      <slot name="task" />
+    </div>
+
+    <div ref="transcriptEl" class="transcript" :class="{ 'is-empty': transcriptEmpty }">
+      <div v-if="guidePlacement === 'top' && $slots.guide" class="chat-guide">
+        <slot name="guide" />
+      </div>
       <div v-if="resume" class="resume">
         <strong>{{ resume.goal ? t("chat.resume.goal", { goal: shown(resume.goal) }) : t("chat.resume.pending") }}</strong>
         <p v-if="resume.interrupted" class="resume__hint">
@@ -126,11 +230,30 @@ function submit(): void {
           <button type="button" class="reject" @click="emit('dismissResume')">{{ t("chat.resume.dismiss") }}</button>
         </div>
       </div>
-      <p v-if="!lines.length" class="empty">{{ emptyText }}</p>
+      <p v-if="!lines.length && !$slots.guide && !(taskPlacement === 'inline' && hasTask && $slots.task)" class="empty">
+        {{ emptyText }}
+      </p>
       <template v-for="(line, index) in lines" :key="index">
-        <p v-if="line.kind === 'user'" class="line user">{{ shown(line.text) }}</p>
-        <div v-else-if="line.kind === 'final'" class="line final markdown" v-html="renderMarkdown(shown(line.text))" />
-        <div v-else-if="line.kind === 'assistant'" class="line assistant markdown" v-html="renderMarkdown(shown(line.text))" />
+        <div v-if="line.kind === 'user'" class="line user">
+          <header v-if="speakers" class="line-head">
+            <span>{{ t("chat.me") }}</span>
+          </header>
+          <p class="line-body">{{ shown(line.text) }}</p>
+        </div>
+        <div v-else-if="line.kind === 'final'" class="line final">
+          <header v-if="speakers" class="line-head">
+            <strong>{{ t("chat.assistantName") }}</strong>
+            <time>{{ lineTimes[index] }}</time>
+          </header>
+          <div class="markdown" v-html="renderMarkdown(shown(line.text))" />
+        </div>
+        <div v-else-if="line.kind === 'assistant'" class="line assistant">
+          <header v-if="speakers" class="line-head">
+            <strong>{{ t("chat.assistantName") }}</strong>
+            <time>{{ lineTimes[index] }}</time>
+          </header>
+          <div class="markdown" v-html="renderMarkdown(shown(line.text))" />
+        </div>
         <p v-else-if="line.kind === 'notice'" class="line notice">{{ shown(line.text) }}</p>
         <p v-else-if="line.kind === 'cancelled'" class="line notice">{{ t("chat.cancelled") }}</p>
         <p v-else-if="line.kind === 'error'" class="line error">{{ shown(line.text) }}</p>
@@ -144,6 +267,10 @@ function submit(): void {
           <span>{{ shown(line.detail) }}</span>
         </p>
       </template>
+      <slot v-if="taskPlacement === 'inline' && hasTask" name="task" />
+      <div v-if="guidePlacement === 'end' && $slots.guide" class="chat-guide chat-guide--end">
+        <slot name="guide" />
+      </div>
       <!-- 「正在执行」：动作流水不刷屏了，但「它在动」这件事要看得见。
            待确认时让位给下面的确认条（那本身就是一次交互，不是「在跑」）。 -->
       <p v-if="running && !pending && !pendingHandoff" class="line executing">
@@ -197,7 +324,17 @@ function submit(): void {
     <slot name="footer" />
 
     <form class="composer" @submit.prevent="submit">
-      <input v-model="draft" :aria-label="t('chat.inputLabel')" :placeholder="placeholderText" :disabled="running" />
+      <textarea
+        v-if="multiline"
+        ref="composerEl"
+        v-model="draft"
+        rows="2"
+        :aria-label="t('chat.inputLabel')"
+        :placeholder="placeholderText"
+        :disabled="running"
+        @keydown="onComposerKeydown"
+      />
+      <input v-else ref="composerEl" v-model="draft" :aria-label="t('chat.inputLabel')" :placeholder="placeholderText" :disabled="running" />
       <button type="submit" :disabled="running || !draft.trim()">{{ t("chat.send") }}</button>
     </form>
   </section>
@@ -207,27 +344,32 @@ function submit(): void {
 .chat {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   height: 100%;
   min-height: 0;
   border: 1px solid var(--pling-color-border, #ddd);
-  border-radius: var(--pling-radius-md, 8px);
-  padding: 12px;
+  border-radius: var(--pling-radius-lg, 12px);
+  padding: 14px;
   background: var(--pling-color-surface, #fff);
   color: var(--pling-color-text, #0f172a);
   font-family: var(--pling-font-family, system-ui, sans-serif);
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.55;
 }
 header {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding-bottom: 8px;
+  padding-bottom: 10px;
   border-bottom: 1px solid var(--pling-color-border-muted, #eee);
+}
+header strong {
+  font-size: 15px;
+  line-height: 1.4;
 }
 header .running {
   color: var(--pling-color-primary-strong, #1565c0);
-  font-size: 12px;
+  font-size: 12.5px;
 }
 header .stop {
   margin-left: auto;
@@ -238,34 +380,58 @@ header .stop {
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+/* A scrolling flex column must not shrink its children to fit. Without this,
+   long transcripts compress every line to a few pixels and scrollHeight never
+   reflects the real content height. */
+.transcript > * {
+  flex: 0 0 auto;
+}
+.transcript.is-empty {
+  align-items: center;
+  justify-content: center;
+}
+.task-pinned {
+  flex: 0 0 auto;
+  max-height: min(58%, 560px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.task-pinned:empty {
+  display: none;
+}
+.chat-guide {
+  flex: 0 0 auto;
 }
 .resume {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 9px 10px;
+  gap: 7px;
+  padding: 10px 12px;
   border: 1px solid var(--pling-color-primary, #7dd3fc);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--pling-color-primary-soft, #f0f9ff);
 }
 .resume strong {
   color: var(--pling-color-primary-strong, #075985);
-  font-size: 12px;
+  font-size: 13px;
+  line-height: 1.45;
 }
 .resume__hint {
   margin: 0;
   color: var(--pling-color-primary-strong, #0369a1);
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: 12.5px;
+  line-height: 1.55;
 }
 .line {
   margin: 0;
-  padding: 6px 8px;
-  border-radius: 6px;
+  padding: 8px 10px;
+  border-radius: 8px;
   border-left: 3px solid var(--pling-color-border, #ddd);
   white-space: pre-wrap;
   word-break: break-word;
+  line-height: 1.6;
 }
 .line.user {
   border-color: var(--pling-color-primary, #90caf9);
@@ -278,66 +444,92 @@ header .stop {
   border-color: var(--pling-color-success, #66bb6a);
   background: var(--pling-color-success-soft, #f1f8f2);
 }
-.line.markdown {
+.line-body {
+  margin: 0;
+  white-space: pre-wrap;
+}
+.line-head {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 6px;
+  color: var(--pling-color-text-subtle, #888);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.line-head time {
+  color: var(--pling-color-text-faint, #a8b3c2);
+  font-size: 11px;
+  font-weight: 400;
+}
+.line.user .line-head {
+  justify-content: flex-end;
+}
+.line.assistant .line-head strong,
+.line.final .line-head strong {
+  color: var(--pling-color-text, #172033);
+}
+.line .markdown {
   white-space: normal;
 }
-.line.markdown :deep(p) {
+.line .markdown :deep(p) {
   margin: 0 0 0.55em;
 }
-.line.markdown :deep(p:last-child) {
+.line .markdown :deep(p:last-child) {
   margin-bottom: 0;
 }
-.line.markdown :deep(h1),
-.line.markdown :deep(h2),
-.line.markdown :deep(h3),
-.line.markdown :deep(h4),
-.line.markdown :deep(h5),
-.line.markdown :deep(h6) {
+.line .markdown :deep(h1),
+.line .markdown :deep(h2),
+.line .markdown :deep(h3),
+.line .markdown :deep(h4),
+.line .markdown :deep(h5),
+.line .markdown :deep(h6) {
   margin: 0.25em 0 0.5em;
   line-height: 1.35;
 }
-.line.markdown :deep(ul),
-.line.markdown :deep(ol) {
+.line .markdown :deep(ul),
+.line .markdown :deep(ol) {
   margin: 0.35em 0;
   padding-left: 1.5em;
 }
-.line.markdown :deep(blockquote) {
+.line .markdown :deep(blockquote) {
   margin: 0.5em 0;
   padding-left: 0.75em;
   border-left: 3px solid var(--pling-color-border, #cbd5e1);
   color: var(--pling-color-text-muted, #475569);
 }
-.line.markdown :deep(pre) {
+.line .markdown :deep(pre) {
   overflow-x: auto;
   margin: 0.5em 0;
   padding: 8px;
   border-radius: 5px;
   background: var(--pling-color-surface-muted, #f1f5f9);
 }
-.line.markdown :deep(code) {
+.line .markdown :deep(code) {
   padding: 0.08em 0.28em;
   border-radius: 3px;
   background: var(--pling-color-surface-muted, #eef2f7);
   font-family: var(--pling-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
   font-size: 0.94em;
 }
-.line.markdown :deep(pre code) {
+.line .markdown :deep(pre code) {
   padding: 0;
   background: transparent;
   white-space: pre;
 }
-.line.markdown :deep(a) {
+.line .markdown :deep(a) {
   color: var(--pling-color-primary, #2e9df7);
   text-decoration: underline;
 }
-.line.markdown :deep(table) {
+.line .markdown :deep(table) {
   display: block;
   max-width: 100%;
   overflow-x: auto;
   border-collapse: collapse;
 }
-.line.markdown :deep(th),
-.line.markdown :deep(td) {
+.line .markdown :deep(th),
+.line .markdown :deep(td) {
   padding: 3px 6px;
   border: 1px solid var(--pling-color-border, #dbe2ea);
   text-align: left;
@@ -346,7 +538,7 @@ header .stop {
   border-color: var(--pling-color-warning, #ffe082);
   background: var(--pling-color-warning-soft, #fffdf3);
   color: var(--pling-color-warning, #795548);
-  font-size: 12px;
+  font-size: 12.5px;
 }
 .line.error {
   border-color: var(--pling-color-danger, #ef9a9a);
@@ -364,7 +556,7 @@ header .stop {
   gap: 6px;
   border-color: var(--pling-color-border, #cbd5e1);
   color: var(--pling-color-text-muted, #64748b);
-  font-size: 12px;
+  font-size: 12.5px;
 }
 .executing__dot {
   width: 7px;
@@ -404,11 +596,17 @@ header .stop {
 .empty {
   color: var(--pling-color-text-subtle, #888);
 }
+.transcript.is-empty .empty {
+  max-width: 280px;
+  padding: 0 10px;
+  text-align: center;
+  line-height: 1.7;
+}
 .confirm {
   border: 1px solid var(--pling-color-warning, #ffe082);
   background: var(--pling-color-warning-soft, #fffdf3);
-  border-radius: var(--pling-radius-sm, 6px);
-  padding: 8px;
+  border-radius: var(--pling-radius-md, 8px);
+  padding: 10px;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -421,11 +619,12 @@ header .stop {
 .handoff {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px;
+  gap: 6px;
+  padding: 10px;
   border: 1px solid var(--pling-color-primary, #93c5fd);
-  border-radius: var(--pling-radius-sm, 6px);
+  border-radius: var(--pling-radius-md, 8px);
   background: var(--pling-color-primary-soft, #eff6ff);
+  font-size: 13px;
 }
 .handoff .ask {
   display: flex;
@@ -438,18 +637,19 @@ header .stop {
   color: var(--pling-color-primary-strong, #1e3a8a);
 }
 .handoff__steps {
-  margin: 2px 0;
+  margin: 3px 0;
   padding: 0;
   list-style: none;
   display: grid;
-  gap: 3px;
+  gap: 4px;
 }
 .handoff__steps li {
   display: flex;
   gap: 6px;
   align-items: baseline;
   color: var(--pling-color-text-muted, #64748b);
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
 }
 .handoff__steps li.is-current {
   color: var(--pling-color-text, #0f172a);
@@ -467,7 +667,7 @@ header .stop {
   border-radius: 50%;
   background: var(--pling-color-primary-soft, #dbeafe);
   color: var(--pling-color-primary-strong, #1d4ed8);
-  font-size: 10px;
+  font-size: 10.5px;
   flex: none;
 }
 .handoff__steps li.is-current .handoff__num {
@@ -477,7 +677,8 @@ header .stop {
 .handoff__hint {
   margin: 0;
   color: var(--pling-color-text-muted, #64748b);
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
 }
 .confirm .ask {
   display: flex;
@@ -498,14 +699,50 @@ header .stop {
 }
 .composer {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
-.composer input {
+.composer input,
+.composer textarea {
   flex: 1;
-  padding: 6px 8px;
+  min-width: 0;
+  min-height: 38px;
+  padding: 7px 10px;
   border: 1px solid var(--pling-color-border, #ddd);
-  border-radius: var(--pling-radius-sm, 6px);
+  border-radius: var(--pling-radius-md, 8px);
   background: var(--pling-color-surface, #fff);
   color: var(--pling-color-text, #0f172a);
+  font: inherit;
+  font-size: 14px;
+  outline: none;
+}
+.composer textarea {
+  height: 46px;
+  max-height: 150px;
+  resize: none;
+  line-height: 22px;
+}
+.composer input:focus,
+.composer textarea:focus {
+  border-color: var(--pling-color-primary, #2e9df7);
+  box-shadow: 0 0 0 3px rgb(46 157 247 / 15%);
+}
+.composer button {
+  flex: none;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: var(--pling-radius-md, 8px);
+  background: var(--pling-color-primary, #2e9df7);
+  color: var(--pling-color-on-primary, #fff);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 620;
+  cursor: pointer;
+}
+.composer button:disabled {
+  background: var(--pling-color-primary, #2e9df7);
+  color: var(--pling-color-on-primary, #fff);
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 </style>

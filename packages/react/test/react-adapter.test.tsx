@@ -2,6 +2,7 @@ import { act, useState, type ReactNode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createExecutor, createPolicy } from "@plingjs/core";
+import { createTaskController } from "@plingjs/agent";
 import { createPling, PlingProvider, useAgentTool, usePlingTool } from "../src";
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
@@ -103,6 +104,27 @@ describe("React 适配器", () => {
     expect(approve).toHaveBeenCalledWith({ id: "SO-1" });
   });
 
+  it("modelVisible: false 的函数动作不进入快照，但仍可调用", async () => {
+    const pling = createPling({ onWarn: () => {} });
+    const run = vi.fn(() => ({ ok: true }));
+
+    function App() {
+      useAgentTool({
+        id: "create_course",
+        desc: "创建课程",
+        kind: "write",
+        modelVisible: false,
+        run,
+      });
+      return <div>课程</div>;
+    }
+
+    await render(<PlingProvider pling={pling}><App /></PlingProvider>);
+    expect(pling.registry.snapshot().actions.map((action) => action.id)).not.toContain("create_course");
+    await pling.registry.get("create_course")!.run!({});
+    expect(run).toHaveBeenCalledOnce();
+  });
+
   it("函数级动作的成功判据会进入执行回执", async () => {
     const pling = createPling({ onWarn: () => {} });
 
@@ -144,5 +166,36 @@ describe("React 适配器", () => {
     expect(pling.registry.snapshot().actions[0]!.description).toBe("保存草稿");
     await render(<PlingProvider pling={pling}><App label="提交订单" /></PlingProvider>);
     expect(pling.registry.snapshot().actions[0]!.description).toBe("提交订单");
+  });
+});
+
+describe("React guided task catalogue", () => {
+  it("shares the same start/update actions on pling.task", async () => {
+    const pling = createPling({ onWarn: () => {} });
+    const controller = createTaskController({ invoke: async () => ({ ok: true, summary: "done" }) as never });
+    const off = pling.task.define({
+      definition: {
+        id: "course.create",
+        title: "Create a course",
+        objective: "Create a publishable course",
+        fields: [
+          { name: "name", label: "Name", recommended: "Yoga foundations" },
+          { name: "cover", label: "Cover", type: "boolean", agentWritable: false },
+        ],
+        steps: [{ id: "save", label: "Save", action: "create_course" }],
+      },
+      controller,
+    });
+
+    await pling.registry.get("pling_start_task")!.run!({ task: "course.create" });
+    const update = pling.registry.get("pling_update_task")!;
+    await update.run!({ task: "course.create", values: { name: "Prenatal yoga" } });
+    expect(controller.snapshot()?.values.name).toBe("Prenatal yoga");
+    await expect(update.run!({ task: "course.create", values: { cover: true } })).rejects.toMatchObject({
+      code: "INVALID_ARGS",
+    });
+
+    off();
+    pling.destroy();
   });
 });

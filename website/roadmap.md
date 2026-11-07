@@ -42,6 +42,7 @@ Browse the public documentation by subject. If this is your first visit, start w
 - [Versioning and compatibility](/concepts/versioning-and-compatibility)
 - [Task continuity across pages and tabs](/concepts/task-continuity-across-pages-and-tabs)
 - [Projection: Shadow DOM and iframes](/concepts/projection-shadow-dom-and-iframes)
+- [Tasks, references, and guided execution](/concepts/tasks-references-and-guided-execution)
 
 ## Operations
 
@@ -79,6 +80,7 @@ Browse the public documentation by subject. If this is your first visit, start w
 - [Migrating an existing Vue app](/vue/migrating-an-existing-vue-app)
 - [Exposing selected capabilities to external agents](/vue/exposing-selected-capabilities-to-external-agents)
 - [Nuxt and SSR](/vue/nuxt-and-ssr)
+- [Guided tasks for a real workflow](/vue/guided-tasks-for-a-real-workflow)
 
 ## React
 
@@ -106,6 +108,7 @@ Browse the public documentation by subject. If this is your first visit, start w
 - [Migrating an existing React app](/react/migrating-an-existing-react-app)
 - [Exposing selected capabilities to external agents](/react/exposing-selected-capabilities-to-external-agents)
 - [Next.js and SSR](/react/next-js-and-ssr)
+- [Guided tasks for a real workflow](/react/guided-tasks-for-a-real-workflow)
 
 ## Vanilla / jQuery
 
@@ -123,6 +126,7 @@ Browse the public documentation by subject. If this is your first visit, start w
 - [Test and debug vanilla capabilities](/vanilla/test-and-debug-vanilla-capabilities)
 - [Add Pling to an existing jQuery app](/vanilla/add-pling-to-an-existing-jquery-app)
 - [Expose selected capabilities to external agents](/vanilla/expose-selected-capabilities-to-external-agents)
+- [Guided tasks for a real workflow](/vanilla/guided-tasks-for-a-real-workflow)
 
 ## Vue 2 Legacy
 
@@ -134,6 +138,7 @@ Browse the public documentation by subject. If this is your first visit, start w
 - [Mount the assistant UI](/vue2/mount-the-assistant-ui)
 - [Test and deploy a Vue 2 app](/vue2/test-and-deploy-a-vue-2-app)
 - [Migrating from Vue 2 to Vue 3](/vue2/migrating-from-vue-2-to-vue-3)
+- [Guided tasks for a real workflow](/vue2/guided-tasks-for-a-real-workflow)
 
 ## Agent Surface
 
@@ -179,6 +184,7 @@ Browse the public documentation by subject. If this is your first visit, start w
 - [Continuity and projection](/reference/continuity-and-projection)
 - [Surface conformance and interoperability](/reference/surface-conformance-and-interoperability)
 - [Protocol schemas and registries](/reference/protocol-schemas-and-registries)
+- [Guided task API](/reference/guided-task-api)
 
 ### API reference
 

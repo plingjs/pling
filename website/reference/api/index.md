@@ -12,20 +12,20 @@ Choose the framework you are integrating. Each page contains only that framework
 
 The parameter tables are the main contract here. Look up a field's type, required status, default, and applicable scenario on the current framework page; follow the linked reference only when you need field-level semantics or error codes.
 
-There are **5** API pages covering **9** capability groups; the current version is `0.1.0-alpha.3` with **preview** stability.
+There are **5** API pages covering **10** capability groups; the current version is `0.1.0-alpha.6` with **preview** stability.
 
 ## Choose by framework
 
 | Framework | Package | Entries | Page |
 | --- | --- | --- | --- |
-| **Vue 3 API** | `@plingjs/vue` | 43 | [Open](/reference/api/vue-3) |
-| **React API** | `@plingjs/react` | 39 | [Open](/reference/api/react) |
-| **Vue 2.7 API** | `@plingjs/vue2` | 25 | [Open](/reference/api/vue-2) |
-| **Vanilla JS API** | `@plingjs/vanilla` | 27 | [Open](/reference/api/vanilla) |
+| **Vue 3 API** | `@plingjs/vue` | 80 | [Open](/reference/api/vue-3) |
+| **React API** | `@plingjs/react` | 76 | [Open](/reference/api/react) |
+| **Vue 2.7 API** | `@plingjs/vue2` | 59 | [Open](/reference/api/vue-2) |
+| **Vanilla JS API** | `@plingjs/vanilla` | 79 | [Open](/reference/api/vanilla) |
 
 ## Shared package API
 
-Runtime, page continuity, testing, and diagnostic APIs share one implementation: **33** entries.
+Runtime, page continuity, testing, and diagnostic APIs share one implementation: **70** entries.
 
 [Open the shared package API](/reference/api/shared)
 
@@ -33,15 +33,15 @@ Runtime, page continuity, testing, and diagnostic APIs share one implementation:
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.3` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.3` | `react >=18` |
-| `@plingjs/vue2` | `0.1.0-alpha.3` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.3` | — |
+| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
 
 | Item | Value |
 | --- | --- |
 | Introduced | `0.1.0-alpha.2` |
-| Runtime | ES modules for Vue 3, React 18+, Vue 2.7, or a browser |
+| Runtime | ES modules for Vue 3, React 16.3+ (Hooks entry 16.8+), Vue 2.7, or a browser |
 | Stability | Pre-1.0 alpha; a minor release may change the API |
 
 ## Machine-readable copies

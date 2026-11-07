@@ -45,12 +45,12 @@ export const routes: RouteRecordRaw[] = [
 
 入口把 router 注册给 Vue，并配置 Pling 可以读取的页面身份：
 
-```ts{9-12,22}
+```ts{5,8-11,16}
 import { createRouter, createWebHistory } from "vue-router";
 import { createPling } from "@plingjs/vue";
 
 const locale = resolveDemoLocale();
-const router = createRouter({ history: createWebHistory(), routes });
+const router = createRouter({ history: createWebHistory(import.meta.env.BASE_URL), routes });
 
 const pling = createPling({
   page: {
@@ -63,6 +63,8 @@ const pling = createPling({
 
 createApp(App).use(router).use(pling.plugin).mount("#app");
 ```
+
+`BASE_URL` 由 Vite 根据部署路径注入。应用位于站点根目录时它是 `/`，位于 `/app/` 或 `/demos/tutorials/.../` 时它会保留这段前缀。省略它会让 Vue Router 把 `/tasks` 当成站点根路径，子路径预览因此只渲染外壳、不渲染路由内容。
 
 常见项目不需要额外接线。应用挂载时，Pling 会读取 `app.config.globalProperties.$router`。先注册 router 还是先注册 `pling.plugin` 都可以。
 
@@ -118,13 +120,17 @@ Pling 会观察所有路由变化，包括直接打开链接、浏览器前进�
 
 ```ts
 function openTask(id: string) {
+  const query: Record<string, string> = { from: "tasks" };
+  if (props.locale === "zh") query.lang = "zh";
   void router.push({
     name: "task-detail",
     params: { id },
-    query: { from: "tasks" },
+    query,
   });
 }
 ```
+
+这里的 `lang` 只用于保持教程界面的语言，不属于页面身份：前面的 `queryKeys: ["from"]` 仍然只会把 `from` 交给模型。
 
 动作成功后，下一份快照会换成新的路由、区域树和动作清单。列表页的旧动作不再出现。这正是需要的信号：agent 应当根据新页面继续，而不是沿用上一轮看到的页面。
 

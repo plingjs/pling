@@ -220,6 +220,7 @@ export function mountOrderApp(pling: Vue2Pling, root: HTMLElement): () => void {
           config: connection.value,
           title: copy.value.listTitle,
           quick: copy.value.quick,
+          debug: { maxCalls: 8 },
           onSessionEvent: (event: SessionEvent) => {
             if (event.type === "user") started.value = true;
           },

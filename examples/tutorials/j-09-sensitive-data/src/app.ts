@@ -253,6 +253,7 @@ export function mountQuickstart(root: HTMLElement, options: QuickstartOptions = 
     placeholder: copy.placeholder,
     emptyHint: copy.regionDescription,
     quick: copy.quick,
+    debug: { maxCalls: 8 },
     onOpenChange: (open) => assistantButton.setAttribute("aria-expanded", String(open)),
   });
   assistantButton.addEventListener("click", () => dock.toggle());

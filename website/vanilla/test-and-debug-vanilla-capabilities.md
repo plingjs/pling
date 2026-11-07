@@ -2,7 +2,7 @@
 id: J-12
 title: "Test and debug vanilla capabilities"
 status: draft
-release: later
+release: 0.1
 prereq: "J-06 / OPS-05"
 locale: en
 ---

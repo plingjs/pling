@@ -1,0 +1,48 @@
+{
+  "app": "northstar-order-desk",
+  "source": "src/baseline/App.vue",
+  "target": "src/integrated/App.vue",
+  "scopes": {
+    "order_queue": "Search and filter controls for the queue",
+    "order_records": "Order records and row actions",
+    "order_detail": "Modal detail region for one order"
+  },
+  "capabilities": [
+    { "id": "order_search", "selector": "input[type=search]", "primitive": "fill", "kind": "write", "scope": "order_queue", "review": "low" },
+    { "id": "filter_all", "selector": ".filters button:nth-child(1)", "primitive": "click", "kind": "write", "scope": "order_queue", "review": "low" },
+    { "id": "filter_pending", "selector": ".filters button:nth-child(2)", "primitive": "click", "kind": "write", "scope": "order_queue", "review": "low" },
+    { "id": "filter_approved", "selector": ".filters button:nth-child(3)", "primitive": "click", "kind": "write", "scope": "order_queue", "review": "low" },
+    { "id": "filter_high", "selector": ".filters button:nth-child(4)", "primitive": "click", "kind": "write", "scope": "order_queue", "review": "low" },
+    { "id": "reset_filters", "selector": ".filters .reset", "primitive": "click", "kind": "write", "scope": "order_queue", "review": "low" },
+    { "id": "open_order@<order.id>", "selector": ".actions button:nth-child(1)", "primitive": "click", "kind": "write", "scope": "order_records", "review": "low", "record": "order.id" },
+    { "id": "approve@<order.id>", "selector": ".actions button:nth-child(2)", "primitive": "click", "kind": "write", "scope": "order_records", "review": "human", "record": "order.id" },
+    { "id": "reopen@<order.id>", "selector": ".actions button:nth-child(2)", "primitive": "click", "kind": "write", "scope": "order_records", "review": "human", "record": "order.id" },
+    { "id": "delete@<order.id>", "selector": ".actions .danger", "primitive": "click", "kind": "danger", "scope": "order_records", "review": "blocked", "record": "order.id" },
+    { "id": "close_order", "selector": ".dialog__close", "primitive": "click", "kind": "write", "scope": "order_detail", "review": "low" },
+    { "id": "orders.set_note", "selector": "function tool", "primitive": "call", "kind": "write", "scope": "order_queue", "review": "human" }
+  ],
+  "state": [
+    {
+      "key": "order_queue_view",
+      "fields": ["filter", "search", "shown", "total", "pending", "approved", "highRisk", "selected"]
+    }
+  ],
+  "external": {
+    "mode": "public-demo locally; BFF in production",
+    "allowlist": [
+      "northstar/orders.set_note",
+      "northstar/open_order@",
+      "northstar/close_order",
+      "northstar/order_search",
+      "northstar/filter_high",
+      "northstar/reset_filters"
+    ],
+    "excluded": ["northstar/approve@", "northstar/reopen@", "northstar/delete@"]
+  },
+  "forbidden": [
+    "Exposing a generic click(selector) or eval operation",
+    "Sending cookie, page token, or provider key through Surface",
+    "Exposing delete or approval to the external Agent in this example",
+    "Using the note textarea plus Save button as two separate agent tools"
+  ]
+}

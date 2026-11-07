@@ -1,8 +1,10 @@
 import {
   hasDynamicParams,
+  resolveKind,
   schemaOf,
   type ActionDescriptor,
   type HandoffSpec,
+  type PresenceState,
   type Primitive,
 } from "@plingjs/core";
 import {
@@ -36,6 +38,7 @@ export function inferPrimitive(element: Element, options: ToolOptions): Primitiv
   const tag = element.tagName.toLowerCase();
   if (tag === "select") return "select";
   if (tag === "textarea") return "type";
+  if (element.hasAttribute("contenteditable")) return "type";
   if (tag === "input") {
     const type = (element as HTMLInputElement).type;
     return type === "checkbox" || type === "radio" ? "click" : "type";
@@ -75,10 +78,23 @@ function closestScope(element: Element | null | undefined): string | undefined {
  * 和 Vue / React 的差异只在「什么时候调用」：这里由开发者显式在元素挂载后调用，
  * 返回值是解绑函数。执行、目标解析、可用性、可见性与存在感全部复用 core / dom。
  */
-export function bindTool(host: VanillaHost, element: Element, options: ToolOptions): () => void {
+export interface BoundTool {
+  id: string;
+  unbind: () => void;
+}
+
+/**
+ * 绑定工具并返回实际 id。
+ *
+ * 公开的 `bindTool()` 仍保持返回解绑函数；适配器内部需要知道自动生成的 id，
+ * 才能在同一个元素上再次声明时替换旧绑定，而不是叠加出重复动作。
+ */
+export function bindToolWithMeta(host: VanillaHost, element: Element, options: ToolOptions): BoundTool {
   const ids = getRegistryNamespace(host.registry);
   const id = options.id ?? `tool_${++autoId}`;
-  const primitive = inferPrimitive(element, options);
+  const steps = options.steps ?? null;
+  const isFlow = steps !== null;
+  const primitive = isFlow ? "flow" : inferPrimitive(element, options);
   const resolution = resolveTarget(element, primitive, {
     hasInjectedRun: Boolean(options.run),
     declaredFidelity: options.fidelity,
@@ -91,8 +107,14 @@ export function bindTool(host: VanillaHost, element: Element, options: ToolOptio
     id,
     primitive,
     description: options.desc,
+    ...(options.label ? { label: options.label } : {}),
+    ...(options.summary ? { summary: options.summary } : {}),
+    ...(options.examples?.length ? { examples: [...options.examples] } : {}),
+    ...(options.successHint ? { successHint: options.successHint } : {}),
+    ...(options.playbook?.length ? { playbook: [...options.playbook] } : {}),
     kind: options.kind,
     confirm: options.confirm,
+    ...(options.modelVisible === false ? { modelVisible: false } : {}),
     ...(handoff ? { handoff: { reason: handoff.reason } } : {}),
     fidelity: resolution.fidelity,
     ...(params ? { params } : {}),
@@ -100,7 +122,16 @@ export function bindTool(host: VanillaHost, element: Element, options: ToolOptio
 
   const warning = targetWarning(id, element.tagName.toLowerCase(), primitive, resolution);
   if (warning) host.warn(warning);
+  if (isFlow && options.run) {
+    host.warn(`pling.tool「${id}」同时写了 steps 和 run：复合动作按 steps 执行，run 不会跑`);
+  }
+  if (isFlow && steps && steps.length === 0) {
+    host.warn(`pling.tool「${id}」的 steps 是空的：这条流程一步都不会走`);
+  }
   if (!options.desc?.trim()) host.warn(`pling.tool「${id}」没有写说明（desc）`);
+  if (options.confirm === false && resolveKind(primitive, options.kind) === "danger") {
+    host.warn(`pling.tool「${id}」声明成了 confirm: false，但它是 danger 动作：执行前不会问用户`);
+  }
   if (options.params !== undefined && !options.run && primitive === "click") {
     host.warn(`pling.tool「${id}」声明了 params 但没有 run：click 原语不会用到这些参数`);
   }
@@ -109,6 +140,9 @@ export function bindTool(host: VanillaHost, element: Element, options: ToolOptio
   }
   if (handoff && options.run) {
     host.warn(`pling.tool「${id}」同时写了 handoff 和 run：接力动作不执行 run（这一步由用户亲自完成）`);
+  }
+  if (handoff && isFlow) {
+    host.warn(`pling.tool「${id}」同时写了 handoff 和 steps：人工接力步骤与复合动作会冲突，请只保留一种`);
   }
 
   const currentTarget = (): Element => {
@@ -130,10 +164,22 @@ export function bindTool(host: VanillaHost, element: Element, options: ToolOptio
     descriptor,
     ...(options.expect ? { expect: options.expect } : {}),
     ...(handoff ? { handoff } : {}),
+    ...(isFlow ? { steps } : {}),
     ...(hasDynamicParams(options.params) ? { resolveParams: () => schemaOf(options.params)! } : {}),
     resolveScope: () => (options.scope === undefined ? closestScope(element) : ids.scope(options.scope)),
     isAvailable: () => {
       const declared = options.available?.();
+      if (isFlow) {
+        if (typeof declared === "string") return { available: false, reason: declared };
+        if (declared === false) {
+          return {
+            available: false,
+            reason: "This flow's preconditions are not met",
+            reasonKey: "availability.flowPreconditions",
+          };
+        }
+        return true;
+      }
       const own = checkActionable(element);
       if (!own.available) {
         if (typeof declared === "string") {
@@ -176,25 +222,42 @@ export function bindTool(host: VanillaHost, element: Element, options: ToolOptio
       return true;
     },
     isVisible: () => host.scopes.isVisible(element),
-    ...(host.presence ? { presence: (state) => host.presence?.mark(currentTarget(), state) } : {}),
-    reveal: async () => scrollElementIntoView(currentTarget()),
-    run: async (args) => {
-      if (options.run) {
-        await runInjected(options, primitive, args);
-        return;
-      }
-      performPrimitive(currentTarget(), primitive, primitive === "press" ? { key: options.key ?? "Enter", ...args } : args);
-    },
+    ...(host.presence && !isFlow
+      ? { presence: (state: PresenceState) => host.presence?.mark(currentTarget(), state) }
+      : {}),
+    ...(isFlow ? {} : { reveal: async () => scrollElementIntoView(currentTarget()) }),
+    ...(isFlow
+      ? {}
+      : {
+          run: async (args: Record<string, unknown>) => {
+            if (options.run) {
+              await runInjected(options, primitive, args);
+              return;
+            }
+            performPrimitive(
+              currentTarget(),
+              primitive,
+              primitive === "press" ? { key: options.key ?? "Enter", ...args } : args,
+            );
+          },
+        }),
   });
 
   markExplicit(element, [id]);
-  return () => {
-    unbind();
-    untrack?.();
-    untrack = null;
-    unmarkExplicit(element);
-    host.scopes.refresh();
+  return {
+    id,
+    unbind: () => {
+      unbind();
+      untrack?.();
+      untrack = null;
+      unmarkExplicit(element);
+      host.scopes.refresh();
+    },
   };
+}
+
+export function bindTool(host: VanillaHost, element: Element, options: ToolOptions): () => void {
+  return bindToolWithMeta(host, element, options).unbind;
 }
 
 /** 函数级工具：没有 DOM 元素，由调用方提供 run。 */
@@ -209,8 +272,14 @@ export function bindAction(
       id: options.id,
       primitive: "call",
       description: options.desc,
+      ...(options.label ? { label: options.label } : {}),
+      ...(options.summary ? { summary: options.summary } : {}),
+      ...(options.examples?.length ? { examples: [...options.examples] } : {}),
+      ...(options.successHint ? { successHint: options.successHint } : {}),
+      ...(options.playbook?.length ? { playbook: [...options.playbook] } : {}),
       kind: options.kind,
       confirm: options.confirm,
+      ...(options.modelVisible === false ? { modelVisible: false } : {}),
       fidelity: "high",
       ...(params ? { params } : {}),
     },

@@ -91,6 +91,7 @@ export function App({ locale = resolveDemoLocale() }: AppProps) {
       <AppRoutes
         tasks={tasks}
         copy={copy}
+        locale={locale}
         addTask={addTask}
         toggleTask={toggleTask}
         updateTaskText={updateTaskText}

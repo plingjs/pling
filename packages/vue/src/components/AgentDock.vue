@@ -8,6 +8,7 @@
  */
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import type { Llm, Registry } from "@plingjs/core";
+import type { QuickTaskItem } from "@plingjs/ui";
 import type {
   AgentConfigOverrides,
   AgentRuntime,
@@ -25,7 +26,7 @@ const props = withDefaults(
     title?: string;
     placeholder?: string;
     emptyHint?: string;
-    quick?: readonly string[];
+    quick?: readonly QuickTaskItem[];
     defaultOpen?: boolean;
     config?: AgentConfigOverrides;
     llm?: Llm;
@@ -35,6 +36,8 @@ const props = withDefaults(
     navigate?: (href: string) => void;
     /** `dock` follows the page in a floating corner. `sidebar` uses a viewport edge. */
     layout?: "dock" | "sidebar";
+    /** `overlay` keeps the sidebar above the page; `fused` lets it occupy a grid column. */
+    sidebarMode?: "overlay" | "fused";
     /** Edge used by `layout="sidebar"`. Ignored by the default dock. */
     side?: "right" | "left";
     /**
@@ -53,6 +56,7 @@ const props = withDefaults(
     quick: () => [],
     defaultOpen: false,
     layout: "dock",
+    sidebarMode: "overlay",
     side: "right",
     launcherPlacement: "bottom",
   },
@@ -71,6 +75,7 @@ let offTask: (() => void) | null = null;
 const shellClass = computed(() => [
   `dock--${props.layout}`,
   ...(props.layout === "sidebar" ? [`dock--${props.side}`] : []),
+  ...(props.layout === "sidebar" && props.sidebarMode === "fused" ? ["dock--fused"] : []),
   ...(props.layout === "sidebar" ? [`dock--launcher-${props.launcherPlacement}`] : []),
   ...(open.value ? ["is-open"] : []),
   ...(ui.classNames.dock ? [ui.classNames.dock] : []),
@@ -111,7 +116,12 @@ onMounted(() => {
 onUnmounted(() => offTask?.());
 
 const runtime = computed<AgentRuntime | undefined>(() => inline.value?.runtime);
-defineExpose({ runtime, send });
+defineExpose({
+  runtime,
+  send,
+  open: () => toggle(true),
+  close: () => toggle(false),
+});
 </script>
 
 <template>
@@ -121,6 +131,7 @@ defineExpose({ runtime, send });
     data-pling-ui
     :data-layout="layout"
     :data-side="layout === 'sidebar' ? side : undefined"
+    :data-sidebar-mode="layout === 'sidebar' ? sidebarMode : undefined"
     :data-launcher-placement="layout === 'sidebar' ? launcherPlacement : 'bottom'"
     :style="[ui.cssVars, { zIndex: PLING_UI_Z_INDEX }]"
   >
@@ -146,7 +157,9 @@ defineExpose({ runtime, send });
       @event="(event) => emit('event', event)"
       @status="setStatus"
       @collapse="toggle(false)"
-    />
+    >
+      <template v-if="$slots.task" #task><slot name="task" /></template>
+    </AgentInline>
 
     <button
       type="button"
@@ -203,7 +216,8 @@ defineExpose({ runtime, send });
   gap: 0;
   pointer-events: none;
 }
-.dock--sidebar > * {
+.dock--sidebar > .dock__launcher,
+.dock--sidebar.is-open > .dock__surface {
   pointer-events: auto;
 }
 .dock--sidebar.dock--right {
@@ -264,6 +278,53 @@ defineExpose({ runtime, send });
   display: none;
 }
 
+/* A fused sidebar is part of the application grid. The surface takes real
+   width instead of covering the work area underneath it. */
+.dock--sidebar.dock--fused {
+  position: relative;
+  inset: auto;
+  width: max-content;
+  height: auto;
+  min-height: 520px;
+  align-self: stretch;
+  gap: 12px;
+  align-items: stretch;
+  pointer-events: auto;
+}
+.dock--sidebar.dock--fused:not(.is-open) {
+  width: auto;
+  min-height: 0;
+  align-self: flex-start;
+}
+.dock--sidebar.dock--fused:not(.is-open) .dock__surface {
+  display: none;
+}
+.dock--sidebar.dock--fused.dock--left {
+  order: -1;
+}
+.dock--sidebar.dock--fused .dock__surface {
+  width: var(--pling-sidebar-width, min(380px, 100vw));
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.dock--sidebar.dock--fused .dock__surface .dock__panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  border: 1px solid var(--pling-color-border, #e3e8f0);
+  border-radius: var(--pling-radius-lg, 14px);
+  box-shadow: var(--pling-shadow-panel, 0 18px 40px rgb(15 23 42 / 10%));
+}
+.dock--sidebar.dock--fused .dock__launcher {
+  position: relative;
+  inset: auto;
+  transform: none;
+  padding: 10px 16px;
+  writing-mode: horizontal-tb;
+}
+.dock--sidebar.dock--fused.is-open .dock__launcher {
+  display: none;
+}
+
 /* On phones a full-height sidebar would leave no working page. Degrade to the
    familiar floating panel instead of hiding the assistant behind a drawer. */
 @media (max-width: 720px) {
@@ -300,6 +361,21 @@ defineExpose({ runtime, send });
     transform: none;
     padding: 10px 16px;
     writing-mode: horizontal-tb;
+  }
+  .dock--sidebar.dock--fused {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    left: auto;
+    width: auto;
+    min-height: 0;
+  }
+  .dock--sidebar.dock--fused .dock__surface {
+    width: min(400px, calc(100vw - 24px));
+    height: auto;
+  }
+  .dock--sidebar.dock--fused .dock__surface .dock__panel {
+    height: min(640px, calc(100dvh - 72px));
   }
 }
 .dock__dot {

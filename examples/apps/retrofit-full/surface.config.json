@@ -1,0 +1,32 @@
+{
+  "tenants": [
+    {
+      "id": "demo",
+      "displayName": "Retrofit Order Desk",
+      "origins": [
+        "http://127.0.0.1:5231",
+        "http://localhost:5231"
+      ],
+      "maxPageSessionTtlMs": 86400000,
+      "maxAgentSessionTtlMs": 86400000,
+      "publicDemo": {
+        "origins": [
+          "http://127.0.0.1:5231",
+          "http://localhost:5231"
+        ],
+        "scope": [
+          "northstar/orders.set_note",
+          "northstar/open_order@",
+          "northstar/close_order",
+          "northstar/order_search",
+          "northstar/filter_high",
+          "northstar/reset_filters"
+        ],
+        "pageSessionTtlMs": 86400000,
+        "maxSessionsPerWindow": 30,
+        "windowMs": 600000,
+        "maxActiveSessions": 40
+      }
+    }
+  ]
+}

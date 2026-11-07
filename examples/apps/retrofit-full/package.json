@@ -1,0 +1,30 @@
+{
+  "name": "@plingjs/example-retrofit-full",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A normal Vue order workbench and its staged Pling retrofit, including an external Agent Surface",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "vite --config ./vite.config.ts --host 127.0.0.1 --port 5231 --strictPort",
+    "build": "vue-tsc --noEmit && vite build --config ./vite.config.ts",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@plingjs/vue": "workspace:*",
+    "vue": "^3"
+  },
+  "devDependencies": {
+    "@plingjs/core": "workspace:*",
+    "@plingjs/surface": "workspace:*",
+    "@plingjs/surface-browser": "workspace:*",
+    "@vitejs/plugin-vue": "^5",
+    "@vue/test-utils": "^2",
+    "jsdom": "^25",
+    "typescript": "^5",
+    "vite": "^6",
+    "vitest": "^2",
+    "vue-tsc": "^3.3.13"
+  }
+}

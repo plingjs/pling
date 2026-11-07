@@ -127,6 +127,7 @@ describe("V3-16 · flows, async work, and recovery", () => {
     const snapshot = pling.registry.snapshot();
 
     expect(wrapper.text()).toContain("订单备注");
+    expect(noteOf(wrapper, "SO-1002")).toBe("发送修订报价");
     expect(snapshot.actions.find((action) => action.id === "update_order_note")?.description).toContain("备注");
     expect(snapshot.actions.find((action) => action.id === "save_note")?.description).toContain("保存");
   });

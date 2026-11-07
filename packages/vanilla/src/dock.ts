@@ -5,6 +5,7 @@ import {
   toActivityRows,
   toTranscriptLines,
   type AgentRuntime,
+  type ContinuityController,
   type ContinuityTaskSummary,
   type PendingApproval,
   type PendingHandoff,
@@ -12,10 +13,20 @@ import {
 } from "@plingjs/agent";
 import { supportsAlwaysAllow } from "@plingjs/core";
 import { PLING_UI_Z_INDEX, sameOriginUrl } from "@plingjs/dom";
-import { describePlingDiagnostic, diagnosticMessageKey } from "@plingjs/ui";
+import { describePlingDiagnostic, diagnosticMessageKey, quickTaskOf } from "@plingjs/ui";
 import { readViteEnv } from "./env";
 import { renderMarkdown } from "./markdown";
 import { DOCK_STYLES } from "./dock-styles";
+import { createDebugInspector, type DebugInspector } from "./debug-view";
+import {
+  applyUserModelSettings,
+  clearUserModelSettings,
+  readUserModelSettings,
+  resolveModelSettings,
+  validateUserModelSettings,
+  writeUserModelSettings,
+  type UserModelSettings,
+} from "./model-settings";
 import type { VanillaDock, VanillaDockOptions, VanillaHost } from "./types";
 
 const RESUME_INSTRUCTION =
@@ -43,6 +54,29 @@ function button(
   return element;
 }
 
+function iconButton(
+  label: string,
+  className: string,
+  paths: readonly string[],
+  onClick: () => void,
+  viewBox = "0 0 20 20",
+): HTMLButtonElement {
+  const element = button("", className, onClick);
+  element.setAttribute("aria-label", label);
+  element.title = label;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", "pling-dock__icon");
+  svg.setAttribute("viewBox", viewBox);
+  svg.setAttribute("aria-hidden", "true");
+  for (const definition of paths) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", definition);
+    svg.append(path);
+  }
+  element.append(svg);
+  return element;
+}
+
 /**
  * 原生 JS 的悬浮问答入口。
  *
@@ -54,29 +88,62 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   const t = ui.t;
   const setup = host.agent ?? {};
   const registry = options.registry ?? host.registry;
-  const config = resolveAgentConfig({
+  const baseConfig = resolveAgentConfig({
     env: readViteEnv(),
     config: { ...(setup.config ?? {}), ...(options.config ?? {}) },
   });
-  registry.setDefaultApproval(config.defaultApproval);
+  registry.setDefaultApproval(baseConfig.defaultApproval);
 
-  let open = options.defaultOpen ?? false;
+  const layout = options.layout ?? "dock";
+  const sidebarMode = options.sidebarMode ?? "overlay";
+  const side = options.side ?? "right";
+  const launcherPlacement = options.launcherPlacement ?? "bottom";
+  let open = options.defaultOpen ?? layout === "inline";
   let tab: "chat" | "activity" | "tasks" = "chat";
   let events: SessionEvent[] = [];
   let running = false;
   let pending: PendingApproval | null = null;
   let pendingHandoff: PendingHandoff | null = null;
-  let taskRows: ContinuityTaskSummary[] = [];
-  let taskBusy = false;
-  let taskError = "";
-  let taskSignature = "";
   let notReady = false;
   let destroyed = false;
   let resumeDismissed = false;
   let returnTimer: ReturnType<typeof setTimeout> | null = null;
+  let debugOpen = false;
+  let settingsOpen = false;
+  let offTask: (() => void) | null = null;
+  let debugView: DebugInspector | null = null;
+  let settingsPanel: HTMLElement | null = null;
+  let taskItems: ContinuityTaskSummary[] = [];
+  let tasksLoading = false;
+  let tasksError = "";
+  let tasksRequest = 0;
+  const traceOption = options.debug !== undefined ? options.debug : setup.trace;
+  const debugEnabled = Boolean(traceOption);
+  const modelSetting = resolveModelSettings(options.modelSettings ?? setup.modelSettings);
+  const injectedLlm = options.llm ?? setup.llm;
+  const modelSettingsMode = injectedLlm && modelSetting.mode === "byok" ? "off" : modelSetting.mode;
+  const modelSettingsEnabled = modelSettingsMode !== "off";
+
+  function modelStorage(): Storage | null {
+    if (modelSetting.persist !== "session" || typeof window === "undefined") return null;
+    try {
+      return window.sessionStorage;
+    } catch {
+      return null;
+    }
+  }
+
+  const settingsStorage = modelStorage();
+  let userModelSettings = settingsStorage ? readUserModelSettings(settingsStorage) : null;
 
   const root = make("div", "pling-dock");
   root.dataset.plingUi = "";
+  root.dataset.layout = layout;
+  if (layout === "sidebar") {
+    root.dataset.side = side;
+    root.dataset.sidebarMode = sidebarMode;
+    root.dataset.launcherPlacement = launcherPlacement;
+  }
   root.style.zIndex = String(PLING_UI_Z_INDEX);
   const style = make("style");
   style.textContent = DOCK_STYLES;
@@ -90,18 +157,33 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   warn.hidden = true;
 
   const quick = make("div", "pling-dock__quick");
-  const quickButtons = (options.quick ?? []).map((task) =>
-    button(task, undefined, () => void send(task)),
-  );
-  quick.append(...quickButtons);
-  quick.hidden = !quickButtons.length;
+  const quickItems = (options.quick ?? []).map((item) => {
+    const task = quickTaskOf(item);
+    const element = button(task.label, undefined, () => void send(task.prompt));
+    if (task.description) element.title = task.description;
+    return { task, element };
+  });
+  quick.append(...quickItems.map((item) => item.element));
+  quick.hidden = !quickItems.length;
 
-  const bar = make("header", "pling-dock__bar");
   const gateHint = make("span", "pling-dock__gate", t("dock.gate.off"));
   gateHint.title = t("dock.gate.offTitle");
-  const clearButton = button(t("dock.clear"), "pling-dock__ghost", () => clear());
-  const closeButton = button(t("dock.collapse"), "pling-dock__ghost", () => setOpen(false));
-  bar.append(gateHint, clearButton, closeButton);
+  const gateStatus = make("footer", "pling-dock__status");
+  gateStatus.append(gateHint);
+  gateStatus.hidden = true;
+
+  const clearButton = iconButton(
+    t("dock.clear"),
+    "pling-dock__ghost",
+    ["M4 4.5h12v9H9l-4 3v-3H4z", "M8 7.5l4 4M12 7.5l-4 4"],
+    () => clear(),
+  );
+  const closeButton = iconButton(
+    t("dock.collapse"),
+    "pling-dock__ghost",
+    ["M5 8l5 5 5-5"],
+    () => setOpen(false),
+  );
 
   const tabs = make("nav", "pling-dock__tabs");
   tabs.setAttribute("role", "tablist");
@@ -114,6 +196,10 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   const badge = make("span", "pling-dock__badge");
   activityTab.append(badge);
   tabs.append(chatTab, activityTab, tasksTab);
+  const actions = make("div", "pling-dock__actions");
+  actions.append(clearButton, closeButton);
+  const nav = make("div", "pling-dock__nav");
+  nav.append(tabs, actions);
 
   const roleHint = make("p", "pling-dock__role");
   roleHint.hidden = true;
@@ -131,6 +217,14 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
 
   const transcript = make("div", "pling-chat__transcript");
   transcript.setAttribute("aria-live", "polite");
+  const chatObserver =
+    typeof MutationObserver === "function"
+      ? new MutationObserver(() => {
+          if (!transcript.isConnected) return;
+          transcript.scrollTop = transcript.scrollHeight;
+        })
+      : null;
+  chatObserver?.observe(transcript, { childList: true, subtree: true, characterData: true });
   const pendingHost = make("div", "pling-chat__pending");
 
   const form = make("form", "pling-chat__composer");
@@ -146,11 +240,41 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   const activityView = make("section", "pling-dock__view pling-dock__activity-view");
   activityView.hidden = true;
   const diagnostics = make("div", "pling-dock__diagnostics");
-  const model = make("span", "pling-dock__model");
+  const model = modelSettingsEnabled
+    ? button("", "pling-dock__model pling-dock__model-button", () => toggleSettings())
+    : make("span", "pling-dock__model");
+  const modelDot = make("span", "pling-dock__model-dot");
+  modelDot.setAttribute("aria-hidden", "true");
+  const modelName = make("span", "pling-dock__model-name");
+  model.append(modelDot, modelName);
+  if (modelSettingsEnabled) {
+    const caret = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    caret.setAttribute("class", "pling-dock__model-caret");
+    caret.setAttribute("viewBox", "0 0 12 12");
+    caret.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "M3 4.5l3 3 3-3");
+    caret.append(path);
+    model.append(caret);
+    (model as HTMLButtonElement).dataset.testid = "pling-model-settings-toggle";
+  }
   const usage = make("span", "pling-dock__usage");
   diagnostics.append(model, usage);
+  const activityHead = make("div", "pling-dock__run-head");
+  activityHead.append(make("p", "pling-dock__run-label", t("dock.run.actions")));
+  let debugToggle: HTMLButtonElement | null = null;
+  if (debugEnabled) {
+    debugToggle = button(t("debug.title"), "pling-dock__run-toggle", () => toggleDebug());
+    debugToggle.dataset.testid = "pling-debug-toggle";
+    activityHead.append(debugToggle);
+  }
   const activityList = make("ol", "pling-dock__activity");
-  activityView.append(diagnostics, activityList);
+  const settingsHost = make("div", "pling-dock__settings");
+  const debugHost = make("div", "pling-dock__debug");
+  const activityRun = make("section", "pling-dock__run-section");
+  activityRun.dataset.testid = "pling-run-actions";
+  activityRun.append(activityHead, activityList);
+  activityView.append(diagnostics, settingsHost, activityRun, debugHost);
 
   const tasksView = make("section", "pling-dock__view pling-dock__tasks");
   tasksView.hidden = true;
@@ -159,57 +283,78 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   tasksView.append(tasksIntro, tasksList);
 
   body.append(chat, activityView, tasksView);
-  panel.append(warn, quick, bar, tabs, roleHint, body);
+  panel.append(warn, nav, quick, roleHint, body, gateStatus);
 
   const launcher = button(t("dock.launcher.open"), "pling-dock__launcher", () => toggle());
   launcher.className = `pling-dock__launcher${ui.classNames.launcher ? ` ${ui.classNames.launcher}` : ""}`;
   chat.className = `pling-chat pling-dock__view${ui.classNames.chat ? ` ${ui.classNames.chat}` : ""}`;
   root.append(launcher);
-  document.body.append(root);
+  (options.mount ?? document.body).append(root);
 
-  const runtime: AgentRuntime = createAgentRuntime({
-    ...setup,
-    ...(options.hooks ?? setup.hooks ? { hooks: options.hooks ?? setup.hooks } : {}),
-    config,
-    registry,
-    responseLocale: setup.responseLocale ?? (() => ui.locale),
-    ...(options.llm ?? setup.llm ? { llm: options.llm ?? setup.llm } : {}),
-    ...(options.gate ?? setup.gate ? { gate: options.gate ?? setup.gate } : {}),
-    onEvent(event) {
-      // 新任务会让会话清空事件；用户消息到达时以会话为准，避免聊天里残留上一个任务的上下文。
-      if (event.type === "user") events = [...runtime.session.events()];
-      else events.push(event);
-      if (event.type === "final") queueReturn();
-      setup.onEvent?.(event);
-      options.onSessionEvent?.(event);
+  let runtime!: AgentRuntime;
+  let runtimeToken = 0;
+  let unsubscribeContinuity: (() => void) | null = null;
+  let unsubscribeTrace: (() => void) | null = null;
+
+  function buildRuntime(): AgentRuntime {
+    const token = ++runtimeToken;
+    return createAgentRuntime({
+      ...setup,
+      ...(options.hooks ?? setup.hooks ? { hooks: options.hooks ?? setup.hooks } : {}),
+      config: applyUserModelSettings(baseConfig, userModelSettings),
+      registry,
+      taskCatalog: host.task,
+      trace: traceOption,
+      responseLocale: setup.responseLocale ?? (() => ui.locale),
+      ...(options.llm ?? setup.llm ? { llm: options.llm ?? setup.llm } : {}),
+      ...(options.gate ?? setup.gate ? { gate: options.gate ?? setup.gate } : {}),
+      onEvent(event) {
+        if (token !== runtimeToken) return;
+        // A new task clears the session event list; mirror it so the transcript does not keep stale context.
+        if (event.type === "user") events = [...runtime.session.events()];
+        else events.push(event);
+        if (event.type === "final") queueReturn();
+        setup.onEvent?.(event);
+        options.onSessionEvent?.(event);
+        render();
+      },
+      onApproval(request) {
+        if (token !== runtimeToken) return;
+        pending = request;
+        setup.onApproval?.(request);
+        render();
+      },
+      onHandoff(request) {
+        if (token !== runtimeToken) return;
+        pendingHandoff = request;
+        setup.onHandoff?.(request);
+        render();
+      },
+    });
+  }
+
+  function subscribeRuntime(): void {
+    unsubscribeContinuity?.();
+    unsubscribeTrace?.();
+    const current = runtime;
+    const token = runtimeToken;
+    unsubscribeContinuity = runtime.continuity.subscribe(() => {
+      if (destroyed || current !== runtime || token !== runtimeToken || !browserScope()) return;
+      events = [...current.session.events()];
       render();
-    },
-    onApproval(request) {
-      pending = request;
-      setup.onApproval?.(request);
-      render();
-    },
-    onHandoff(request) {
-      pendingHandoff = request;
-      setup.onHandoff?.(request);
-      render();
-    },
-  });
-  // 整页导航恢复出来的事件在会话里，不在本次 document 的 onEvent 回调里。
+      if (tab === "tasks") void refreshTasks();
+    });
+    unsubscribeTrace = runtime.trace?.subscribe(() => {
+      if (!destroyed && current === runtime && token === runtimeToken) render();
+    }) ?? null;
+  }
+
+  runtime = buildRuntime();
   events = [...runtime.session.events()];
-
-  const unsubscribeContinuity = runtime.continuity.subscribe(() => {
-    if (!browserScope()) return;
-    // follow / takeover / fork 会整体替换会话历史；订阅变化时以会话为准，
-    // 否则浮窗会继续显示上一个标签页的事件流。
-    events = [...runtime.session.events()];
-    void refreshTasks();
-    render();
-  });
+  subscribeRuntime();
   const unsubscribeUi = ui.subscribe(() => {
     if (!destroyed) render();
   });
-  void refreshTasks();
 
   function cancelReturn(): void {
     if (returnTimer === null) return;
@@ -239,6 +384,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   }
 
   function setOpen(next: boolean): void {
+    if (layout === "inline") next = true;
     if (destroyed || open === next) return;
     open = next;
     render();
@@ -253,8 +399,200 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   function setTab(next: "chat" | "activity" | "tasks"): void {
     if (tab === next) return;
     tab = next;
-    if (next === "tasks") void refreshTasks();
     render();
+    if (next === "tasks") void refreshTasks();
+  }
+
+  function toggleDebug(): void {
+    if (!debugEnabled) return;
+    debugOpen = !debugOpen;
+    render();
+  }
+
+  function toggleSettings(): void {
+    if (!modelSettingsEnabled) return;
+    settingsOpen = !settingsOpen;
+    render();
+  }
+
+  function replaceRuntime(notice?: string): void {
+    cancelReturn();
+    runtime.session.cancel();
+    runtime.approvals.clear();
+    runtime.handoffs.clear();
+    const next = buildRuntime();
+    // 新连接不能被上一轮任务的自动恢复悄悄接管；用户已经明确换了模型 / 端点。
+    next.session.reset();
+    runtime = next;
+    subscribeRuntime();
+    events = notice ? [{ type: "notice", text: notice }] : [];
+    pending = null;
+    pendingHandoff = null;
+    notReady = false;
+    resumeDismissed = true;
+    running = false;
+    input.value = "";
+  }
+
+  function renderModelSettings(): void {
+    if (!settingsOpen || !modelSettingsEnabled) {
+      settingsPanel = null;
+      settingsHost.replaceChildren();
+      return;
+    }
+
+    const section = make("section", "model-settings");
+    section.dataset.testid = "pling-model-settings";
+    const head = make("header", "model-settings__head");
+    head.append(
+      make("h3", undefined, t("modelSettings.title")),
+      make(
+        "span",
+        undefined,
+        modelSettingsMode === "readonly" ? t("modelSettings.readonly") : t("modelSettings.byok"),
+      ),
+    );
+    section.append(head);
+
+    if (modelSettingsMode === "readonly") {
+      section.append(make("p", "model-settings__note", t("modelSettings.readonlyHint")));
+      const facts = make("dl", "model-settings__facts");
+      const addFact = (label: string, value: string): void => {
+        facts.append(make("dt", undefined, label));
+        const detail = make("dd");
+        detail.append(make("code", undefined, value));
+        facts.append(detail);
+      };
+      addFact(t("modelSettings.baseUrl"), runtime.config.baseUrl || t("dock.model.unconfigured"));
+      addFact(t("modelSettings.model"), runtime.config.model || t("dock.model.unconfigured"));
+      const keyFact = make("dd", undefined, t("modelSettings.managed"));
+      facts.append(make("dt", undefined, t("modelSettings.apiKey")), keyFact);
+      section.append(facts);
+      settingsPanel = section;
+      settingsHost.replaceChildren(section);
+      return;
+    }
+
+    const form = make("form", "model-settings__form");
+    const source = userModelSettings ?? runtime.config;
+    const baseInput = make("input");
+    baseInput.type = "text";
+    baseInput.inputMode = "url";
+    baseInput.autocomplete = "off";
+    baseInput.spellcheck = false;
+    baseInput.placeholder = "https://provider.example.com/v1";
+    baseInput.dataset.testid = "pling-model-base-url";
+    baseInput.value = source.baseUrl;
+    const modelInput = make("input");
+    modelInput.type = "text";
+    modelInput.autocomplete = "off";
+    modelInput.spellcheck = false;
+    modelInput.placeholder = "model-name";
+    modelInput.dataset.testid = "pling-model-name";
+    modelInput.value = source.model;
+    const keyInput = make("input");
+    keyInput.type = "password";
+    keyInput.autocomplete = "new-password";
+    keyInput.spellcheck = false;
+    keyInput.placeholder = source.apiKey ? t("modelSettings.apiKeyConfigured") : "sk-…";
+    keyInput.dataset.testid = "pling-model-api-key";
+    keyInput.value = userModelSettings?.apiKey ?? "";
+
+    const addField = (labelText: string, control: HTMLInputElement): void => {
+      const label = make("label");
+      label.append(make("span", undefined, labelText), control);
+      form.append(label);
+    };
+    addField(t("modelSettings.baseUrl"), baseInput);
+    addField(t("modelSettings.model"), modelInput);
+    addField(t("modelSettings.apiKey"), keyInput);
+
+    const error = make("p", "model-settings__error");
+    error.setAttribute("role", "alert");
+    error.hidden = true;
+    const runningHint = make("p", "model-settings__error", t("modelSettings.running"));
+    runningHint.hidden = !running;
+
+    const actions = make("div", "model-settings__actions");
+    const save = button(t("modelSettings.save"), "model-settings__save", () => {
+      if (running) return;
+      const canInheritKey = source.baseUrl.trim() === baseInput.value.trim() && Boolean(source.apiKey);
+      const next: UserModelSettings = {
+        baseUrl: baseInput.value.trim(),
+        model: modelInput.value.trim(),
+        apiKey: keyInput.value.trim() || (canInheritKey ? source.apiKey.trim() : ""),
+      };
+      const problem = validateUserModelSettings(next);
+      if (problem) {
+        error.textContent = t(`modelSettings.error.${problem === "base_url" ? "baseUrl" : problem}`);
+        error.hidden = false;
+        return;
+      }
+      userModelSettings = next;
+      if (modelSetting.persist === "session") writeUserModelSettings(next, settingsStorage);
+      else clearUserModelSettings(settingsStorage);
+      settingsOpen = false;
+      replaceRuntime(t("modelSettings.saved", { model: next.model }));
+      tab = "chat";
+      render();
+    });
+    save.type = "submit";
+    const reset = button(t("modelSettings.reset"), "model-settings__reset", () => {
+      if (running) return;
+      userModelSettings = null;
+      clearUserModelSettings(settingsStorage);
+      settingsOpen = false;
+      replaceRuntime(t("modelSettings.resetDone"));
+      tab = "chat";
+      render();
+    });
+    reset.type = "button";
+    actions.append(save, reset);
+    form.append(error, runningHint, actions);
+    form.append(
+      make("p", "model-settings__note", t("modelSettings.securityHint")),
+      make(
+        "p",
+        "model-settings__note",
+        modelSetting.persist === "session"
+          ? t("modelSettings.storage.session")
+          : t("modelSettings.storage.memory"),
+      ),
+    );
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      save.click();
+    });
+    for (const control of [baseInput, modelInput, keyInput]) {
+      control.disabled = running;
+      control.addEventListener("input", () => {
+        error.hidden = true;
+      });
+    }
+    save.disabled = running;
+    reset.disabled = running;
+    section.append(form);
+    settingsPanel = section;
+    settingsHost.replaceChildren(section);
+  }
+
+  function renderDebug(): void {
+    if (!debugEnabled || !debugOpen || !runtime.trace) {
+      debugHost.replaceChildren();
+      return;
+    }
+    if (!debugView) {
+      debugView = createDebugInspector({
+        registry,
+        ui,
+        // Coverage describes the business page, not just the assistant shell.
+        // A custom mount point (for example an inline workbench column) must not
+        // shrink the scan to that column; this matches Vue's `pi.inspectCoverage()`.
+        root: () => document.body,
+      });
+    }
+    debugView.render(runtime);
+    debugHost.replaceChildren(debugView.element);
   }
 
   function browserScope(): boolean {
@@ -272,151 +610,84 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     return t("dock.role.unbound");
   }
 
-  async function refreshTasks(): Promise<void> {
-    if (!browserScope()) return;
-    try {
-      taskRows = await runtime.continuity.tasks();
-      taskError = "";
-    } catch (error) {
-      taskError = error instanceof Error ? error.message : String(error);
-    }
-    if (!destroyed) render();
+  function tasksIntroText(): string {
+    const continuity = runtime.continuity;
+    if (continuity.leaseLost) return t("dock.tasks.intro.leaseLost");
+    if (continuity.role === "follower") return t("dock.tasks.intro.follower");
+    return t("dock.tasks.intro.owner");
   }
 
-  async function runTaskAction(action: () => Promise<void>): Promise<void> {
-    if (taskBusy) return;
-    taskBusy = true;
-    taskError = "";
+  function taskState(task: ContinuityTaskSummary): "owner" | "follower" | "done" | "remote" | "idle" {
+    if (task.status === "done") return "done";
+    const current = runtime.continuity.sessionId === task.sessionId;
+    if (current) return runtime.continuity.role === "follower" ? "follower" : "owner";
+    return task.ownerActive ? "remote" : "idle";
+  }
+
+  async function refreshTasks(): Promise<void> {
+    const current = runtime;
+    const token = runtimeToken;
+    const request = ++tasksRequest;
+    if (destroyed || !browserScope()) {
+      taskItems = [];
+      tasksError = "";
+      tasksLoading = false;
+      render();
+      return;
+    }
+    tasksLoading = true;
+    tasksError = "";
     render();
     try {
-      await action();
+      const items = await current.continuity.tasks();
+      if (destroyed || current !== runtime || token !== runtimeToken || request !== tasksRequest) return;
+      taskItems = items;
     } catch (error) {
-      taskError = error instanceof Error ? error.message : String(error);
+      if (destroyed || current !== runtime || token !== runtimeToken || request !== tasksRequest) return;
+      taskItems = [];
+      tasksError = error instanceof Error ? error.message : String(error);
     } finally {
-      taskBusy = false;
+      if (!destroyed && current === runtime && token === runtimeToken && request === tasksRequest) {
+        tasksLoading = false;
+        render();
+      }
+    }
+  }
+
+  async function taskAction(
+    run: (continuity: ContinuityController) => Promise<void>,
+    after?: () => void,
+  ): Promise<void> {
+    const current = runtime;
+    const token = runtimeToken;
+    tasksLoading = true;
+    tasksError = "";
+    render();
+    try {
+      await run(current.continuity);
+      if (destroyed || current !== runtime || token !== runtimeToken) return;
+      after?.();
       await refreshTasks();
+    } catch (error) {
+      if (destroyed || current !== runtime || token !== runtimeToken) return;
+      tasksError = error instanceof Error ? error.message : String(error);
+      tasksLoading = false;
       render();
     }
   }
 
-  function taskStateText(row: ContinuityTaskSummary, current: boolean): string {
-    if (current && runtime.continuity.role === "owner") return t("dock.task.state.owner");
-    if (current && runtime.continuity.role === "follower") return t("dock.task.state.follower");
-    if (row.ownerActive) return t("dock.task.state.remote");
-    if (row.status === "done") return t("dock.task.state.done");
-    return t("dock.task.state.idle");
-  }
-
-  function renderTasks(): void {
-    if (!browserScope()) return;
-    const continuity = runtime.continuity;
-    // 检查点会频繁更新；用稳定签名避免每一步都替换 DOM，否则用户/自动化正在点的按钮会被抽走。
-    const signature = [
-      continuity.role,
-      continuity.leaseLost,
-      continuity.sessionId ?? "",
-      taskBusy,
-      taskError,
-      ...taskRows.map((row) =>
-        [row.sessionId, row.status, row.goal ?? "", row.ownerActive].join(":"),
-      ),
-    ].join("|");
-    if (signature === taskSignature) return;
-    taskSignature = signature;
-    tasksIntro.textContent = continuity.leaseLost
-      ? t("dock.tasks.intro.leaseLost")
-      : continuity.role === "owner"
-        ? t("dock.tasks.intro.owner")
-        : t("dock.tasks.intro.follower");
-
-    const nodes: HTMLElement[] = [];
-    if (taskError) nodes.push(make("li", "pling-dock__task-error", taskError));
-    for (const row of taskRows) {
-      const current = row.sessionId === continuity.sessionId;
-      const ownerHere = current && continuity.role === "owner" && !continuity.leaseLost;
-      const item = make("li", `pling-dock__task${current ? " is-current" : ""}`);
-      const head = make("div", "pling-dock__task-head");
-      head.append(
-        make("strong", undefined, shown(row.goal || t("dock.task.untitled"))),
-        make(
-          "span",
-          `pling-dock__tag${ownerHere ? " is-owner" : row.ownerActive ? " is-remote" : ""}`,
-          taskStateText(row, current),
-        ),
-      );
-      item.append(head);
-      const meta = make("p", "pling-dock__meta");
-      meta.textContent = t("dock.task.updated", {
-        id: row.sessionId,
-        time: new Date(row.updatedAt).toLocaleTimeString(ui.locale, {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      });
-      item.append(meta);
-
-      if (!ownerHere) {
-        const actions = make("div", "pling-dock__task-actions");
-        if (!current) {
-          actions.append(
-            button(t("dock.task.follow"), undefined, () => {
-              void runTaskAction(() => continuity.follow(row.sessionId));
-            }),
-          );
-        }
-        actions.append(
-          button(t("dock.task.fork"), undefined, () => {
-            void runTaskAction(async () => {
-              await continuity.fork(row.sessionId);
-              setTab("chat");
-              input.focus();
-            });
-          }),
-        );
-        if (row.status !== "done") {
-          actions.append(
-            button(
-              continuity.leaseLost ? t("dock.task.retake") : t("dock.task.takeover"),
-              undefined,
-              () => {
-                void runTaskAction(() => continuity.takeover(row.sessionId));
-              },
-            ),
-          );
-        }
-        if (taskBusy) {
-          actions.querySelectorAll("button").forEach((item) => {
-            item.disabled = true;
-          });
-        }
-        item.append(actions);
-      }
-      nodes.push(item);
-    }
-
-    if (!nodes.length) {
-      nodes.push(
-        make(
-          "li",
-          "pling-dock__task-empty",
-          t("dock.task.empty"),
-        ),
-      );
-    }
-    tasksList.replaceChildren(...nodes);
-  }
-
   function renderLauncher(): void {
+    launcher.hidden = layout === "inline";
+    if (layout === "inline") return;
     launcher.classList.toggle("is-open", open);
-    launcher.replaceChildren(
-      document.createTextNode(
-        open
-          ? t("dock.launcher.close")
-          : resumePending()
-            ? t("dock.launcher.resume")
-            : t("dock.launcher.open"),
-      ),
-    );
+    launcher.setAttribute("aria-expanded", String(open));
+    const label = open
+      ? t("dock.launcher.close")
+      : resumePending()
+        ? t("dock.launcher.resume")
+        : options.launcherLabel?.trim() || t("dock.launcher.open");
+    launcher.title = label;
+    launcher.replaceChildren(document.createTextNode(label));
     if (running || (!open && resumePending())) {
       const dot = make("span", "pling-dock__dot");
       dot.setAttribute("aria-hidden", "true");
@@ -478,7 +749,8 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     const nodes: HTMLElement[] = [];
     const resume = renderResume();
     if (resume) nodes.push(resume);
-    if (!lines.length) {
+    const task = typeof options.task === "function" ? options.task() : options.task;
+    if (!lines.length && !task) {
       nodes.push(
         make(
           "p",
@@ -525,6 +797,8 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
         );
       }
     }
+
+    if (task) nodes.push(task);
 
     if (running && !pending && !pendingHandoff) {
       const executing = make("p", "pling-chat__line is-executing");
@@ -619,6 +893,78 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     pendingHost.append(box);
   }
 
+  function renderTasks(): void {
+    tasksIntro.textContent = tasksIntroText();
+    const nodes: HTMLElement[] = [];
+    if (tasksError) {
+      nodes.push(make("li", "pling-dock__task-error", tasksError));
+    } else if (!taskItems.length) {
+      nodes.push(make("li", "pling-dock__task-empty", t("dock.task.empty")));
+    } else {
+      for (const task of taskItems) {
+        const state = taskState(task);
+        const current = runtime.continuity.sessionId === task.sessionId;
+        const item = make("li", `pling-dock__task${current ? " is-current" : ""}`);
+        const head = make("div", "pling-dock__task-head");
+        head.append(
+          make("strong", undefined, task.goal?.trim() || t("dock.task.untitled")),
+          make("span", `pling-dock__tag is-${state}`, t(`dock.task.state.${state}`)),
+        );
+        item.append(
+          head,
+          make(
+            "p",
+            "pling-dock__meta",
+            t("dock.task.updated", {
+              id: task.sessionId.slice(-8),
+              time: new Date(task.updatedAt).toLocaleTimeString(ui.locale, {
+                hour: "2-digit",
+                minute: "2-digit",
+              }),
+            }),
+          ),
+        );
+
+        const actions = make("div", "pling-dock__task-actions");
+        const disabled = tasksLoading || running;
+        if (!current || state === "done") {
+          const follow = button(t("dock.task.follow"), undefined, () => {
+            void taskAction((continuity) => continuity.follow(task.sessionId));
+          });
+          follow.disabled = disabled;
+          actions.append(follow);
+        }
+        if (task.status !== "done" && state !== "owner") {
+          const takeover = button(
+            runtime.continuity.leaseLost ? t("dock.task.retake") : t("dock.task.takeover"),
+            undefined,
+            () => {
+              void taskAction(
+                (continuity) => continuity.takeover(task.sessionId),
+                () => setTab("chat"),
+              );
+            },
+          );
+          takeover.disabled = disabled;
+          actions.append(takeover);
+        }
+        const fork = button(t("dock.task.fork"), undefined, () => {
+          void taskAction(
+            async (continuity) => {
+              await continuity.fork(task.sessionId);
+            },
+            () => setTab("chat"),
+          );
+        });
+        fork.disabled = disabled;
+        actions.append(fork);
+        item.append(actions);
+        nodes.push(item);
+      }
+    }
+    tasksList.replaceChildren(...nodes);
+  }
+
   function renderActivity(): void {
     const rows = toActivityRows(events, { locale: ui.locale, translate: t });
     const nodes: HTMLElement[] = rows.map((row) => {
@@ -674,7 +1020,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   }
 
   function applyUi(): void {
-    root.className = `pling-dock${ui.classNames.dock ? ` ${ui.classNames.dock}` : ""}`;
+    root.className = `pling-dock pling-dock--${layout}${open ? " is-open" : ""}${layout === "sidebar" ? ` pling-dock--${side} pling-dock--launcher-${launcherPlacement}${sidebarMode === "fused" ? " pling-dock--fused" : ""}` : ""}${ui.classNames.dock ? ` ${ui.classNames.dock}` : ""}`;
     panel.className = `pling-dock__panel${ui.classNames.panel ? ` ${ui.classNames.panel}` : ""}`;
     chat.className = `pling-chat pling-dock__view${ui.classNames.chat ? ` ${ui.classNames.chat}` : ""}`;
     launcher.className = `pling-dock__launcher${ui.classNames.launcher ? ` ${ui.classNames.launcher}` : ""}`;
@@ -684,11 +1030,14 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     chatTitle.textContent = options.title ?? t("dock.assistant");
     gateHint.textContent = t("dock.gate.off");
     gateHint.title = t("dock.gate.offTitle");
-    clearButton.textContent = t("dock.clear");
-    closeButton.textContent = t("dock.collapse");
+    clearButton.setAttribute("aria-label", t("dock.clear"));
+    clearButton.title = t("dock.clear");
+    closeButton.setAttribute("aria-label", t("dock.collapse"));
+    closeButton.title = t("dock.collapse");
     setButtonLabel(chatTab, t("dock.tab.chat"));
     setButtonLabel(activityTab, t("dock.tab.activity"));
     setButtonLabel(tasksTab, t("dock.tab.tasks"));
+    if (debugToggle) debugToggle.textContent = t("debug.title");
     runningHint.textContent = t("chat.running");
     stopButton.textContent = t("chat.stop");
     sendButton.textContent = t("chat.send");
@@ -697,9 +1046,10 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
 
   function render(): void {
     if (destroyed) return;
+    if (tab === "tasks" && !browserScope()) tab = "chat";
     applyUi();
     renderLauncher();
-    if (!open) {
+    if (!open && layout !== "inline") {
       panel.remove();
       return;
     }
@@ -707,9 +1057,9 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
 
     warn.hidden = !notReady;
     warn.textContent = describePlingDiagnostic(runtime.readiness, t);
-    model.textContent = runtime.model || t("dock.model.unconfigured");
+    modelName.textContent = runtime.model || t("dock.model.unconfigured");
     const gateActive = (options.gate ?? setup.gate)?.() ?? true;
-    gateHint.hidden = gateActive;
+    gateStatus.hidden = gateActive;
     model.title = t("dock.limits.title", {
       model: runtime.model || t("dock.model.unconfigured"),
       context: runtime.limits.contextTokens,
@@ -723,18 +1073,17 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     });
     const readOnly = browserScope() && runtime.continuity.leaseLost;
     clearButton.disabled = running;
-    quickButtons.forEach((item) => {
-      item.disabled = running || readOnly;
+    quickItems.forEach((item) => {
+      item.element.disabled = running || readOnly || item.task.disabled === true;
     });
 
-    tasksTab.hidden = !browserScope();
-    if (!browserScope() && tab === "tasks") tab = "chat";
     chatTab.classList.toggle("is-active", tab === "chat");
     activityTab.classList.toggle("is-active", tab === "activity");
     tasksTab.classList.toggle("is-active", tab === "tasks");
     chatTab.setAttribute("aria-selected", String(tab === "chat"));
     activityTab.setAttribute("aria-selected", String(tab === "activity"));
     tasksTab.setAttribute("aria-selected", String(tab === "tasks"));
+    tasksTab.hidden = !browserScope();
 
     const activityRows = toActivityRows(events, { locale: ui.locale, translate: t });
     const failedCount = activityRows.filter(
@@ -747,8 +1096,10 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     chat.hidden = tab !== "chat";
     activityView.hidden = tab !== "activity";
     tasksView.hidden = tab !== "tasks";
+    quick.hidden = tab !== "chat" || quickItems.length === 0;
     runningHint.hidden = !running;
     stopButton.hidden = !running;
+    closeButton.hidden = layout === "inline";
     roleHint.hidden = !browserScope();
     roleHint.textContent = browserScope() ? roleText() : "";
     roleHint.classList.toggle("is-lost", browserScope() && runtime.continuity.leaseLost);
@@ -762,11 +1113,22 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     input.disabled = running || readOnly;
     sendButton.disabled = running || readOnly || !input.value.trim();
     usage.textContent = describeUsage();
+    model.classList.toggle("is-active", settingsOpen);
+    if (model instanceof HTMLButtonElement) {
+      model.setAttribute("aria-expanded", String(settingsOpen));
+      model.setAttribute("aria-label", t("modelSettings.title"));
+    }
+    if (debugToggle) {
+      debugToggle.classList.toggle("is-active", debugOpen);
+      debugToggle.setAttribute("aria-expanded", String(debugOpen));
+    }
 
     renderTranscript();
     renderPending();
-    renderActivity();
     renderTasks();
+    renderActivity();
+    renderModelSettings();
+    renderDebug();
   }
 
   async function send(text: string): Promise<void> {
@@ -815,6 +1177,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     runtime.approvals.clear();
     runtime.handoffs.clear();
     runtime.telemetry.clear();
+    runtime.trace?.clear();
     events = [];
     pending = null;
     pendingHandoff = null;
@@ -831,6 +1194,14 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     sendButton.disabled = running || !input.value.trim();
   });
 
+  offTask = host.task.register({
+    id: options.surfaceId ?? "dock",
+    ask: async (prompt) => {
+      setOpen(true);
+      await send(prompt);
+    },
+  });
+
   render();
 
   if (runtime.readiness.ready && runtime.continuity.claimAutoResume()) {
@@ -840,7 +1211,9 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
 
   return {
     element: root,
-    runtime,
+    get runtime() {
+      return runtime;
+    },
     open() {
       setOpen(true);
     },
@@ -853,8 +1226,14 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
       if (destroyed) return;
       destroyed = true;
       cancelReturn();
+      offTask?.();
+      offTask = null;
       unsubscribeUi();
-      unsubscribeContinuity();
+      unsubscribeContinuity?.();
+      unsubscribeTrace?.();
+      chatObserver?.disconnect();
+      debugView?.destroy();
+      debugView = null;
       runtime.session.cancel();
       runtime.approvals.clear();
       runtime.handoffs.clear();

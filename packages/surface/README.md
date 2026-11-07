@@ -31,6 +31,29 @@ scope. The Surface never adds a click selector, script-execution escape hatch,
 or second approval authority. Destructive actions still require the page's human
 confirmation path.
 
+`tasks` can describe business workflows made from exposed capabilities:
+
+```ts
+createSurface({
+  registry: pling.registry,
+  expose: ["search_students", "get_student_cards"],
+  tasks: [{
+    id: "student.cards",
+    title: "Find a student's membership cards",
+    steps: [
+      { action: "search_students", label: "Find the student" },
+      { action: "get_student_cards", label: "Read the cards" },
+    ],
+  }],
+  execute: (id, args) => executor.execute(id, args),
+});
+```
+
+Task metadata is descriptive. It does not grant access to an action that is
+absent from `expose`, does not widen the verified session scope, and does not
+bypass approval or audit. An external Agent must still call each capability
+through the normal `invoke` path.
+
 ## Documentation
 
 - [Agent Surface overview](https://plingjs.dev/surface/)

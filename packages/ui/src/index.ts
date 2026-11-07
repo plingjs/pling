@@ -4,3 +4,4 @@ export * from "./errors";
 export * from "./theme";
 export * from "./controller";
 export * from "./availability";
+export * from "./quick";

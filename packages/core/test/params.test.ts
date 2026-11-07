@@ -69,6 +69,46 @@ describe("执行前：校验 + 规整", () => {
     );
   });
 
+  it("对象参数按对象校验，嵌套字段也会规整", () => {
+    const objectSchema = {
+      type: "object" as const,
+      properties: {
+        values: {
+          type: "object",
+          description: "任务字段",
+          properties: {
+            name: { type: "string" },
+            count: { type: "number" },
+          },
+          required: ["name"],
+          additionalProperties: false,
+        },
+      },
+      required: ["values"],
+    };
+    expect(normalizeDeclaredArgs(objectSchema, { values: { name: "Yoga", count: "3" } })).toEqual({
+      values: { name: "Yoga", count: 3 },
+    });
+    expect(() => normalizeDeclaredArgs(objectSchema, { values: "not-an-object" })).toThrowError(
+      'Parameter "values" must be an object (任务字段); received "not-an-object"',
+    );
+    expect(() => normalizeDeclaredArgs(objectSchema, { values: { count: 3 } })).toThrowError(
+      'Missing required parameter "name"',
+    );
+  });
+
+  it("数组参数只接受数组", () => {
+    const arraySchema = {
+      type: "object" as const,
+      properties: { tags: { type: "array", description: "标签" } },
+      required: ["tags"],
+    };
+    expect(normalizeDeclaredArgs(arraySchema, { tags: ["a", "b"] })).toEqual({ tags: ["a", "b"] });
+    expect(() => normalizeDeclaredArgs(arraySchema, { tags: "a,b" })).toThrowError(
+      'Parameter "tags" must be an array (标签); received "a,b"',
+    );
+  });
+
   it("没声明的键原样留着（框架不该收走别的层要用的东西）", () => {
     expect(normalizeDeclaredArgs(schema, { item: "t4", position: 1, extra: true })).toEqual({
       item: "t4",
@@ -252,6 +292,29 @@ describe("S6b-1：值域、格式与动态选项", () => {
     expect(() => normalizeDeclaredArgs(schema, { level: 4 })).toThrowError(
       'Parameter "level" must be one of: 1 / 2 / 3; received 4',
     );
+  });
+
+  it("modelVisible: false 的动作不进模型快照，但执行器仍能调用", async () => {
+    const registry = createRegistry();
+    const run = vi.fn();
+    registry.bind({
+      descriptor: {
+        id: "internal_write",
+        primitive: "call",
+        description: "由任务执行器调用的内部写操作",
+        kind: "write",
+        modelVisible: false,
+      },
+      isAvailable: () => true,
+      run: async (args) => run(args),
+    });
+
+    expect(registry.snapshot().actions.some((action) => action.id === "internal_write")).toBe(false);
+    expect(registry.get("internal_write")).toBeDefined();
+
+    const runtime = createRuntime({ registry, policy: createPolicy(async () => "always"), llm: async () => ({ content: "" }) });
+    await runtime.execute("internal_write", JSON.stringify({ value: 1 }));
+    expect(run).toHaveBeenCalledWith({ value: 1 });
   });
 
   it("选项很多时错误只列前 8 个，并报总数", () => {

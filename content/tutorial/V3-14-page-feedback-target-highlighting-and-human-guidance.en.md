@@ -176,7 +176,7 @@ pnpm tutorial:dev v3-14
 
 Check the following:
 
-1. Clear the workspace name and select **Save name**. The feedback message appears.
+1. Clear the workspace name and select **Save workspace name**. The feedback message appears.
 2. Ask the assistant to save the name without providing one. Inspect Activity and confirm the model receives the field and message.
 3. Inspect the page actions. `verification_code` is absent; `publish_changes` is present.
 4. Ask the assistant to publish changes. The handoff panel identifies the code field and the publish button, and the spotlight follows the steps.

@@ -12,3 +12,4 @@ export * from "./target";
 export * from "./derive";
 export * from "./coverage";
 export * from "./task";
+export * from "./guide-actions";

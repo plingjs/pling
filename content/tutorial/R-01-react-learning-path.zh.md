@@ -44,7 +44,7 @@ Pling 的 React 适配器把现有应用接入页面能力运行时。它不接�
 
 ## 适用范围
 
-React 适配器支持 React 18 及更新版本，面向客户端渲染的 React 应用。Next.js 与服务端渲染需要额外处理 ref 和浏览器 API 的执行时机，属于后续章节，不应混入首次安装。
+React 的 Hooks API 支持 React 16.8 及更新版本。React 16.3–16.7 的应用改用 `@plingjs/react/legacy` 入口，它通过 class 组件和 render props 提供同一套页面概念。两种入口都面向客户端渲染；Next.js 与服务端渲染需要额外处理 ref 和浏览器 API 的执行时机，属于后续章节，不应混入首次安装。
 
 示例使用 Vite，但 Pling 本身不依赖 Vite。换用其他构建工具时，请显式传入模型配置，不要依赖 `VITE_AGENT_*` 快捷方式。
 

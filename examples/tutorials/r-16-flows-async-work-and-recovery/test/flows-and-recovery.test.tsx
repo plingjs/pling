@@ -149,6 +149,8 @@ describe("R-16 · flows, async work, and recovery", () => {
     const snapshot = pling.registry.snapshot();
 
     expect(document.body.textContent).toContain("订单备注");
+    expect(document.querySelector('[data-order="SO-1002"] .orders__note')?.textContent)
+      .toBe("发送修订报价");
     expect(snapshot.actions.find((action) => action.id === "update_order_note")?.description)
       .toContain("备注");
     expect(snapshot.actions.find((action) => action.id === "save_note")?.description)

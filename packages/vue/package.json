@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/vue",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "Vue 3 adapter, directives, and assistant UI for Pling.",
+  "description": "Pling Vue adapter: v-tool/v-scope directives, coverage diagnostics, target resolution, visibility culling, and a debug panel.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -35,6 +35,7 @@
     "@plingjs/surface": "workspace:*",
     "@plingjs/surface-browser": "workspace:*",
     "@plingjs/ui": "workspace:*",
+    "@plingjs/vanilla": "workspace:*",
     "markdown-it": "^15.0.3"
   },
   "peerDependencies": {

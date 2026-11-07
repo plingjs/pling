@@ -37,12 +37,25 @@ export { RECORD_ID_KEYS, normalizeRecordValue, recordSignature, type NormalizedR
  *   2. Vue 的 `ref` 套在**普通对象**里不会被自动解包（只有顶层才会），直接读会把
  *      `{ __v_isRef: true, … }` 这种内部结构喂给模型 —— 这里顺手解掉。
  */
-function liveFields(fields: Record<string, unknown>): () => Record<string, unknown> {
-  return () => {
+type LiveFields = (() => Record<string, unknown>) & {
+  update(next: Record<string, unknown>): void;
+};
+
+function liveFields(fields: Record<string, unknown>): LiveFields {
+  // Namespace 包装会把声明对象展开成一份副本，但函数是同一个引用。
+  // 把“当前字段对象”放在闭包里，rewireFields 才能改到 registry 真正读取的那一份。
+  let current = fields;
+  const read = () => {
     const out: Record<string, unknown> = {};
-    for (const key of Object.keys(fields)) out[key] = unref(fields[key]);
+    for (const key of Object.keys(current)) out[key] = unref(current[key]);
     return out;
   };
+
+  read.update = (next: Record<string, unknown>) => {
+    current = next;
+  };
+
+  return read;
 }
 
 /** 供适配器直接登记：把归一化结果补上动态作用域解析与实时字段读取 */
@@ -62,5 +75,11 @@ export function toDeclaration(
 
 /** 同一行、数据变了：只换字段读取，不动登记 */
 export function rewireFields(declaration: RecordDeclaration, fields: Record<string, unknown>): void {
-  declaration.fields = liveFields(fields);
+  const current = declaration.fields as LiveFields | undefined;
+
+  if (current && typeof current.update === "function") {
+    current.update(fields);
+  } else {
+    declaration.fields = liveFields(fields);
+  }
 }

@@ -83,6 +83,38 @@ describe("React agent surfaces", () => {
       .toContain("Open copilot");
   });
 
+  it("supports a fused sidebar as a page grid column", async () => {
+    const pling = setup();
+    await render(
+      <PlingProvider pling={pling}>
+        <AgentDock
+          layout="sidebar"
+          sidebarMode="fused"
+          side="left"
+          defaultOpen
+        />
+      </PlingProvider>,
+    );
+
+    const dock = document.querySelector(".pling-dock")!;
+    expect(dock.classList).toContain("pling-dock--fused");
+    expect(dock.getAttribute("data-sidebar-mode")).toBe("fused");
+    expect(document.querySelectorAll(".pling-dock")).toHaveLength(1);
+  });
+
+  it("keeps overlay as the sidebar default", async () => {
+    const pling = setup();
+    await render(
+      <PlingProvider pling={pling}>
+        <AgentDock layout="sidebar" />
+      </PlingProvider>,
+    );
+
+    const dock = document.querySelector(".pling-dock")!;
+    expect(dock.getAttribute("data-sidebar-mode")).toBe("overlay");
+    expect(dock.classList).not.toContain("pling-dock--fused");
+  });
+
   it("routes pling.ask into the mounted dock and expands it", async () => {
     const llm = createReplayLlm([{ content: "Two tasks are open." }]);
     const pling = setup(llm);

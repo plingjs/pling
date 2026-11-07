@@ -306,7 +306,7 @@ export function mountQuickstart(root: HTMLElement, options: QuickstartOptions = 
     print(await surface.handle(request("invoke", { capability: "todo.clear_completed" })));
   });
 
-  const dock = pling.dock({ title: copy.dockTitle, quick: copy.quick });
+  const dock = pling.dock({ title: copy.dockTitle, quick: copy.quick, debug: { maxCalls: 8 } });
 
   return {
     pling,

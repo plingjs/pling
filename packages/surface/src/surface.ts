@@ -31,6 +31,7 @@ import {
   type SurfaceSession,
   type SurfaceSessionErrorCode,
   type SurfaceSessionSource,
+  type SurfaceTask,
 } from "./types";
 
 /** 默认一页行数据。能力清单仍完整；字段数据按窗口读取，避免长列表每轮重复进入上下文。 */
@@ -55,6 +56,8 @@ export interface SurfaceOptions {
   ): Promise<SurfaceExecutionResult>;
   /** 应用 / 站点标识，可选 */
   app?: string;
+  /** Optional business tasks; descriptive only and never an authorization grant. */
+  tasks?: readonly SurfaceTask[] | (() => readonly SurfaceTask[]);
   /**
    * 本次会话允许暴露的能力 id。
    *
@@ -130,11 +133,41 @@ function approvalOf(approval: Approval): SurfaceCapability["approval"] {
   return approval;
 }
 
+function humanFieldsOf(source: {
+  label?: string;
+  summary?: string;
+  examples?: readonly string[];
+  successHint?: string;
+  playbook?: readonly string[];
+}): Pick<SurfaceCapability, "label" | "summary" | "examples" | "successHint" | "playbook"> {
+  return {
+    ...(source.label ? { label: source.label } : {}),
+    ...(source.summary ? { summary: source.summary } : {}),
+    ...(source.examples?.length ? { examples: [...source.examples] } : {}),
+    ...(source.successHint ? { successHint: source.successHint } : {}),
+    ...(source.playbook?.length ? { playbook: [...source.playbook] } : {}),
+  };
+}
+
+function tasksOf(source: SurfaceOptions["tasks"]): SurfaceTask[] | undefined {
+  if (!source) return undefined;
+  const tasks = typeof source === "function" ? source() : source;
+  if (!tasks.length) return undefined;
+  return tasks.map((task) => ({
+    ...task,
+    ...(task.examples?.length ? { examples: [...task.examples] } : {}),
+    ...(task.fields?.length ? { fields: task.fields.map((field) => ({ ...field })) } : {}),
+    ...(task.steps?.length ? { steps: task.steps.map((step) => ({ ...step })) } : {}),
+    ...(task.playbook?.length ? { playbook: [...task.playbook] } : {}),
+  }));
+}
+
 function capabilityOf(action: ActionView): SurfaceCapability {
   const inputSchema = hasInputSchema(action.params) ? action.params : undefined;
   return {
     id: action.id,
     description: action.description,
+    ...humanFieldsOf(action),
     ...(inputSchema ? { inputSchema } : {}),
     effect: effectOf(action.kind),
     ...(action.approval === "ask" || action.approval === "ask-always"
@@ -154,6 +187,7 @@ function foldedCapabilityOf(id: string, folded: FoldedAction): SurfaceCapability
   return {
     id,
     description: folded.description,
+    ...humanFieldsOf(folded),
     ...(inputSchema ? { inputSchema } : {}),
     effect: effectOf(folded.kind),
     ...(folded.approval === "ask" || folded.approval === "ask-always"
@@ -753,10 +787,12 @@ export function createSurface(options: SurfaceOptions): AgentSurface {
     const capabilitiesUnchanged =
       input.capabilities === "changed" && lastCapabilitySignature === capabilitySignature(capabilities);
     if (!capabilitiesUnchanged) lastCapabilitySignature = capabilitySignature(capabilities);
+    const tasks = tasksOf(options.tasks);
     return {
       protocol: SURFACE_PROTOCOL,
       ...(options.app?.trim() ? { app: options.app.trim() } : {}),
       capabilities: capabilitiesUnchanged ? [] : capabilities,
+      ...(tasks ? { tasks } : {}),
       ...(capabilitiesUnchanged
         ? { capabilitiesUnchanged: true as const, capabilitiesTotal: capabilities.length }
         : {}),

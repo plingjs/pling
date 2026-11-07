@@ -178,7 +178,11 @@ for (const name of names) {
   if (!hasPageAssistant && !externalOnly) {
     fail(manifestPath, "example must mount an assistant entry");
   }
-  if (!/(?:v-tool\b|v-record\b|usePlingTool\b|usePlingRecord\b|\bpling\.(?:tool|record)\s*\()/.test(source)) {
+  if (
+    !/(?:v-tool\b|v-record\b|usePlingTool\b|usePlingRecord\b|<Pling(?:Tool|Record)\b|\bpling\.(?:tool|record)\s*\(|name:\s*["'](?:tool|record)["'])/.test(
+      source,
+    )
+  ) {
     fail(manifestPath, "example must declare at least one tool or record");
   }
 

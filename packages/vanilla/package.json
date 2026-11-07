@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/vanilla",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "Framework-free DOM adapter for Pling actions, records, regions, and state.",
+  "description": "Pling vanilla JS adapter: declare actions, records, regions, and read-only state on DOM elements.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -32,6 +32,8 @@
     "@plingjs/agent": "workspace:*",
     "@plingjs/core": "workspace:*",
     "@plingjs/dom": "workspace:*",
+    "@plingjs/surface": "workspace:*",
+    "@plingjs/surface-browser": "workspace:*",
     "@plingjs/ui": "workspace:*",
     "markdown-it": "^15.0.3"
   },

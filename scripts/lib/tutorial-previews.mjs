@@ -10,6 +10,18 @@ export const PUBLIC_PREVIEW_AGENT = {
   model: "server-model",
 };
 
+/**
+ * The preview bundle must carry the same model name the public gateway will
+ * actually use. A server-side alias such as `server-model` is intentionally
+ * invisible here: the assistant badge shows the model, not the proxy route.
+ */
+export function resolvePublicPreviewModel(env = {}) {
+  for (const value of [env.PLING_MODEL, env.VITE_AGENT_MODEL, PUBLIC_PREVIEW_AGENT.model]) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return PUBLIC_PREVIEW_AGENT.model;
+}
+
 export function tutorialFramework(id) {
   if (typeof id !== "string" || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/i.test(id)) {
     throw new Error(`Invalid tutorial id: ${String(id)}`);

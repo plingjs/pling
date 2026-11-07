@@ -8,5 +8,5 @@ export default defineConfig({
   dts: true,
   sourcemap: true,
   clean: true,
-  external: ["@plingjs/core"],
+  external: ["@plingjs/core", "@plingjs/ui"],
 });

@@ -2,7 +2,7 @@
 id: J-12
 title: "测试与调试原生页面能力"
 status: draft
-release: later
+release: 0.1
 prereq: "J-06 / OPS-05"
 locale: zh
 ---

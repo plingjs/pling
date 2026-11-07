@@ -786,9 +786,9 @@ body {
 /* Chapter runner: one compact entry for the hosted page and its local source. */
 .tutorial-runner {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 24px;
-  align-items: center;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
   margin: 22px 0 38px;
   padding: 17px 19px 17px 21px;
   border: 1px solid var(--pling-line);
@@ -834,16 +834,19 @@ body {
 .tutorial-runner__main p {
   margin: 4px 0 0;
   color: var(--pling-muted);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.55;
 }
 
 .tutorial-runner__local {
   display: grid;
-  gap: 5px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 5px 10px;
+  align-items: baseline;
   min-width: 0;
-  padding-left: 21px;
-  border-left: 1px solid var(--pling-line);
+  max-width: 100%;
+  padding-top: 13px;
+  border-top: 1px solid var(--pling-line);
 }
 
 .tutorial-runner__local > span {
@@ -852,6 +855,10 @@ body {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.tutorial-runner__local > span + code {
+  margin-bottom: 2px;
 }
 
 .tutorial-runner__local code {
@@ -872,14 +879,11 @@ body {
 
 @media (max-width: 720px) {
   .tutorial-runner {
-    grid-template-columns: 1fr;
     gap: 14px;
     padding: 16px 17px;
   }
 
   .tutorial-runner__local {
-    padding: 13px 0 0;
-    border-top: 1px solid var(--pling-line);
-    border-left: 0;
+    grid-template-columns: minmax(0, 1fr);
   }
 }

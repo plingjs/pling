@@ -140,7 +140,7 @@ describe("R-14 · page feedback, highlighting, and human guidance", () => {
     await mountApp("zh");
 
     expect(document.body.textContent).toContain("工作区设置");
-    expect(document.querySelector("[data-save-name]")?.textContent).toBe("保存名称");
+    expect(document.querySelector("[data-save-name]")?.textContent).toBe("保存工作区名称");
     expect(document.querySelector("[data-publish]")?.textContent).toBe("发布变更");
   });
 });

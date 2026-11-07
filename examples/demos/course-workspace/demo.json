@@ -1,0 +1,143 @@
+{
+  "id": "course-workspace",
+  "title": "Course management back office",
+  "titleZh": "冰草约课 · 课程管理后台",
+  "eyebrow": "Guided workflow",
+  "eyebrowZh": "引导式业务",
+  "summary": "A realistic course-management back office for a yoga studio. Guided tasks arrive as cards in the assistant conversation, collect only the decisions the page cannot infer, and run through the same executor as chat.",
+  "summaryZh": "冰草约课的门店课程管理后台：引导任务以任务卡出现在助手对话里，只收集页面无法判断的决定，再通过与聊天相同的执行器完成。",
+  "url": "/demos/course-workspace/",
+  "open": "src/main.ts",
+  "files": [
+    {
+      "path": "src/main.ts",
+      "label": "main.ts",
+      "role": "Runtime, actions, and page rendering",
+      "roleZh": "运行时、动作与页面渲染",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-workspace/tasks.ts",
+      "scope": "workspace",
+      "label": "tasks.ts",
+      "role": "Guided task definitions",
+      "roleZh": "引导任务定义",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-workspace/runtime.ts",
+      "scope": "workspace",
+      "label": "runtime.ts",
+      "role": "Shared actions and guided-task runtime",
+      "roleZh": "共享动作与引导任务运行时",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-workspace/course-service.ts",
+      "scope": "workspace",
+      "label": "course-service.ts",
+      "role": "Business rules and mock data",
+      "roleZh": "业务规则与模拟数据",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-workspace/copy.ts",
+      "scope": "workspace",
+      "label": "copy.ts",
+      "role": "Bilingual task and page copy",
+      "roleZh": "双语文案",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-workspace/styles.css",
+      "scope": "workspace",
+      "label": "styles.css",
+      "role": "Workspace layout shared by all framework entries",
+      "roleZh": "四端共用的工作台布局",
+      "lang": "css"
+    },
+    {
+      "path": "index.html",
+      "label": "index.html",
+      "role": "Page shell",
+      "roleZh": "页面外壳",
+      "lang": "html"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Run steps and what to test",
+      "roleZh": "运行步骤与测试建议",
+      "lang": "markdown"
+    }
+  ],
+  "focus": {
+    "task-card": { "selector": ".pling-chat__transcript", "match": "createTaskCard(taskRuntime.controller" },
+    "task-definition": { "selector": "createTaskDefinitions", "match": "id: \"course.create\"" },
+    "execution-bridge": { "selector": "createCourseTaskRuntime", "match": "invoke: (action, args)" },
+    "task-card-view": { "selector": ".pling-task-panel--card", "match": "createTaskCard(" },
+    "business-rules": { "selector": "checkSlot", "match": "checkSlot(args)" },
+    "assistant-dock": { "selector": ".pling-dock", "match": "pling.dock({" }
+  },
+  "guide": {
+    "title": "A task is a contract, not a second app",
+    "titleZh": "任务是一份契约，不是第二套应用",
+    "intro": [
+      "This page already has students, membership cards, teachers, and a schedule. The task card does not reimplement any of those rules. It sits in the chat, collects the decisions that cannot be inferred, then calls the existing business actions in order.",
+      "The same task runtime will be used by the Vue, React, Vue 2.7, and Vanilla versions. Only the page rendering changes."
+    ],
+    "introZh": [
+      "这个页面本来就有学员、会员卡、老师和课表。任务卡没有重写任何一条业务规则；它留在聊天里，只收集页面无法推断的决定，再按顺序调用已有的业务动作。",
+      "后面的 Vue、React、Vue 2.7 与原生 JS 版本会共用同一套任务运行时，变化的只有页面渲染。"
+    ],
+    "steps": [
+      {
+        "title": "Start with the business service",
+        "titleZh": "先有业务服务",
+        "body": "Searching students, reading cards, adding a teacher, checking a slot, and creating a lesson all live in one service. The interface and the task layer call these functions; neither owns a private copy of the rules.",
+        "bodyZh": "搜索学员、读取会员卡、新增老师、检查时段与创建课程都在同一个服务里。界面和任务层调用这些函数，谁都不会私存一份规则。",
+        "file": "shared/course-workspace/course-service.ts",
+        "match": "checkSlot(args)",
+        "lines": 16
+      },
+      {
+        "title": "Describe the task once",
+        "titleZh": "把任务描述一次",
+        "body": "A task names its fields and ordered steps. The course task collects the catalogue fields in the chat, while the scheduling task reuses a lookup field so the two students called Li Na can be told apart by masked phone number.",
+        "bodyZh": "任务只声明字段与步骤顺序。新建课程任务在聊天里收集课程库字段；排课任务复用查找字段，让两个都叫李娜的学员可以靠脱敏手机号区分。",
+        "file": "shared/course-workspace/tasks.ts",
+        "match": "id: \"course.create\"",
+        "lines": 60
+      },
+      {
+        "title": "Reuse the existing executor",
+        "titleZh": "复用已有执行器",
+        "body": "The task controller receives one invoke bridge. Here it is the same executor the assistant uses, so action ids, availability, audit, and future approval rules stay on one path.",
+        "bodyZh": "任务控制器只接收一个 invoke 桥。这里接的是助手原本使用的同一个执行器，因此动作 id、可用性、审计以及未来的确认规则都留在同一条路径上。",
+        "file": "shared/course-workspace/runtime.ts",
+        "match": "invoke: (action, args)",
+        "lines": 5
+      },
+      {
+        "title": "Put the task in the conversation",
+        "titleZh": "把任务放进对话里",
+        "body": "createTaskCard uses the same controller as the full panel, with the compact card variant. It is mounted in the chat transcript, so task decisions and ordinary messages share one assistant surface.",
+        "bodyZh": "createTaskCard 复用完整面板的同一个控制器，只把外观换成紧凑卡片，并挂进聊天消息流。任务决定和普通消息因此共用一个助手入口。",
+        "file": "src/main.ts",
+        "match": "createTaskCard(taskRuntime.controller",
+        "lines": 8
+      },
+      {
+        "title": "Keep the free-form assistant available",
+        "titleZh": "保留自由对话",
+        "body": "The fused sidebar keeps the page and the assistant visible together. Guided tasks cover common operations; the composer still handles questions and unusual requests. Open Activity and Debug to see the model request, tool arguments, and page evidence.",
+        "bodyZh": "融合侧栏让页面和助手同时可见。引导任务覆盖常用操作，输入框仍负责提问和特殊请求。打开“最近操作”与调试，可以看到模型请求、工具参数与页面证据。",
+        "file": "src/main.ts",
+        "match": "pling.dock({",
+        "lines": 8
+      }
+    ],
+    "note": "Start with “Create a course”, then add a teacher or schedule a lesson. To see a rejected step, schedule Zhou Min on 2026-03-16 at 10:00, where a lesson already exists.",
+    "noteZh": "先试“新建课程”，再新增老师或安排课程。要看不通过的一步，可以给周敏排 2026-03-16 10:00，这个时段已经有课。"
+  }
+}

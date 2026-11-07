@@ -54,11 +54,12 @@ Pling 把助手的“外壳”和“运行时”分开。外壳决定对话出�
 
 ## 有固定工作栏时使用侧栏
 
-页面本来就有清晰的左右结构时，侧栏通常比浮层更像产品的一部分：
+页面本来就有清晰的左右结构时，侧栏通常比浮层更像产品的一部分。侧栏有两种模式：`overlay` 仍然覆盖在页面之上；`fused` 则作为页面栅格中的一列，与业务内容各自占用空间。
 
 ```vue{4-8}
 <AgentDock
   layout="sidebar"
+  sidebar-mode="overlay"
   side="right"
   launcher-placement="bottom"
   launcher-label="Ask Pling"
@@ -71,12 +72,37 @@ Pling 把助手的“外壳”和“运行时”分开。外壳决定对话出�
 | 参数 | 取值 | 作用 |
 | --- | --- | --- |
 | `layout` | `"dock"` / `"sidebar"` | 浮动角落或视口边缘 |
+| `sidebar-mode` | `"overlay"` / `"fused"` | 覆盖页面，或进入页面栅格 |
 | `side` | `"right"` / `"left"` | 侧栏贴在哪一边 |
 | `launcher-placement` | `"bottom"` / `"center"` | 收起后的入口位置 |
 | `launcher-label` | 字符串 | 收起入口上显示的文字 |
 | `default-open` | 布尔值 | 初始是否展开 |
 
-`side`、`launcher-placement` 和 `launcher-label` 只对侧栏生效。应用可以把用户选择存进自己的偏好设置，在运行时切换外壳，而无需重建对话。
+`side`、`sidebar-mode`、`launcher-placement` 和 `launcher-label` 只对侧栏生效。`launcher-placement` 只影响覆盖模式；融合模式没有浮在页面之外的收起入口。应用可以把用户选择存进自己的偏好设置，在运行时切换外壳，而无需重建对话。
+
+融合模式需要外层提供一列空间。助手仍然由 `AgentDock` 管理展开状态、启动按钮和同一份会话历史：
+
+```vue
+<div class="workspace">
+  <OrderTable />
+  <AgentDock layout="sidebar" sidebar-mode="fused" side="right" title="Order copilot" />
+</div>
+```
+
+```css
+.workspace {
+  display: flex;
+  align-items: stretch;
+  gap: 20px;
+}
+
+.workspace__main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+```
+
+`fused` 适合“保留浮动入口，但展开时不要把表格盖住”的场景。窄屏下组件会退回浮动面板，避免侧栏把工作区域挤成一条窄缝。
 
 如果页面要自己控制栅格，可以把 `AgentInline` 放进一栏：
 
@@ -166,10 +192,11 @@ pnpm tutorial:dev v3-13
 依次检查：
 
 1. 在 **Floating dock** 与 **Page sidebar** 之间切换。外壳改变后，已经收到的回复仍在。
-2. 选侧栏后，切换左右边缘和收起入口的位置。
-3. 收起外壳，再点“总结未完成待办”。外壳展开并发送请求。
-4. 从页面发起一次提问，再打开启动按钮。两条消息在同一段历史中。
-5. 查看页面动作。两个任务按钮没有出现在模型工具清单里。
+2. 选侧栏后，分别在 **覆盖页面** 与 **融入页面** 之间切换，确认业务内容不再被面板遮住。
+3. 切换左右边缘和收起入口的位置；融合模式下左侧会让助手列排到页面主列之前。
+4. 收起外壳，再点“总结未完成待办”。外壳展开并发送请求。
+5. 从页面发起一次提问，再打开启动按钮。两条消息在同一段历史中。
+6. 查看页面动作。两个任务按钮没有出现在模型工具清单里。
 
 运行确定性检查：
 
@@ -177,7 +204,7 @@ pnpm tutorial:dev v3-13
 pnpm tutorial:check v3-13
 ```
 
-测试覆盖外壳切换、侧栏参数、任务入口不注册为动作、共享历史和中英文文案。
+测试覆盖外壳切换、覆盖与融合模式、侧栏参数、任务入口不注册为动作、共享历史和中英文文案。
 
 ## 常见失败
 

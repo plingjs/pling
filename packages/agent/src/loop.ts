@@ -22,6 +22,7 @@ import {
   listActionIds,
   renderPageContext,
   renderResponseLanguage,
+  renderTaskContext,
   type ContextOptions,
 } from "./prompt";
 import { buildProtocol, toolNameOf, type ToolProtocol } from "./protocol";
@@ -30,6 +31,7 @@ import { isAborted } from "./retry";
 import { Telemetry } from "./telemetry";
 import type { AgentTraceRecorder } from "./trace";
 import type { SessionEvent, SessionEventListener } from "./types";
+import type { TaskCatalog } from "./task-catalog";
 
 export const DEFAULT_MAX_TURNS = 10;
 export const DEFAULT_LOOP_THRESHOLD = 3;
@@ -65,6 +67,8 @@ export interface LoopOptions {
    * 这是同一套循环的两种用法 —— 聊天的那些能力（历史压缩、重试、事件流）完全复用。
    */
   registry?: Registry;
+  /** Optional page-declared guided-task catalog. */
+  taskCatalog?: TaskCatalog;
   /**
    * 权限策略。不给默认 `createPolicy(null)`（fail-closed：没有确认通道就一律拒绝），
    * 所以「不小心忘了传」不会变成「悄悄放行」。
@@ -188,6 +192,7 @@ export async function defaultSettle(): Promise<void> {
 export function createAgentLoop(options: LoopOptions): AgentLoop {
   const {
     registry,
+    taskCatalog,
     policy,
     handoff,
     llm,
@@ -490,7 +495,9 @@ export function createAgentLoop(options: LoopOptions): AgentLoop {
         for (const [name, id] of protocol.nameToId) knownNames.set(name, id);
 
         // system 每轮重建：页面可能已经被上一步操作改变了
-        const pagePrompt = registry ? systemPrompt + renderPageContext(snapshot, context) : systemPrompt;
+        const pagePrompt = registry
+          ? systemPrompt + renderPageContext(snapshot, context) + renderTaskContext(taskCatalog)
+          : systemPrompt;
         const language = responseLanguage();
         const turnSystem: LlmMessage = {
           role: "system",

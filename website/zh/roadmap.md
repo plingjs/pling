@@ -42,6 +42,7 @@ locale: zh
 - [版本与兼容性](/zh/concepts/versioning-and-compatibility)
 - [跨页面与标签页的任务连续性](/zh/concepts/task-continuity-across-pages-and-tabs)
 - [投影：Shadow DOM 与 iframe](/zh/concepts/projection-shadow-dom-and-iframes)
+- [任务、引用与引导式执行](/zh/concepts/tasks-references-and-guided-execution)
 
 ## 跨框架运维
 
@@ -79,6 +80,7 @@ locale: zh
 - [在存量 Vue 应用中接入 Pling](/zh/vue/migrating-an-existing-vue-app)
 - [向外部 Agent 开放选定能力](/zh/vue/exposing-selected-capabilities-to-external-agents)
 - [Nuxt 与服务端渲染](/zh/vue/nuxt-and-ssr)
+- [面向真实业务流程的引导任务](/zh/vue/guided-tasks-for-a-real-workflow)
 
 ## React
 
@@ -106,6 +108,7 @@ locale: zh
 - [在存量 React 应用中接入 Pling](/zh/react/migrating-an-existing-react-app)
 - [向外部 Agent 开放选定能力](/zh/react/exposing-selected-capabilities-to-external-agents)
 - [Next.js 与 SSR](/zh/react/next-js-and-ssr)
+- [面向真实业务流程的引导任务](/zh/react/guided-tasks-for-a-real-workflow)
 
 ## 原生 JS / jQuery
 
@@ -123,6 +126,7 @@ locale: zh
 - [测试与调试原生页面能力](/zh/vanilla/test-and-debug-vanilla-capabilities)
 - [在存量 jQuery 应用中接入 Pling](/zh/vanilla/add-pling-to-an-existing-jquery-app)
 - [向外部 Agent 开放选定能力](/zh/vanilla/expose-selected-capabilities-to-external-agents)
+- [面向真实业务流程的引导任务](/zh/vanilla/guided-tasks-for-a-real-workflow)
 
 ## Vue 2 Legacy
 
@@ -134,6 +138,7 @@ locale: zh
 - [挂载问答入口与助手界面](/zh/vue2/mount-the-assistant-ui)
 - [测试与部署 Vue 2 应用](/zh/vue2/test-and-deploy-a-vue-2-app)
 - [从 Vue 2 迁移到 Vue 3](/zh/vue2/migrating-from-vue-2-to-vue-3)
+- [面向真实业务流程的引导任务](/zh/vue2/guided-tasks-for-a-real-workflow)
 
 ## Agent Surface
 
@@ -179,6 +184,7 @@ locale: zh
 - [连续性与投影](/zh/reference/continuity-and-projection)
 - [Surface 一致性与互操作](/zh/reference/surface-conformance-and-interoperability)
 - [协议 Schema 与注册表](/zh/reference/protocol-schemas-and-registries)
+- [引导任务 API](/zh/reference/guided-task-api)
 
 ### API 参考
 

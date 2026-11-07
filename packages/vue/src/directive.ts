@@ -17,7 +17,13 @@ import {
   type RegionRole,
   type Registry,
 } from "@plingjs/core";
-import { resolveAgentConfig, type AgentConfigOverrides, type AgentRuntimeOptions } from "@plingjs/agent";
+import {
+  createTaskCatalog,
+  resolveAgentConfig,
+  type AgentConfigOverrides,
+  type AgentRuntimeOptions,
+  type TaskCatalog,
+} from "@plingjs/agent";
 import { createActionNamespace, getRegistryNamespace, queryAllComposed, type PlingPage } from "@plingjs/dom";
 import { readViteEnv } from "./env";
 import { normalizeRecordValue, recordSignature, rewireFields, toDeclaration, type RecordValue } from "./record";
@@ -69,6 +75,16 @@ export type TaskValue = string | TaskOptions;
 export interface ToolOptionsBase {
   /** 给 agent 的说明（必填）：这个元素是什么、做什么 */
   desc: string;
+  /** 面向人的短名称；省略时界面回退到 desc */
+  label?: string;
+  /** 面向人的一句解释：为什么存在、会改变什么 */
+  summary?: string;
+  /** 任务卡 / 帮助面板展示的示例说法 */
+  examples?: readonly string[];
+  /** 成功后展示给人的判定说明，不是执行协议 */
+  successHint?: string;
+  /** 外部 Agent 的操作提示；不替代权限与审批 */
+  playbook?: readonly string[];
   /** 稳定 id；列表项建议显式传入，否则自动生成 */
   id?: string;
   /** 风险等级，默认 write（fail-closed） */
@@ -80,6 +96,8 @@ export interface ToolOptionsBase {
    *   `"always"`  每次都问，且不给「总是允许」
    */
   confirm?: boolean | "always";
+  /** 隐藏模型入口；动作仍可由页面代码与任务步骤调用。 */
+  modelVisible?: boolean;
   /** 覆盖动作类型推断（默认：表单输入→type，其余→click） */
   action?: "click" | "fill" | "select" | "press" | "hover";
   /** action: "press" 时按哪个键，默认 Enter */
@@ -333,7 +351,7 @@ export interface PlingElement {
    */
   ask(prompt: string, options?: PlingAskOptions): Promise<void>;
   /** @internal Shared task routing used by built-in surfaces. */
-  task: PlingTaskController;
+  task: PlingTaskController & TaskCatalog;
   /**
    * L1 派生器（只在 `createPling({ derive: ... })` 时非空）。配了就**一直**在，
    * 只是要等 `app.mount()` 之后才有东西可扫 —— 所以 `derived()?.ids()` 在挂载前一直是空的。
@@ -394,6 +412,7 @@ function inferPrimitive(el: Element, options: ToolOptions): Primitive {
   const tag = el.tagName.toLowerCase();
   if (tag === "select") return "select";
   if (tag === "textarea") return "type";
+  if (el.hasAttribute("contenteditable")) return "type";
   if (tag === "input") {
     const type = (el as HTMLInputElement).type;
     return type === "checkbox" || type === "radio" ? "click" : "type";
@@ -443,7 +462,23 @@ export function toolOptionsOf(value: ToolValue): ToolOptions[] {
  */
 function signatureOf(values: ToolOptions[]): string {
   return JSON.stringify(
-    values.map((v) => [v.id, v.desc, v.kind, v.action, v.key, v.scope, v.fidelity, paramSignature(v.params), v.steps ?? null]),
+    values.map((v) => [
+      v.id,
+      v.desc,
+      v.label,
+      v.summary,
+      v.examples ?? null,
+      v.successHint,
+      v.playbook ?? null,
+      v.kind,
+      v.modelVisible,
+      v.action,
+      v.key,
+      v.scope,
+      v.fidelity,
+      paramSignature(v.params),
+      v.steps ?? null,
+    ]),
   );
 }
 
@@ -576,7 +611,13 @@ export function createPling(
   const presence = createPresence(plingOptions.presence === false ? false : (plingOptions.presence ?? {}));
   if (!sharedPage) scopes.onChange(() => registry.setAutoScopes(scopes.activeScopes()));
   const feedback = sharedPage?.feedback ?? createFeedbackCollector(registry);
-  const task = createTaskController(warn);
+  const task = Object.assign(
+    createTaskController(warn),
+    createTaskCatalog({
+      registry: baseRegistry,
+      isScopeActive: (id) => registry.isScopeActive(id),
+    }),
+  );
   const pageOptions: PageOptions = plingOptions.page === false
     ? { enabled: false }
     : (plingOptions.page ?? (sharedPage && isNestedWindow() ? { enabled: false } : {}));
@@ -735,8 +776,14 @@ export function createPling(
         id,
         primitive,
         description: options.desc,
+        ...(options.label ? { label: options.label } : {}),
+        ...(options.summary ? { summary: options.summary } : {}),
+        ...(options.examples?.length ? { examples: [...options.examples] } : {}),
+        ...(options.successHint ? { successHint: options.successHint } : {}),
+        ...(options.playbook?.length ? { playbook: [...options.playbook] } : {}),
         kind: options.kind,
         confirm: options.confirm,
+        ...(options.modelVisible === false ? { modelVisible: false } : {}),
         ...(handoff ? { handoff: { reason: handoff.reason } } : {}),
         scope: options.scope,
         fidelity: resolution.fidelity,
@@ -1122,7 +1169,7 @@ export function createPling(
         descriptor: {
           id: revealId,
           primitive: "scroll",
-          description: `Scroll the page to the "${label}" region (use when the region is outside the viewport)`,
+          description: ui.t("scroll.reveal", { label }),
           kind: "read",
         },
         isAvailable: () =>
@@ -1147,7 +1194,7 @@ export function createPling(
         descriptor: {
           id: scrollId,
           primitive: "scroll",
-          description: `Scroll inside the "${label}" region to reveal more content`,
+          description: ui.t("scroll.inside", { label }),
           kind: "read",
           params: {
             type: "object",
@@ -1155,7 +1202,7 @@ export function createPling(
               direction: {
                 type: "string",
                 enum: ["next", "prev"],
-                description: "Scroll direction; defaults to next (forward / down)",
+                description: ui.t("scroll.direction"),
               },
             },
             required: [],
@@ -1297,6 +1344,7 @@ export function createPling(
     destroy() {
       stopped = true;
       ui.destroy();
+      task.destroy();
       deriver?.stop();
       presence?.destroy();
       if (!sharedPage) feedback.stop();

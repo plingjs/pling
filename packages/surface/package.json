@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/surface",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "Agent Surface protocol projection and invoke boundary for Pling.",
+  "description": "Pling Agent Surface protocol core: project page capabilities, context, and invocation contracts to external agents.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

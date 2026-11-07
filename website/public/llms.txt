@@ -29,6 +29,7 @@ Specification entry point: https://plingjs.dev/spec/0.1/. Full text: https://pli
 - [Versioning and compatibility](https://plingjs.dev/concepts/versioning-and-compatibility)
 - [Task continuity across pages and tabs](https://plingjs.dev/concepts/task-continuity-across-pages-and-tabs)
 - [Projection: Shadow DOM and iframes](https://plingjs.dev/concepts/projection-shadow-dom-and-iframes)
+- [Tasks, references, and guided execution](https://plingjs.dev/concepts/tasks-references-and-guided-execution)
 
 ## Operations
 
@@ -66,6 +67,7 @@ Specification entry point: https://plingjs.dev/spec/0.1/. Full text: https://pli
 - [Migrating an existing Vue app](https://plingjs.dev/vue/migrating-an-existing-vue-app)
 - [Exposing selected capabilities to external agents](https://plingjs.dev/vue/exposing-selected-capabilities-to-external-agents)
 - [Nuxt and SSR](https://plingjs.dev/vue/nuxt-and-ssr)
+- [Guided tasks for a real workflow](https://plingjs.dev/vue/guided-tasks-for-a-real-workflow)
 
 ## React
 
@@ -93,6 +95,7 @@ Specification entry point: https://plingjs.dev/spec/0.1/. Full text: https://pli
 - [Migrating an existing React app](https://plingjs.dev/react/migrating-an-existing-react-app)
 - [Exposing selected capabilities to external agents](https://plingjs.dev/react/exposing-selected-capabilities-to-external-agents)
 - [Next.js and SSR](https://plingjs.dev/react/next-js-and-ssr)
+- [Guided tasks for a real workflow](https://plingjs.dev/react/guided-tasks-for-a-real-workflow)
 
 ## Vanilla / jQuery
 
@@ -110,6 +113,7 @@ Specification entry point: https://plingjs.dev/spec/0.1/. Full text: https://pli
 - [Test and debug vanilla capabilities](https://plingjs.dev/vanilla/test-and-debug-vanilla-capabilities)
 - [Add Pling to an existing jQuery app](https://plingjs.dev/vanilla/add-pling-to-an-existing-jquery-app)
 - [Expose selected capabilities to external agents](https://plingjs.dev/vanilla/expose-selected-capabilities-to-external-agents)
+- [Guided tasks for a real workflow](https://plingjs.dev/vanilla/guided-tasks-for-a-real-workflow)
 
 ## Vue 2 Legacy
 
@@ -121,6 +125,7 @@ Specification entry point: https://plingjs.dev/spec/0.1/. Full text: https://pli
 - [Mount the assistant UI](https://plingjs.dev/vue2/mount-the-assistant-ui)
 - [Test and deploy a Vue 2 app](https://plingjs.dev/vue2/test-and-deploy-a-vue-2-app)
 - [Migrating from Vue 2 to Vue 3](https://plingjs.dev/vue2/migrating-from-vue-2-to-vue-3)
+- [Guided tasks for a real workflow](https://plingjs.dev/vue2/guided-tasks-for-a-real-workflow)
 
 ## Agent Surface
 
@@ -183,6 +188,7 @@ Specification entry point: https://plingjs.dev/spec/0.1/. Full text: https://pli
 - [Continuity and projection](https://plingjs.dev/reference/continuity-and-projection)
 - [Surface conformance and interoperability](https://plingjs.dev/reference/surface-conformance-and-interoperability)
 - [Protocol schemas and registries](https://plingjs.dev/reference/protocol-schemas-and-registries)
+- [Guided task API](https://plingjs.dev/reference/guided-task-api)
 
 ## Troubleshooting
 

@@ -10,14 +10,16 @@
  * For the normal one-line setup keep using `<AgentDock />`. `<AgentInline>` is for
  * enterprise/workbench layouts where the agent belongs to the page grid.
  */
-import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, shallowRef, useSlots, watch } from "vue";
 import type { Llm, Registry } from "@plingjs/core";
+import type { AgentBeforeSendHandler } from "../before-send";
 import {
   compactAt,
   createAgentRuntime,
   resolveAgentConfig,
   toActivityRows,
   type ActivityRow,
+  type ActiveGuidedTask,
   type AgentConfigOverrides,
   type AgentRuntime,
   type AgentTraceOptions,
@@ -25,9 +27,15 @@ import {
   type PendingApproval,
   type PendingHandoff,
   type SessionEvent,
+  type TaskGuideCommand,
 } from "@plingjs/agent";
 import { sameOriginUrl } from "@plingjs/dom";
-import { describePlingDiagnostic, diagnosticMessageKey } from "@plingjs/ui";
+import {
+  describePlingDiagnostic,
+  diagnosticMessageKey,
+  quickTaskOf,
+  type QuickTaskItem,
+} from "@plingjs/ui";
 import { usePling } from "../directive";
 import { readViteEnv } from "../env";
 import {
@@ -42,14 +50,17 @@ import {
 import AgentChat from "./AgentChat.vue";
 import AgentDebug from "./AgentDebug.vue";
 import AgentModelSettings from "./AgentModelSettings.vue";
+import AgentTaskGuide from "./AgentTaskGuide.vue";
 
 const props = withDefaults(
   defineProps<{
     title?: string;
     placeholder?: string;
     emptyHint?: string;
+    /** Render a speaker header (name + time) above each chat message. */
+    speakers?: boolean;
     /** Recommended tasks. They stay available for repeated work; only disable while running. */
-    quick?: readonly string[];
+    quick?: readonly QuickTaskItem[];
     config?: AgentConfigOverrides;
     llm?: Llm;
     hooks?: HookRegistry;
@@ -60,6 +71,12 @@ const props = withDefaults(
     visible?: boolean;
     /** Visual variant. `dock` preserves the compact floating-panel width. */
     variant?: "dock" | "inline";
+    /** Composer density. `multiline` is for full workspace panels. */
+    composer?: "compact" | "multiline";
+    /** Keep the active task above the transcript (`pinned`), in the message flow (`inline`), or hidden (`none`). */
+    taskPlacement?: "inline" | "pinned" | "none";
+    /** Render the `#guide` slot above the transcript (`top`) or as the newest message (`end`). */
+    guidePlacement?: "top" | "end";
     /** Built-in surfaces register with the page task router by default. */
     manageSurface?: boolean;
     surfaceId?: string;
@@ -69,11 +86,16 @@ const props = withDefaults(
     debug?: boolean | AgentTraceOptions;
     /** Expose model connection details in the run surface. `off` unless explicitly enabled. */
     modelSettings?: ModelSettingsSetting;
+    /** Optional local responder. Return handled: true to answer without calling the model. */
+    beforeSend?: AgentBeforeSendHandler;
   }>(),
   {
     quick: () => [],
     visible: true,
     variant: "inline",
+    composer: "compact",
+    taskPlacement: "inline",
+    guidePlacement: "top",
     manageSurface: true,
     surfaceId: "inline",
     collapsible: false,
@@ -91,7 +113,7 @@ const ui = pi.ui;
 const t = ui.t;
 const registry = computed(() => props.registry ?? pi.registry);
 const titleText = computed(() => props.title ?? t("dock.assistant"));
-
+const quickItems = computed(() => props.quick.map(quickTaskOf));
 const setup = pi.agent ?? {};
 const showText = (text: string): string => (pi.revealSensitive ? registry.value.tokens.resolve(text) : text);
 
@@ -110,6 +132,14 @@ let destroyed = false;
 let returnTimer: ReturnType<typeof setTimeout> | null = null;
 let offTask: (() => void) | null = null;
 const tick = ref(0);
+const activeGuide = shallowRef<ActiveGuidedTask | null>(null);
+let offGuidedTask: (() => void) | null = null;
+const slots = useSlots();
+const hasTask = computed(() => Boolean(activeGuide.value?.guide) || Boolean(slots.task));
+
+function refreshActiveGuide(): void {
+  activeGuide.value = pi.task.active();
+}
 const transcript = ref<InstanceType<typeof AgentChat> | null>(null);
 const traceOption = props.debug !== undefined ? props.debug : setup.trace;
 const debugEnabled = Boolean(traceOption);
@@ -153,6 +183,7 @@ function buildRuntime(): AgentRuntime {
     ...(injectedLlm ? { llm: injectedLlm } : {}),
     ...(props.gate ? { gate: props.gate } : {}),
     registry: registry.value,
+    taskCatalog: pi.task,
     responseLocale: setup.responseLocale ?? (() => ui.locale),
     onEvent: (event) => {
       if (token !== runtimeToken) return;
@@ -176,6 +207,11 @@ function buildRuntime(): AgentRuntime {
 
 const runtime = shallowRef<AgentRuntime>(buildRuntime());
 events.value = [...runtime.value.session.events()];
+
+function runGuideCommand(command: TaskGuideCommand): void {
+  pi.task.command(command);
+  refreshActiveGuide();
+}
 
 function selectTab(next: "chat" | "activity"): void {
   tab.value = next;
@@ -306,16 +342,6 @@ const summary = computed(() => {
 });
 
 watch(
-  () => events.value.length,
-  async () => {
-    await nextTick();
-    const el = transcript.value?.$el as HTMLElement | undefined;
-    const box = el?.querySelector(".transcript") as HTMLElement | null;
-    if (box) box.scrollTop = box.scrollHeight;
-  },
-);
-
-watch(
   [running, () => Boolean(resume.value)],
   () => emit("status", { running: running.value, resume: Boolean(resume.value) }),
   { immediate: true },
@@ -325,6 +351,39 @@ async function send(text: string): Promise<void> {
   const value = text.trim();
   if (!value || running.value) return;
   draft.value = "";
+
+  // Page-guided flows can resolve a complete instruction locally. This is an
+  // opt-in seam: without `beforeSend`, the model path is unchanged.
+  if (props.beforeSend) {
+    running.value = true;
+    let local: Awaited<ReturnType<AgentBeforeSendHandler>>;
+    try {
+      local = await props.beforeSend(value);
+    } catch (error) {
+      running.value = false;
+      throw error;
+    }
+    if (local?.handled) {
+      const userEvent: SessionEvent = { type: "user", text: value };
+      events.value = [...events.value, userEvent];
+      runtime.value.session.loop.history.append({
+        role: "user",
+        content: registry.value.redactText(value),
+      });
+      emit("event", userEvent);
+      if (local.reply?.trim()) {
+        const reply = local.reply.trim();
+        const replyEvent: SessionEvent = { type: "assistant", text: reply };
+        events.value = [...events.value, replyEvent];
+        runtime.value.session.loop.history.append({ role: "assistant", content: reply });
+        emit("event", replyEvent);
+      }
+      tick.value += 1;
+      running.value = false;
+      return;
+    }
+    running.value = false;
+  }
 
   notReady.value = false;
   if (!runtime.value.readiness.ready) {
@@ -376,7 +435,22 @@ function clear(): void {
   tick.value = 0;
 }
 
+/** Append a local assistant message without invoking the model. */
+function say(text: string): void {
+  const value = text.trim();
+  if (!value) return;
+  const event: SessionEvent = { type: "assistant", text: value };
+  events.value = [...events.value, event];
+  runtime.value.session.loop.history.append({ role: "assistant", content: value });
+  tick.value += 1;
+  emit("event", event);
+}
+
 onMounted(() => {
+  offGuidedTask = pi.task.subscribe(() => {
+    refreshActiveGuide();
+  });
+  refreshActiveGuide();
   if (props.manageSurface) {
     offTask = pi.task.register({
       id: props.surfaceId,
@@ -392,6 +466,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   offTask?.();
+  offGuidedTask?.();
+  offGuidedTask = null;
   destroyed = true;
   cancelReturn();
   runtime.value.session.cancel();
@@ -399,7 +475,7 @@ onUnmounted(() => {
   runtime.value.handoffs.clear();
 });
 
-defineExpose({ runtime, send, ask: send });
+defineExpose({ runtime, send, ask: send, say });
 </script>
 
 <template>
@@ -442,6 +518,7 @@ defineExpose({ runtime, send, ask: send });
           </button>
         </nav>
         <div class="dock__actions">
+          <slot name="nav-actions" />
           <button
             type="button"
             class="dock__ghost"
@@ -469,9 +546,16 @@ defineExpose({ runtime, send, ask: send });
         </div>
       </div>
 
-      <div v-if="quick.length && tab === 'chat'" class="dock__quick">
-        <button v-for="task in quick" :key="task" type="button" :disabled="running" @click="send(task)">
-          {{ task }}
+      <div v-if="quickItems.length && tab === 'chat'" class="dock__quick">
+        <button
+          v-for="(task, index) in quickItems"
+          :key="`${task.prompt}:${index}`"
+          type="button"
+          :disabled="running || task.disabled"
+          :title="task.description"
+          @click="send(task.prompt)"
+        >
+          {{ task.label }}
         </button>
       </div>
 
@@ -555,11 +639,16 @@ defineExpose({ runtime, send, ask: send });
         :title="titleText"
         :placeholder="placeholder"
         :empty-hint="emptyHint"
+        :speakers="speakers"
         :events="events"
         :running="running"
         :pending="pending"
         :pending-handoff="pendingHandoff"
         :resume="resume"
+        :multiline="composer === 'multiline'"
+        :task-placement="taskPlacement"
+        :guide-placement="guidePlacement"
+        :has-task="hasTask"
         :reveal="showText"
         @send="send"
         @resume="resumeTask"
@@ -568,7 +657,25 @@ defineExpose({ runtime, send, ask: send });
         @handoff="(done) => runtime.handoffs.reply(done)"
         @handoff-step="(delta) => runtime.handoffs.moveStep(delta)"
         @stop="runtime.session.cancel()"
-      />
+      >
+        <template #task>
+          <slot name="task">
+            <AgentTaskGuide
+              v-if="activeGuide?.guide"
+              :definition="activeGuide.guide"
+              :snapshot="activeGuide.state.snapshot ?? null"
+              :step="activeGuide.state.step ?? 1"
+              :busy="activeGuide.state.busy ?? false"
+              :error="activeGuide.state.error ?? ''"
+              :completed="activeGuide.state.completed ?? false"
+              @command="runGuideCommand"
+            />
+          </slot>
+        </template>
+        <template v-if="$slots.guide" #guide>
+          <slot name="guide" />
+        </template>
+      </AgentChat>
 
       <footer v-if="!gateActive" class="dock__status">
         <span class="dock__gate" :title="t('dock.gate.offTitle')">
@@ -584,7 +691,7 @@ defineExpose({ runtime, send, ask: send });
   box-sizing: border-box;
   color: var(--pling-color-text, #0f172a);
   font-family: var(--pling-font-family, system-ui, sans-serif);
-  font-size: 13px;
+  font-size: 14px;
 }
 .pling-inline *,
 .pling-inline *::before,
@@ -594,7 +701,7 @@ defineExpose({ runtime, send, ask: send });
 .dock__panel {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   height: var(--pling-inline-height, min(640px, calc(100vh - 96px)));
   padding: 12px;
@@ -614,20 +721,22 @@ defineExpose({ runtime, send, ask: send });
   border-radius: var(--pling-radius-md, 8px);
   background: var(--pling-color-warning-soft, #fff7ed);
   color: var(--pling-color-warning, #9a3412);
-  font-size: 12px;
+  font-size: 12.5px;
+  line-height: 1.55;
 }
 .dock__quick {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 7px;
 }
 .dock__quick button {
-  padding: 3px 8px;
+  min-height: 30px;
+  padding: 0 10px;
   border: 1px solid var(--pling-color-border, #cbd5e1);
   border-radius: 999px;
   background: var(--pling-color-surface-muted, #f8fafc);
   color: var(--pling-color-text-muted, #334155);
-  font-size: 12px;
+  font-size: 12.5px;
   cursor: pointer;
 }
 .dock__quick button:disabled {
@@ -655,12 +764,13 @@ defineExpose({ runtime, send, ask: send });
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  min-height: 34px;
+  padding: 5px 11px;
   border: none;
   border-bottom: 2px solid transparent;
   background: none;
   color: var(--pling-color-text-muted, #64748b);
-  font-size: 12px;
+  font-size: 13px;
   cursor: pointer;
 }
 .dock__tabs button.is-active {
@@ -668,11 +778,11 @@ defineExpose({ runtime, send, ask: send });
   color: var(--pling-color-primary-strong, #1677c8);
 }
 .dock__badge {
-  padding: 0 5px;
+  padding: 1px 6px;
   border-radius: 999px;
   background: var(--pling-color-primary-soft, #eaf6ff);
   color: var(--pling-color-primary-strong, #1677c8);
-  font-size: 11px;
+  font-size: 11.5px;
 }
 .dock__badge.is-bad {
   background: var(--pling-color-danger-soft, #fee2e2);
@@ -680,8 +790,9 @@ defineExpose({ runtime, send, ask: send });
 }
 .dock__activity {
   margin: 0;
-  padding: 4px 4px 4px 22px;
-  font-size: 12px;
+  padding: 5px 4px 5px 22px;
+  font-size: 12.5px;
+  line-height: 1.55;
 }
 .dock__run {
   display: flex;
@@ -705,19 +816,20 @@ defineExpose({ runtime, send, ask: send });
 .dock__run-label {
   margin: 0;
   color: var(--pling-color-text-subtle, #94a3b8);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .dock__run-toggle {
-  padding: 1px 6px;
+  min-height: 26px;
+  padding: 2px 8px;
   border: none;
   border-radius: 999px;
   background: none;
   color: var(--pling-color-text-subtle, #94a3b8);
   font: inherit;
-  font-size: 10px;
+  font-size: 11px;
   cursor: pointer;
 }
 .dock__run-toggle:hover,
@@ -786,7 +898,7 @@ defineExpose({ runtime, send, ask: send });
   background: var(--pling-color-surface-muted, #f8fafc);
   color: var(--pling-color-text-muted, #334155);
   font-family: var(--pling-font-family-mono, ui-monospace, monospace);
-  font-size: 11px;
+  font-size: 11.5px;
   white-space: pre-wrap;
   word-break: break-all;
 }
@@ -808,7 +920,7 @@ defineExpose({ runtime, send, ask: send });
   border-radius: 999px;
   background: var(--pling-color-surface-muted, #f8fafc);
   color: var(--pling-color-text-muted, #64748b);
-  font-size: 11px;
+  font-size: 11.5px;
   max-width: 150px;
   overflow: hidden;
   white-space: nowrap;
@@ -856,7 +968,7 @@ defineExpose({ runtime, send, ask: send });
 }
 .dock__gate {
   color: var(--pling-color-warning, #b45309);
-  font-size: 11px;
+  font-size: 11.5px;
   white-space: nowrap;
 }
 .dock__actions {
@@ -868,8 +980,8 @@ defineExpose({ runtime, send, ask: send });
 .dock__ghost {
   display: inline-grid;
   place-items: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   padding: 0;
   border: none;
   border-radius: 7px;
@@ -908,7 +1020,7 @@ defineExpose({ runtime, send, ask: send });
 .dock__usage {
   margin: 0;
   color: var(--pling-color-text-subtle, #94a3b8);
-  font-size: 11px;
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
 </style>

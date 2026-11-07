@@ -25,6 +25,7 @@ mounted() {
     placeholder: "What needs doing?",
     emptyHint: "I can work with the task list on this page.",
     quick: ["Mark the first task as completed"],
+    debug: { maxCalls: 8 },
     defaultOpen: true,
     onOpenChange: (open) => { this.assistantOpen = open; },
   });
@@ -47,6 +48,7 @@ The dock accepts presentation settings and an application-level agent setup:
 | `placeholder` | Prompt inside the message field |
 | `emptyHint` | Text shown before the first turn |
 | `quick` | Suggested prompts; clicking one sends it |
+| `debug` | Opens the read-only request inspector; `{ maxCalls: 8 }` retains the latest eight model calls |
 | `defaultOpen` | Whether the panel starts open |
 | `config` | Per-entry model or runtime overrides |
 | `gate` | Confirmation channel for actions that require approval |

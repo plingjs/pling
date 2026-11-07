@@ -12,6 +12,7 @@ export const ALL_PACKAGES = [
   "@plingjs/surface-browser",
   "@plingjs/continuity-http",
   "@plingjs/server",
+  "@plingjs/surface-gateway",
   "@plingjs/vanilla",
   "@plingjs/react",
   "@plingjs/vue",

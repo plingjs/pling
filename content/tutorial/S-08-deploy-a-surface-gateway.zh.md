@@ -30,6 +30,28 @@ Surface 网关
 
 页面必须保持打开，因为它是能力投影与真人审批界面的来源。页面不存在时，网关不能自行编造上下文或执行业务逻辑。
 
+## 运行参考实现
+
+`@plingjs/surface-gateway` 是 Node 参考实现，包含 HTTP / WebSocket 传输、MCP facade、会话与配对存储、作用域检查、撤销与审计回调。它既能作为库使用，也提供一个小型 CLI；它不是已经托管的多人多租户服务。
+
+```bash
+npm install @plingjs/surface-gateway
+SURFACE_ADMIN_TOKEN="$(openssl rand -hex 32)" npx pling-surface-gateway
+```
+
+CLI 默认监听 `127.0.0.1:5219`，并使用包内的 `config.example.json`。真实部署应提供自己的租户与 Origin 白名单：
+
+```bash
+SURFACE_CONFIG=/etc/pling/surface.json \
+SURFACE_ADMIN_TOKEN=<server-side-secret> \
+SURFACE_PUBLIC_BASE_URL=https://surface.example.com \
+SURFACE_HOST=127.0.0.1 \
+SURFACE_PORT=5219 \
+npx pling-surface-gateway
+```
+
+只有反向代理会覆盖 `X-Forwarded-For` 时才设置 `SURFACE_TRUST_PROXY=1`。仓库里的 `services/surface-gateway` 只是兼容旧部署命令的薄壳；实现与公开 API 都在 npm 包中。
+
 ## 凭证隔离
 
 | 凭证 | 持有者 | 用途 |

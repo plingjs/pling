@@ -46,6 +46,7 @@ const route = useRoute();
       :title="copy.dockTitle"
       :placeholder="copy.dockPlaceholder"
       :quick="copy.quick"
+      :debug="{ maxCalls: 8 }"
       default-open
     />
   </div>

@@ -23,7 +23,11 @@ Install `@plingjs/react` with the package manager already used by the applicatio
 | npm | `npm install @plingjs/react` |
 | Yarn | `yarn add @plingjs/react` |
 
-`@plingjs/react` declares React 18 or newer as a peer dependency. The adapter, agent runtime, DOM execution layer, and UI styles needed by the dock are installed together. The React dock injects its own component styles; unlike the Vue 3 adapter, there is no separate `style.css` import to add.
+`@plingjs/react` supports React 16.3 and newer. The default entry uses Hooks and therefore requires React 16.8+; applications on React 16.3–16.7 import `@plingjs/react/legacy` instead. The installer brings in the adapter, agent runtime, DOM execution layer, and the styles used by the assistant. The React dock injects its own component styles; unlike the Vue 3 adapter, there is no separate `style.css` import to add.
+
+This chapter follows the Hooks entry and uses `createRoot`, so its setup applies to React 16.8+. The legacy entry has a different, render-prop API for the pre-Hooks years; it is documented in [React adapter](/reference/react-adapter#react-163-167-legacy-entry).
+
+To see the result immediately, open the [React 16.3 legacy Todo](/examples/react16-legacy-todo). It runs on real `react@16.3.0` and includes the complete source and local run command. For a business-task example on the same entry, open the [React 16.3 course management back office](/examples/course-workspace-react16).
 
 The example uses Vite. The adapter does not depend on Vite; on another build tool, the installation and provider setup remain the same as long as the application renders in a browser. Model configuration no longer reads `VITE_AGENT_*` automatically, so pass it explicitly as shown in “Configure the model” below.
 

@@ -1,9 +1,9 @@
 {
   "name": "@plingjs/dom",
-  "version": "0.1.0-alpha.3",
+  "version": "0.1.0-alpha.6",
   "private": false,
   "type": "module",
-  "description": "Framework-neutral DOM execution layer for Pling adapters.",
+  "description": "Framework-agnostic DOM execution layer for Pling: target resolution, availability checks, UI primitives, and scrolling.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -29,7 +29,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@plingjs/core": "workspace:*"
+    "@plingjs/core": "workspace:*",
+    "@plingjs/ui": "workspace:*"
   },
   "devDependencies": {
     "jsdom": "^25",

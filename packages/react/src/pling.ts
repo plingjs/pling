@@ -13,7 +13,7 @@ import {
   type ScopeControllerOptions,
   type PlingPage,
 } from "@plingjs/dom";
-import { resolveAgentConfig } from "@plingjs/agent";
+import { createTaskCatalog, resolveAgentConfig } from "@plingjs/agent";
 import { createUiController, type PlingUiOptions } from "@plingjs/ui";
 import { readViteEnv } from "./env";
 import type { AgentSetup, PlingElement } from "./context";
@@ -69,7 +69,13 @@ export function createPling(
   const config = resolveAgentConfig({ env: readViteEnv(), config: options.agent?.config });
   registry.setDefaultApproval(config.defaultApproval);
   const warn = options.onWarn ?? ((message: string) => console.warn(message));
-  const task = createTaskController(warn);
+  const task = Object.assign(
+    createTaskController(warn),
+    createTaskCatalog({
+      registry: baseRegistry,
+      isScopeActive: (id) => registry.isScopeActive(id),
+    }),
+  );
 
   // 与 Vue 同一条可见性链路：区域进视口 → 活跃；元素进容器视口 → 进动作清单；
   // 被弹窗 / 遮罩盖住 → 不进清单并给出原因。观察器只负责「变了就广播」。
@@ -103,6 +109,7 @@ export function createPling(
     },
     destroy() {
       deriver?.stop();
+      task.destroy();
       if (!sharedPage) feedback.stop();
       presence?.destroy();
       ui.destroy();
