@@ -8,7 +8,7 @@ Agent 通过用户正在使用的控件和业务逻辑完成操作。校验、�
 Pling 不是浏览器 Agent，不替代后端 API，也不是通用点击层。它在 Web 应用与
 Agent 运行时之间提供一个有边界、可审计的接口。动作对 Agent 可见，不等于它已被授权。
 
-> 状态：`0.1.0-alpha.6`。包 API 与 Surface 协议仍可能变化。用于生产环境前，请查看
+> 状态：`0.1.0-alpha.7`。包 API 与 Surface 协议仍可能变化。用于生产环境前，请查看
 > [版本与升级说明](https://plingjs.dev/zh/releases/)。
 
 ## 主要能力

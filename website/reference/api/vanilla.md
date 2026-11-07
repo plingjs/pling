@@ -16,9 +16,9 @@ This page lists only `@plingjs/vanilla` entry points, plus the shared-package ty
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.6` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.7` |
 
-The current package version is `0.1.0-alpha.6`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.7`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -4058,10 +4058,10 @@ panel.destroy();
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | Item | Value |
 | --- | --- |

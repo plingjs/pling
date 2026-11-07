@@ -684,8 +684,8 @@ Surface 任务解释能力之间怎样配合。它不授予能力、不扩大会
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.6` |
-| 引入版本 | `0.1.0-alpha.6` |
+| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.7` |
+| 引入版本 | `0.1.0-alpha.7` |
 | 运行环境 | 支持 ES2022 模块的浏览器；任务控制器在 Node.js 20 或更高版本可用 |
 | Peer 依赖 | 无 |
 | 稳定性 | 实验性；快照可能增加字段，但不会改变已有字段的含义 |

@@ -16,11 +16,11 @@ This page lists only `@plingjs/react` entry points, plus the shared-package type
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.6` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.7` |
 
 The Hooks API on this page requires React 16.8+. React 16.3–16.7 use `@plingjs/react/legacy`, a class/render-prop entry documented in the [React adapter reference](/reference/react-adapter#react-163-167-legacy-entry).
 
-The current package version is `0.1.0-alpha.6`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.7`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -3832,10 +3832,10 @@ card.current?.open("lesson.note", {}, {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | Item | Value |
 | --- | --- |

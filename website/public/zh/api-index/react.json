@@ -4,7 +4,7 @@
   "page": "react",
   "route": "/zh/reference/api/react",
   "package": "@plingjs/react",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "compatibility": "本页的 Hooks API 要求 React 16.8+。React 16.3–16.7 使用 `@plingjs/react/legacy`，这是一套 class/render-prop 入口，详见 [React 适配器参考](/zh/reference/react-adapter#react-163-167-legacy-entry)。",

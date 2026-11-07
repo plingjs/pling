@@ -12,7 +12,7 @@ Choose the framework you are integrating. Each page contains only that framework
 
 The parameter tables are the main contract here. Look up a field's type, required status, default, and applicable scenario on the current framework page; follow the linked reference only when you need field-level semantics or error codes.
 
-There are **5** API pages covering **10** capability groups; the current version is `0.1.0-alpha.6` with **preview** stability.
+There are **5** API pages covering **10** capability groups; the current version is `0.1.0-alpha.7` with **preview** stability.
 
 ## Choose by framework
 
@@ -33,10 +33,10 @@ Runtime, page continuity, testing, and diagnostic APIs share one implementation:
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | Item | Value |
 | --- | --- |

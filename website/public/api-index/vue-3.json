@@ -4,7 +4,7 @@
   "page": "vue3",
   "route": "/reference/api/vue-3",
   "package": "@plingjs/vue",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "compatibility": null,

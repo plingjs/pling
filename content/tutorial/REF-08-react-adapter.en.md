@@ -217,7 +217,7 @@ The legacy entry exposes feedback, guide targets, and task entrances through its
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/react` `0.1.0-alpha.6` |
+| Applies to | `@plingjs/react` `0.1.0-alpha.7` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | React 16.8+ for the Hooks entry; React 16.3+ for the legacy entry; browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
 | Peer dependencies | `react >=16.3` |

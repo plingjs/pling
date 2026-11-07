@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/delegation",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "private": false,
   "type": "module",
   "description": "Pling delegation integration: contracts, in-memory adapters, SurfaceSession mapping, browser client, and Web HTTP/SSE handlers.",

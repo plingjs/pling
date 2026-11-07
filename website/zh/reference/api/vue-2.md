@@ -16,9 +16,9 @@ Vue 2.7 适配器沿用 DOM 运行时，提供指令与共享的 DOM 问答入�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.6` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.7` |
 
-当前包版本为 `0.1.0-alpha.6`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.7`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -3028,10 +3028,10 @@ interface GuideActionItem {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | 项目 | 值 |
 | --- | --- |

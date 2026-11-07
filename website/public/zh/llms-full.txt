@@ -20010,7 +20010,7 @@ legacy 入口通过 render-prop 组件提供页面反馈、分步指引和任务
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/react` `0.1.0-alpha.6` |
+| 适用版本 | `@plingjs/react` `0.1.0-alpha.7` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | Hooks 入口要求 React 16.8+，legacy 入口支持 React 16.3+；浏览器需支持 ES2022 模块；SSR 与构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | `react >=16.3` |
@@ -20270,7 +20270,7 @@ $("#add").on("click", addTask);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.6` |
+| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.7` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；jQuery 为可选项 |
@@ -21724,8 +21724,8 @@ Surface 任务解释能力之间怎样配合。它不授予能力、不扩大会
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.6` |
-| 引入版本 | `0.1.0-alpha.6` |
+| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.7` |
+| 引入版本 | `0.1.0-alpha.7` |
 | 运行环境 | 支持 ES2022 模块的浏览器；任务控制器在 Node.js 20 或更高版本可用 |
 | Peer 依赖 | 无 |
 | 稳定性 | 实验性；快照可能增加字段，但不会改变已有字段的含义 |
@@ -22893,7 +22893,7 @@ Canonical: https://plingjs.dev/zh/reference/api/
 
 参数表是这里的重点。遇到某个选项时，先查它在当前框架页中的类型、必填性、默认值与适用场景；需要字段级语义或错误码时，再进入对应参考页。
 
-共 **5** 个 API 页面，覆盖 **10** 类能力；当前版本 `0.1.0-alpha.6`，稳定性为 **preview**。
+共 **5** 个 API 页面，覆盖 **10** 类能力；当前版本 `0.1.0-alpha.7`，稳定性为 **preview**。
 
 ## 按框架查阅
 
@@ -22914,10 +22914,10 @@ Canonical: https://plingjs.dev/zh/reference/api/
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -22954,9 +22954,9 @@ Vue 3 的完整 API：应用初始化、指令、组合式函数、组件，以�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.6` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.7` |
 
-当前包版本为 `0.1.0-alpha.6`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.7`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -27012,10 +27012,10 @@ interface GuideActionItem {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -27041,11 +27041,11 @@ React Hooks 的完整 API：Provider、声明 Hook、组件，以及它们使用
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.6` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.7` |
 
 本页的 Hooks API 要求 React 16.8+。React 16.3–16.7 使用 `@plingjs/react/legacy`，这是一套 class/render-prop 入口，详见 [React 适配器参考](/zh/reference/react-adapter#react-163-167-legacy-entry)。
 
-当前包版本为 `0.1.0-alpha.6`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.7`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -30857,10 +30857,10 @@ card.current?.open("lesson.note", {}, {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -30886,9 +30886,9 @@ Vue 2.7 适配器沿用 DOM 运行时，提供指令与共享的 DOM 问答入�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.6` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.7` |
 
-当前包版本为 `0.1.0-alpha.6`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.7`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -33898,10 +33898,10 @@ interface GuideActionItem {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -33927,9 +33927,9 @@ Canonical: https://plingjs.dev/zh/reference/api/vanilla
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.6` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.7` |
 
-当前包版本为 `0.1.0-alpha.6`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.7`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -37969,10 +37969,10 @@ panel.destroy();
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -37998,9 +37998,9 @@ Canonical: https://plingjs.dev/zh/reference/api/shared
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.6` |
+| `@plingjs/core` | — | `0.1.0-alpha.7` |
 
-当前包版本为 `0.1.0-alpha.6`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.7`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -41582,10 +41582,10 @@ const config = resolveAgentConfig({
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.6` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.6` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.6` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.6` | — |
+| `@plingjs/vue` | `0.1.0-alpha.7` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.7` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.7` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.7` | — |
 
 | 项目 | 值 |
 | --- | --- |

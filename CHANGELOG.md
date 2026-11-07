@@ -3,6 +3,13 @@
 Pling 使用[语义化版本](https://semver.org/lang/zh-CN/)。`0.x` 阶段 API 仍可能调整，
 每次影响接入方式的变更都会记录在这里，并同步到 `website/releases/index.md` 的版本策略。
 
+## [0.1.0-alpha.7] — 2026-11-07
+
+- 修复 `0.1.0-alpha.6` 的发布元数据错误：11 个包的 `workspace:*` 依赖未被改写，
+  从 npm 安装会报 `EUNSUPPORTEDPROTOCOL`。本版改用 `pnpm pack` 生成发布 tarball，
+  所有包依赖固定为 `0.1.0-alpha.7`。
+- 功能、API 与 `0.1.0-alpha.6` 相同；`latest` 与 `next` 均指向本版。
+
 ## [0.1.0-alpha.6] — 2026-11-07
 
 - 新增任务层：`TaskDefinition`、`TaskRun`、任务目录、引用 / lookup、人类可读动作文案，

@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/core",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "private": false,
   "type": "module",
   "description": "Framework-agnostic core for Pling: action registry, UI primitives, permissions, execution pipeline, and tool-calling loop.",

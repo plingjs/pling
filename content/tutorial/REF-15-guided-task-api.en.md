@@ -684,8 +684,8 @@ Unknown task ids, unknown field names, duplicate definitions, a missing bound re
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.6` |
-| Introduced | `0.1.0-alpha.6` |
+| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.7` |
+| Introduced | `0.1.0-alpha.7` |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for the task controller |
 | Peer dependencies | None |
 | Stability | Experimental; snapshots may gain fields without changing existing meaning |

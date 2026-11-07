@@ -9,7 +9,8 @@
  *   node scripts/export-public.mjs /Users/mac/Workspace/Projects/plingjs-public
  *   node scripts/export-public.mjs .public-export --with-cases
  */
-import { chmod, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { chmod, cp, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { join, resolve } from "node:path";
 
@@ -67,8 +68,19 @@ function filter(source) {
   return true;
 }
 
+// Keep the checkout metadata when re-exporting into an existing clone.
+const gitDir = join(target, ".git");
+const gitBackup = `${target}.git-export-backup`;
+const hasGitDir = existsSync(gitDir);
+if (hasGitDir) {
+  await rm(gitBackup, { recursive: true, force: true });
+  await rename(gitDir, gitBackup);
+}
 await rm(target, { recursive: true, force: true });
 await mkdir(target, { recursive: true });
+if (hasGitDir) {
+  await rename(gitBackup, gitDir);
+}
 
 for (const entry of allow) {
   const source = join(root, entry);
@@ -113,6 +125,14 @@ const workspace = [
 ].join("\n");
 await writeFile(join(target, "pnpm-workspace.yaml"), workspace, { mode: 0o644 });
 await chmod(join(target, "pnpm-workspace.yaml"), 0o644);
+
+// The internal lockfile describes the internal workspace (it includes wrangler and
+// private members). Regenerate it from the exported manifests so
+// `pnpm install --frozen-lockfile` works for readers.
+execFileSync("pnpm", ["install", "--lockfile-only", "--ignore-scripts"], {
+  cwd: target,
+  stdio: "inherit",
+});
 
 const requiredFiles = [
   ".dockerignore",
