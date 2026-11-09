@@ -17,6 +17,18 @@ services:
       PLING_TRUST_PROXY: "1"
     restart: unless-stopped
 
+  recipe:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+      target: runtime
+    command: ["node", "examples/recipe-backends/access-service/server.mjs"]
+    environment:
+      RECIPE_API_HOST: 0.0.0.0
+      RECIPE_API_PORT: "5193"
+      RECIPE_COOKIE_SECURE: "true"
+    restart: unless-stopped
+
   surface:
     build:
       context: ..
@@ -60,6 +72,7 @@ services:
       target: caddy
     depends_on:
       - api
+      - recipe
       - surface
       - todo
     ports:

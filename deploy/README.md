@@ -61,6 +61,7 @@ Health checks:
 
 ```bash
 curl -fsS "https://example.com/api/agent/health"
+curl -fsS "https://demo.example.com/api/recipe/health"
 curl -fsS "https://surface.example.com/health"
 curl -fsS "https://todo.example.com/api/health"
 ```
@@ -79,11 +80,15 @@ Expose these loopback ports through your own virtual hosts:
 | Service | Loopback port |
 | --- | --- |
 | Model gateway | `127.0.0.1:5192` |
+| Recipe demo API | `127.0.0.1:5193` |
 | Surface Gateway | `127.0.0.1:5219` |
 | Todo BFF | `127.0.0.1:5221` |
 
+Proxy `/api/recipe/*` to port `5193` without exposing the service publicly.
 Proxy WebSocket upgrades for `/surface`, and do not buffer `/mcp` or `/v1/*`.
-Keep the application ports off the public interface.
+Keep the application ports off the public interface. The recipe API is a
+disposable, in-memory fixture for the login recipe; it is not an identity
+service or a production account store.
 
 To build static artifacts without Docker:
 

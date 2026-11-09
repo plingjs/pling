@@ -108,6 +108,10 @@ function serveTutorialPreviews() {
 
 export default defineConfig({
   base: "/demos/",
+  // React 16 legacy examples and the adapter must resolve the same React
+  // instance. The adapter's development dependency is React 19; without
+  // deduplication Vite can bundle elements from one runtime into another.
+  resolve: { dedupe: ["react", "react-dom"] },
   define: previewModel ? { "import.meta.env.VITE_AGENT_MODEL": JSON.stringify(previewModel) } : undefined,
   esbuild: {
     jsx: "transform",

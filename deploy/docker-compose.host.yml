@@ -18,6 +18,17 @@ services:
       - "127.0.0.1:5192:5192"
     restart: unless-stopped
 
+  recipe:
+    image: ${PLING_IMAGE:-plingjs:runtime}
+    command: ["node", "examples/recipe-backends/access-service/server.mjs"]
+    environment:
+      RECIPE_API_HOST: 0.0.0.0
+      RECIPE_API_PORT: "5193"
+      RECIPE_COOKIE_SECURE: "true"
+    ports:
+      - "127.0.0.1:5193:5193"
+    restart: unless-stopped
+
   surface:
     image: ${PLING_IMAGE:-plingjs:runtime}
     command: ["node", "services/surface-gateway/src/index.mjs"]
