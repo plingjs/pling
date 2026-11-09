@@ -407,6 +407,7 @@ function orderRemoved(id: string): boolean {
 
     <AgentDock
       layout="sidebar"
+      sidebar-mode="overlay"
       side="right"
       :title="copy.dockTitle"
       :placeholder="copy.dockPlaceholder"

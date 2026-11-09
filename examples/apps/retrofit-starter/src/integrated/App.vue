@@ -313,6 +313,7 @@ function setFilter(value: TodoFilter): void {
     <!-- [Retrofit 05] The assistant is one surface over the same declared page actions. -->
     <AgentDock
       layout="sidebar"
+      sidebar-mode="overlay"
       side="right"
       :title="copy.dockTitle"
       :placeholder="copy.dockPlaceholder"

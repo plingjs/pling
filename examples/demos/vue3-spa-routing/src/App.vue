@@ -42,6 +42,7 @@ const route = useRoute();
     <AgentDock
       class="app-sidebar"
       layout="sidebar"
+      sidebar-mode="overlay"
       side="right"
       :title="copy.dockTitle"
       :placeholder="copy.dockPlaceholder"

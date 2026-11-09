@@ -218,6 +218,7 @@ function setFilter(value: "all" | "open" | "completed"): void {
     <AgentDock
       class="todo-sidebar"
       layout="sidebar"
+      sidebar-mode="overlay"
       side="right"
       :title="copy.dockTitle"
       :placeholder="copy.dockPlaceholder"

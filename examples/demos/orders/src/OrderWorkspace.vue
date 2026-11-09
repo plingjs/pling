@@ -299,6 +299,7 @@ function askRisk(order: Order): void {
     <AgentDock
       class="order-sidebar"
       layout="sidebar"
+      sidebar-mode="overlay"
       side="right"
       :title="copy.dockTitle"
       :placeholder="copy.dockPlaceholder"

@@ -331,6 +331,7 @@ onUnmounted(() => {
 
   <AgentDock
     layout="sidebar"
+    sidebar-mode="overlay"
     side="right"
     launcher-placement="bottom"
     title="Todo assistant"

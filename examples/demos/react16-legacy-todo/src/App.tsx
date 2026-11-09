@@ -280,6 +280,7 @@ export class App extends React.Component<AppProps, AppState> {
 
         <AgentDock
           layout="sidebar"
+          sidebarMode="overlay"
           side="right"
           className="todo-sidebar"
           defaultOpen
