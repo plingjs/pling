@@ -86,8 +86,10 @@ export const PLING_UI_STYLES = `
   width: min(400px, calc(100vw - 48px));
   height: min(640px, calc(100vh - 120px));
 }
+.pling-inline--inline .pling-inline__panel,
 .pling-inline--fused .pling-inline__panel {
-  height: 100%;
+  width: 100%;
+  height: var(--pling-inline-height, min(640px, calc(100vh - 96px)));
   border: 0;
   border-radius: 0;
   box-shadow: none;

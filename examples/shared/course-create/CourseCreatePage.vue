@@ -286,7 +286,7 @@ onMounted(() => {
       </main>
     </section>
 
-    <aside class="assistant" :class="{ 'is-collapsed': !assistantOpen }" aria-label="页灵助手">
+    <aside class="course-assistant" :class="{ 'is-collapsed': !assistantOpen }" aria-label="页灵助手">
       <AgentInline
         ref="assistant"
         class="assistant-agent"

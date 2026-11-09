@@ -21,4 +21,11 @@ describe("ensurePlingStyles", () => {
     expect(PLING_UI_STYLES).toContain(".pling-guide__card");
     expect(PLING_UI_STYLES).toContain(".pling-guide__rail");
   });
+
+  it("lets inline panels fill their host without inheriting the floating card", () => {
+    expect(PLING_UI_STYLES).toMatch(
+      /\.pling-inline--inline \.pling-inline__panel,\s*\.pling-inline--fused \.pling-inline__panel\s*\{[^}]*width:\s*100%;[^}]*height:\s*var\(--pling-inline-height,[^;]+\);[^}]*border:\s*0;[^}]*border-radius:\s*0;[^}]*box-shadow:\s*none;/s,
+    );
+    expect(PLING_UI_STYLES).toContain(".pling-inline--dock .pling-inline__panel");
+  });
 });
