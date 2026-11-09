@@ -150,6 +150,18 @@ The available effects are:
 
 Presence follows the element the executor actually targets. When an action is running, the outline appears over the real control. When a handoff waits for a person, the corresponding guide target or action is highlighted. When execution ends, the overlay clears.
 
+### Mark the target when the user asks where it is
+
+Whenever a page declares actions, the framework gives the model a read-only tool named `pling_locate`. When the user asks “where do I upload the cover?” or “where is Save?”, the model passes the exact action id:
+
+```json
+{ "actionId": "course_cover" }
+```
+
+The framework scrolls the target into view and applies a stronger focus highlight. It does not execute the action: no click, no typing, no file picker, no submit. The page does not need one custom “point at this control” tool per element.
+
+`pling_locate` is advertised only when the page has actions. The target must be a declared action; a business function with no visual carrier cannot be highlighted.
+
 The overlay uses `pointer-events: none` and is marked as Pling UI, so it cannot intercept clicks and does not become part of the page snapshot. Reduced-motion preferences disable animation while keeping a static outline.
 
 Presence is not an accessibility substitute. The handoff panel still needs readable instructions, and the page still needs a real label on the field. Highlighting helps a sighted user locate the step; it does not explain it on its own.

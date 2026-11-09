@@ -11,7 +11,7 @@ status: drafted
 
 A Surface gateway sits between an external agent and an open page. It carries protocol envelopes, binds a page to a user and tenant, issues a delegated agent session, and forwards requests. It does not become a second copy of the page's business state.
 
-The repository's authenticated Todo example is a reference topology, not a hosted service. In particular, `surface.plingjs.dev` is a demo endpoint, not a shared customer proxy. A production enterprise should run the same boundary at its own origin and connect it to its own identity and data systems.
+The repository's authenticated Todo example is a reference topology, not a hosted service. In particular, `surface.plingjs.com` is a demo endpoint, not a shared customer proxy. A production enterprise should run the same boundary at its own origin and connect it to its own identity and data systems.
 
 ## A workable topology
 

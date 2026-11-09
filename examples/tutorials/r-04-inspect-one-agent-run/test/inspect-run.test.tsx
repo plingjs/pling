@@ -67,10 +67,11 @@ async function waitFor(read: () => boolean, timeoutMs = 2_000): Promise<void> {
 }
 
 async function say(text: string): Promise<void> {
-  const input = document.querySelector<HTMLInputElement>(".pling-chat__composer input");
+  const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(".pling-chat__composer textarea, .pling-chat__composer input");
   const form = document.querySelector<HTMLFormElement>(".pling-chat__composer");
   if (!input || !form) throw new Error("聊天输入框不存在");
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, "value")!.set!;
   await act(async () => {
     setter.call(input, text);
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -132,8 +133,7 @@ describe("R-04 · inspect one React agent run", () => {
     await click(document.querySelectorAll<HTMLButtonElement>(".pling-dock__tabs button")[1] ?? null);
     expect(document.querySelector('[data-testid="pling-debug"]')!.textContent).toContain("Inspect this run");
 
-    const clear = [...document.querySelectorAll<HTMLButtonElement>(".pling-dock__ghost")]
-      .find((button) => button.textContent?.trim() === "Clear");
+    const clear = document.querySelector<HTMLButtonElement>('.pling-dock__ghost[aria-label="Clear"]');
     await click(clear ?? null);
 
     expect(document.querySelector('[data-testid="pling-debug"]')!.textContent).toContain("No model calls yet");

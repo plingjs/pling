@@ -34,7 +34,7 @@ describe("agent request trace", () => {
     expect(call).toMatchObject({ turn: 1, status: "ok" });
     expect(call.messages.map((message) => message.role)).toEqual(["system", "user"]);
     expect(call.messages[1]!.content).toBe("Add one task");
-    expect(call.tools.map((tool) => tool.function.name)).toEqual(["add_todo"]);
+    expect(call.tools.map((tool) => tool.function.name)).toEqual(["add_todo", "pling_locate"]);
     expect(call.snapshot.actions.map((action) => action.id)).toEqual(["add_todo"]);
     expect(call.response).toMatchObject({ content: "Done", toolCalls: [] });
     expect(call.contextTokens).toBeGreaterThan(0);

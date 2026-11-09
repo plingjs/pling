@@ -29,7 +29,7 @@ import {
   type SessionEvent,
   type TaskGuideCommand,
 } from "@plingjs/agent";
-import { sameOriginUrl } from "@plingjs/dom";
+import { ensurePlingStyles, sameOriginUrl } from "@plingjs/dom";
 import {
   describePlingDiagnostic,
   diagnosticMessageKey,
@@ -93,12 +93,13 @@ const props = withDefaults(
     quick: () => [],
     visible: true,
     variant: "inline",
-    composer: "compact",
-    taskPlacement: "inline",
+    composer: "multiline",
+    taskPlacement: "pinned",
     guidePlacement: "top",
     manageSurface: true,
     surfaceId: "inline",
     collapsible: false,
+    speakers: true,
   },
 );
 
@@ -110,6 +111,7 @@ const emit = defineEmits<{
 
 const pi = usePling();
 const ui = pi.ui;
+ensurePlingStyles();
 const t = ui.t;
 const registry = computed(() => props.registry ?? pi.registry);
 const titleText = computed(() => props.title ?? t("dock.assistant"));
@@ -124,14 +126,17 @@ const resumeDismissed = ref(false);
 const tab = ref<"chat" | "activity">("chat");
 const debugOpen = ref(false);
 const modelSettingsOpen = ref(false);
+const quickMenuOpen = ref(false);
 const pending = ref<PendingApproval | null>(null);
 const pendingHandoff = ref<PendingHandoff | null>(null);
+const quickMenuEl = ref<HTMLElement | null>(null);
 const gateActive = computed(() => (props.gate ?? setup.gate)?.() ?? true);
 const notReady = ref(false);
 let destroyed = false;
 let returnTimer: ReturnType<typeof setTimeout> | null = null;
 let offTask: (() => void) | null = null;
 const tick = ref(0);
+const guideRevision = ref(0);
 const activeGuide = shallowRef<ActiveGuidedTask | null>(null);
 let offGuidedTask: (() => void) | null = null;
 const slots = useSlots();
@@ -139,6 +144,7 @@ const hasTask = computed(() => Boolean(activeGuide.value?.guide) || Boolean(slot
 
 function refreshActiveGuide(): void {
   activeGuide.value = pi.task.active();
+  guideRevision.value += 1;
 }
 const transcript = ref<InstanceType<typeof AgentChat> | null>(null);
 const traceOption = props.debug !== undefined ? props.debug : setup.trace;
@@ -215,6 +221,24 @@ function runGuideCommand(command: TaskGuideCommand): void {
 
 function selectTab(next: "chat" | "activity"): void {
   tab.value = next;
+  quickMenuOpen.value = false;
+}
+
+function toggleQuickMenu(): void {
+  if (!quickItems.value.length) return;
+  quickMenuOpen.value = !quickMenuOpen.value;
+}
+
+function runQuick(prompt: string): void {
+  if (!prompt.trim() || running.value) return;
+  quickMenuOpen.value = false;
+  void send(prompt);
+}
+
+function onDocumentPointerDown(event: PointerEvent): void {
+  if (!quickMenuOpen.value) return;
+  if (quickMenuEl.value?.contains(event.target as Node)) return;
+  quickMenuOpen.value = false;
 }
 
 function toggleDebug(): void {
@@ -350,6 +374,7 @@ watch(
 async function send(text: string): Promise<void> {
   const value = text.trim();
   if (!value || running.value) return;
+  quickMenuOpen.value = false;
   draft.value = "";
 
   // Page-guided flows can resolve a complete instruction locally. This is an
@@ -423,6 +448,7 @@ function dismissResume(): void {
 
 function clear(): void {
   cancelReturn();
+  quickMenuOpen.value = false;
   resumeDismissed.value = true;
   runtime.value.session.reset();
   runtime.value.approvals.clear();
@@ -447,6 +473,7 @@ function say(text: string): void {
 }
 
 onMounted(() => {
+  document.addEventListener("pointerdown", onDocumentPointerDown);
   offGuidedTask = pi.task.subscribe(() => {
     refreshActiveGuide();
   });
@@ -465,6 +492,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  document.removeEventListener("pointerdown", onDocumentPointerDown);
   offTask?.();
   offGuidedTask?.();
   offGuidedTask = null;
@@ -487,14 +515,14 @@ defineExpose({ runtime, send, ask: send, say });
   >
     <section
       v-if="visible"
-      class="dock__panel pling-inline__panel"
+      class="dock__panel pling-inline__panel pling-dock__panel"
       :class="ui.classNames.panel"
       :aria-label="titleText"
     >
-      <p v-if="notReadyText" class="dock__warn">{{ notReadyText }}</p>
+      <p v-if="notReadyText" class="dock__warn pling-dock__warn">{{ notReadyText }}</p>
 
-      <div class="dock__nav">
-        <nav class="dock__tabs" role="tablist">
+      <div class="dock__nav pling-dock__nav">
+        <nav class="dock__tabs pling-dock__tabs" role="tablist">
           <button
             type="button"
             role="tab"
@@ -512,21 +540,54 @@ defineExpose({ runtime, send, ask: send, say });
             @click="selectTab('activity')"
           >
             {{ t("dock.tab.activity") }}
-            <span v-if="activityRows.length" class="dock__badge" :class="{ 'is-bad': failedCount > 0 }">
+            <span v-if="activityRows.length" class="dock__badge pling-dock__badge" :class="{ 'is-bad': failedCount > 0 }">
               {{ activityRows.length }}
             </span>
           </button>
         </nav>
-        <div class="dock__actions">
+        <div class="dock__actions pling-dock__actions">
           <slot name="nav-actions" />
+          <div v-if="quickItems.length" ref="quickMenuEl" class="dock__action-wrap pling-dock__action-wrap">
+            <button
+              type="button"
+              class="dock__ghost pling-dock__ghost"
+              :class="{ 'is-active': quickMenuOpen }"
+              :aria-label="t('dock.pageActions')"
+              :aria-expanded="quickMenuOpen"
+              :title="t('dock.pageActions')"
+              @click.stop="toggleQuickMenu"
+            >
+              <svg class="dock__icon pling-dock__icon" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M4 5.5h12M4 10h12M4 14.5h8" />
+              </svg>
+            </button>
+            <div v-if="quickMenuOpen" class="pling-dock__actions-menu" role="menu">
+              <header>
+                <strong>{{ t("dock.pageActions") }}</strong>
+                <span>{{ t("dock.pageActionsHint") }}</span>
+              </header>
+              <button
+                v-for="(task, index) in quickItems"
+                :key="`${task.prompt}:menu:${index}`"
+                type="button"
+                role="menuitem"
+                :disabled="running || task.disabled"
+                :title="task.description"
+                @click="runQuick(task.prompt)"
+              >
+                <span>{{ task.label }}</span>
+                <small v-if="task.description">{{ task.description }}</small>
+              </button>
+            </div>
+          </div>
           <button
             type="button"
-            class="dock__ghost"
+            class="dock__ghost pling-dock__ghost"
             :aria-label="t('dock.clear')"
             :title="t('dock.clear')"
             @click="clear"
           >
-            <svg class="dock__icon" viewBox="0 0 20 20" aria-hidden="true">
+            <svg class="dock__icon pling-dock__icon" viewBox="0 0 20 20" aria-hidden="true">
               <path d="M4 4.5h12v9H9l-4 3v-3H4z" />
               <path d="M8 7.5l4 4M12 7.5l-4 4" />
             </svg>
@@ -534,37 +595,30 @@ defineExpose({ runtime, send, ask: send, say });
           <button
             v-if="collapsible"
             type="button"
-            class="dock__ghost"
+            class="dock__ghost pling-dock__ghost"
             :aria-label="t('dock.collapse')"
             :title="t('dock.collapse')"
             @click="emit('collapse')"
           >
-            <svg class="dock__icon" viewBox="0 0 20 20" aria-hidden="true">
+            <svg class="dock__icon pling-dock__icon" viewBox="0 0 20 20" aria-hidden="true">
               <path d="M5 8l5 5 5-5" />
             </svg>
           </button>
         </div>
       </div>
 
-      <div v-if="quickItems.length && tab === 'chat'" class="dock__quick">
-        <button
-          v-for="(task, index) in quickItems"
-          :key="`${task.prompt}:${index}`"
-          type="button"
-          :disabled="running || task.disabled"
-          :title="task.description"
-          @click="send(task.prompt)"
-        >
-          {{ task.label }}
-        </button>
+      <div v-if="running" class="dock__running pling-dock__running">
+        <span class="pling-dock__running-dot" aria-hidden="true" />
+        <span>{{ t("chat.running") }}</span>
+        <button type="button" class="stop pling-chat__stop" @click="runtime.session.cancel()">{{ t("chat.stop") }}</button>
       </div>
 
-      <div v-if="tab === 'activity'" class="dock__run">
-        <div class="dock__diagnostics">
+      <div v-if="tab === 'activity'" class="dock__run pling-dock__run">
+        <div class="dock__diagnostics pling-dock__diagnostics">
           <button
             v-if="modelSettingsEnabled"
             type="button"
-            class="dock__model dock__model-button"
+            class="dock__model dock__model-button pling-dock__model pling-dock__model-button"
             :class="{ 'is-active': modelSettingsOpen }"
             :aria-label="t('modelSettings.title')"
             :aria-expanded="modelSettingsOpen"
@@ -572,17 +626,17 @@ defineExpose({ runtime, send, ask: send, say });
             data-testid="pling-model-settings-toggle"
             @click="toggleModelSettings"
           >
-            <span class="dock__model-dot" aria-hidden="true"></span>
-            <span class="dock__model-name">{{ runtime.model || t("dock.model.unconfigured") }}</span>
-            <svg class="dock__model-caret" viewBox="0 0 12 12" aria-hidden="true">
+            <span class="dock__model-dot pling-dock__model-dot" aria-hidden="true"></span>
+            <span class="dock__model-name pling-dock__model-name">{{ runtime.model || t("dock.model.unconfigured") }}</span>
+            <svg class="dock__model-caret pling-dock__model-caret" viewBox="0 0 12 12" aria-hidden="true">
               <path d="M3 4.5l3 3 3-3" />
             </svg>
           </button>
-          <span v-else class="dock__model" :title="limitsHint">
-            <span class="dock__model-dot" aria-hidden="true"></span>
-            <span class="dock__model-name">{{ runtime.model || t("dock.model.unconfigured") }}</span>
+          <span v-else class="dock__model pling-dock__model" :title="limitsHint">
+            <span class="dock__model-dot pling-dock__model-dot" aria-hidden="true"></span>
+            <span class="dock__model-name pling-dock__model-name">{{ runtime.model || t("dock.model.unconfigured") }}</span>
           </span>
-          <span class="dock__usage">{{ summary }}</span>
+          <span class="dock__usage pling-dock__usage">{{ summary }}</span>
         </div>
 
         <AgentModelSettings
@@ -596,13 +650,13 @@ defineExpose({ runtime, send, ask: send, say });
           @reset="resetModelSettings"
         />
 
-        <section class="dock__run-section" data-testid="pling-run-actions">
-          <div class="dock__run-head">
-            <p class="dock__run-label">{{ t("dock.run.actions") }}</p>
+        <section class="dock__run-section pling-dock__run-section" data-testid="pling-run-actions">
+          <div class="dock__run-head pling-dock__run-head">
+            <p class="dock__run-label pling-dock__run-label">{{ t("dock.run.actions") }}</p>
             <button
               v-if="debugEnabled"
               type="button"
-              class="dock__run-toggle"
+              class="dock__run-toggle pling-dock__run-toggle"
               :class="{ 'is-active': debugOpen }"
               :aria-expanded="debugOpen"
               data-testid="pling-debug-toggle"
@@ -611,17 +665,17 @@ defineExpose({ runtime, send, ask: send, say });
               {{ t("debug.title") }}
             </button>
           </div>
-          <ol class="dock__activity">
-            <li v-for="row in activityRows" :key="row.seq" class="dock__row">
-              <p class="dock__row-head">
+          <ol class="dock__activity pling-dock__activity">
+            <li v-for="row in activityRows" :key="row.seq" class="dock__row pling-dock__row">
+              <p class="dock__row-head pling-dock__row-head">
                 <code>{{ row.id }}</code>
-                <span :class="['dock__state', `is-${row.status}`]">{{ stateText(row.status) }}</span>
-                <span v-if="row.description" class="dock__desc">{{ row.description }}</span>
+                <span :class="['dock__state', 'pling-dock__state', `is-${row.status}`]">{{ stateText(row.status) }}</span>
+                <span v-if="row.description" class="dock__desc pling-dock__desc">{{ row.description }}</span>
               </p>
-              <pre v-if="Object.keys(row.args).length" class="dock__args">{{ showText(JSON.stringify(row.args)) }}</pre>
-              <p v-if="row.detail" class="dock__detail">{{ showText(row.detail) }}</p>
+              <pre v-if="Object.keys(row.args).length" class="dock__args pling-dock__args">{{ showText(JSON.stringify(row.args)) }}</pre>
+              <p v-if="row.detail" class="dock__detail pling-dock__detail">{{ showText(row.detail) }}</p>
             </li>
-            <li v-if="!activityRows.length" class="dock__empty">{{ t("dock.activity.empty") }}</li>
+            <li v-if="!activityRows.length" class="dock__empty pling-dock__empty">{{ t("dock.activity.empty") }}</li>
           </ol>
         </section>
 
@@ -635,11 +689,13 @@ defineExpose({ runtime, send, ask: send, say });
       <AgentChat
         v-else-if="tab === 'chat'"
         ref="transcript"
-        class="dock__chat"
+        class="dock__chat pling-dock__chat"
         :title="titleText"
         :placeholder="placeholder"
         :empty-hint="emptyHint"
         :speakers="speakers"
+        :quick="quickItems"
+        :show-header="false"
         :events="events"
         :running="running"
         :pending="pending"
@@ -656,6 +712,7 @@ defineExpose({ runtime, send, ask: send, say });
         @reply="(decision) => runtime.approvals.reply(decision)"
         @handoff="(done) => runtime.handoffs.reply(done)"
         @handoff-step="(delta) => runtime.handoffs.moveStep(delta)"
+        @quick="runQuick"
         @stop="runtime.session.cancel()"
       >
         <template #task>
@@ -668,6 +725,7 @@ defineExpose({ runtime, send, ask: send, say });
               :busy="activeGuide.state.busy ?? false"
               :error="activeGuide.state.error ?? ''"
               :completed="activeGuide.state.completed ?? false"
+              :revision="guideRevision"
               @command="runGuideCommand"
             />
           </slot>
@@ -677,8 +735,8 @@ defineExpose({ runtime, send, ask: send, say });
         </template>
       </AgentChat>
 
-      <footer v-if="!gateActive" class="dock__status">
-        <span class="dock__gate" :title="t('dock.gate.offTitle')">
+      <footer v-if="!gateActive" class="dock__status pling-dock__status">
+        <span class="dock__gate pling-dock__gate" :title="t('dock.gate.offTitle')">
           {{ t("dock.gate.off") }}
         </span>
       </footer>
@@ -686,341 +744,3 @@ defineExpose({ runtime, send, ask: send, say });
   </div>
 </template>
 
-<style>
-.pling-inline {
-  box-sizing: border-box;
-  color: var(--pling-color-text, #0f172a);
-  font-family: var(--pling-font-family, system-ui, sans-serif);
-  font-size: 14px;
-}
-.pling-inline *,
-.pling-inline *::before,
-.pling-inline *::after {
-  box-sizing: border-box;
-}
-.dock__panel {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  width: 100%;
-  height: var(--pling-inline-height, min(640px, calc(100vh - 96px)));
-  padding: 12px;
-  border: 1px solid var(--pling-color-border, #e3e8f0);
-  border-radius: var(--pling-radius-lg, 12px);
-  background: var(--pling-color-surface, #fff);
-  box-shadow: var(--pling-shadow-panel, 0 18px 40px rgb(15 23 42 / 16%));
-}
-.pling-inline--dock .dock__panel {
-  width: min(400px, calc(100vw - 48px));
-  height: min(600px, calc(100vh - 120px));
-}
-.dock__warn {
-  margin: 0;
-  padding: 8px 10px;
-  border: 1px solid var(--pling-color-warning, #9a6700);
-  border-radius: var(--pling-radius-md, 8px);
-  background: var(--pling-color-warning-soft, #fff7ed);
-  color: var(--pling-color-warning, #9a3412);
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-.dock__quick {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
-.dock__quick button {
-  min-height: 30px;
-  padding: 0 10px;
-  border: 1px solid var(--pling-color-border, #cbd5e1);
-  border-radius: 999px;
-  background: var(--pling-color-surface-muted, #f8fafc);
-  color: var(--pling-color-text-muted, #334155);
-  font-size: 12.5px;
-  cursor: pointer;
-}
-.dock__quick button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.dock__chat {
-  flex: 1;
-  min-height: 0;
-}
-.dock__nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-bottom: 1px solid var(--pling-color-border, #e3e8f0);
-}
-.dock__tabs {
-  display: flex;
-  gap: 4px;
-  min-width: 0;
-  margin: 2px 0 0;
-}
-.dock__tabs button {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: 34px;
-  padding: 5px 11px;
-  border: none;
-  border-bottom: 2px solid transparent;
-  background: none;
-  color: var(--pling-color-text-muted, #64748b);
-  font-size: 13px;
-  cursor: pointer;
-}
-.dock__tabs button.is-active {
-  border-bottom-color: var(--pling-color-primary, #2e9df7);
-  color: var(--pling-color-primary-strong, #1677c8);
-}
-.dock__badge {
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--pling-color-primary-soft, #eaf6ff);
-  color: var(--pling-color-primary-strong, #1677c8);
-  font-size: 11.5px;
-}
-.dock__badge.is-bad {
-  background: var(--pling-color-danger-soft, #fee2e2);
-  color: var(--pling-color-danger, #b91c1c);
-}
-.dock__activity {
-  margin: 0;
-  padding: 5px 4px 5px 22px;
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-.dock__run {
-  display: flex;
-  flex: 1;
-  min-height: 0;
-  flex-direction: column;
-  gap: 8px;
-  overflow: auto;
-  padding-right: 2px;
-}
-.dock__run-section {
-  flex: none;
-}
-.dock__run-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0 4px 4px;
-}
-.dock__run-label {
-  margin: 0;
-  color: var(--pling-color-text-subtle, #94a3b8);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.dock__run-toggle {
-  min-height: 26px;
-  padding: 2px 8px;
-  border: none;
-  border-radius: 999px;
-  background: none;
-  color: var(--pling-color-text-subtle, #94a3b8);
-  font: inherit;
-  font-size: 11px;
-  cursor: pointer;
-}
-.dock__run-toggle:hover,
-.dock__run-toggle.is-active {
-  background: var(--pling-color-surface-muted, #f1f5f9);
-  color: var(--pling-color-primary-strong, #1677c8);
-}
-.dock__run-toggle:focus-visible {
-  outline: 2px solid var(--pling-color-primary, #2e9df7);
-  outline-offset: 1px;
-}
-.dock__diagnostics {
-  display: flex;
-  flex: none;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  padding: 2px 4px 6px;
-  border-bottom: 1px solid var(--pling-color-border-muted, #f1f5f9);
-}
-.dock__diagnostics .dock__usage {
-  flex: 1 1 180px;
-  min-width: 0;
-  line-height: 1.45;
-}
-.dock__row {
-  margin-bottom: 8px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--pling-color-border-muted, #f1f5f9);
-}
-.dock__row:last-child {
-  border-bottom: none;
-}
-.dock__row-head {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin: 0;
-  flex-wrap: wrap;
-}
-.dock__activity code {
-  color: var(--pling-color-text, #0f172a);
-  word-break: break-all;
-}
-.dock__state {
-  color: var(--pling-color-text-muted, #64748b);
-  flex: none;
-}
-.dock__state.is-running {
-  color: var(--pling-color-primary, #2e9df7);
-}
-.dock__state.is-ok {
-  color: var(--pling-color-success, #15803d);
-}
-.dock__state.is-failed,
-.dock__state.is-blocked {
-  color: var(--pling-color-danger, #b91c1c);
-}
-.dock__desc {
-  color: var(--pling-color-text-muted, #64748b);
-}
-.dock__args {
-  margin: 2px 0 0;
-  padding: 4px 6px;
-  border-radius: 6px;
-  background: var(--pling-color-surface-muted, #f8fafc);
-  color: var(--pling-color-text-muted, #334155);
-  font-family: var(--pling-font-family-mono, ui-monospace, monospace);
-  font-size: 11.5px;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-.dock__detail {
-  margin: 2px 0 0;
-  color: var(--pling-color-text-subtle, #94a3b8);
-}
-.dock__activity .dock__empty {
-  color: var(--pling-color-text-subtle, #94a3b8);
-  list-style: none;
-  margin-left: -16px;
-  line-height: 1.6;
-}
-.dock__model {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--pling-color-surface-muted, #f8fafc);
-  color: var(--pling-color-text-muted, #64748b);
-  font-size: 11.5px;
-  max-width: 150px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.dock__model-button {
-  border: 1px solid transparent;
-  font: inherit;
-  cursor: pointer;
-}
-.dock__model-button:hover,
-.dock__model-button.is-active {
-  border-color: var(--pling-color-border, #e3e8f0);
-  background: var(--pling-color-primary-soft, #eaf6ff);
-  color: var(--pling-color-primary-strong, #1677c8);
-}
-.dock__model-button:focus-visible {
-  outline: 2px solid var(--pling-color-primary, #2e9df7);
-  outline-offset: 1px;
-}
-.dock__model-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.dock__model-caret {
-  width: 10px;
-  height: 10px;
-  flex: none;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.4;
-  transition: transform 120ms ease;
-}
-.dock__model-button.is-active .dock__model-caret {
-  transform: rotate(180deg);
-}
-.dock__model-dot {
-  width: 5px;
-  height: 5px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--pling-color-success, #22a06b);
-}
-.dock__gate {
-  color: var(--pling-color-warning, #b45309);
-  font-size: 11.5px;
-  white-space: nowrap;
-}
-.dock__actions {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: 2px;
-}
-.dock__ghost {
-  display: inline-grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 7px;
-  background: none;
-  color: var(--pling-color-text-muted, #64748b);
-  cursor: pointer;
-}
-.dock__ghost:hover {
-  background: var(--pling-color-surface-muted, #f1f5f9);
-  color: var(--pling-color-text, #0f172a);
-}
-.dock__ghost.is-active {
-  background: var(--pling-color-primary-soft, #eaf6ff);
-  color: var(--pling-color-primary-strong, #1677c8);
-}
-.dock__ghost:focus-visible {
-  outline: 2px solid var(--pling-color-primary, #2e9df7);
-  outline-offset: 1px;
-}
-.dock__icon {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.6;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.dock__status {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 8px;
-  min-height: 18px;
-}
-.dock__usage {
-  margin: 0;
-  color: var(--pling-color-text-subtle, #94a3b8);
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-}
-</style>

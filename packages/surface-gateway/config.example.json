@@ -8,13 +8,13 @@
         "http://localhost:5220",
         "http://127.0.0.1:5191",
         "http://localhost:5191",
-        "https://todo.plingjs.dev",
-        "https://plingjs.dev"
+        "https://todo.plingjs.com",
+        "https://demo.plingjs.com"
       ],
       "maxPageSessionTtlMs": 86400000,
       "maxAgentSessionTtlMs": 86400000,
       "publicDemo": {
-        "origins": ["http://127.0.0.1:5191", "http://localhost:5191", "https://plingjs.dev"],
+        "origins": ["http://127.0.0.1:5191", "http://localhost:5191", "https://demo.plingjs.com"],
         "scope": [
           "todo.overview",
           "todo.add",

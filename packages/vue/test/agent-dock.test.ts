@@ -10,10 +10,10 @@ import {
   type SessionEvent,
 } from "@plingjs/agent";
 import type { PlingUiOptions } from "@plingjs/ui";
+import { PLING_UI_STYLES } from "@plingjs/dom";
 import { createPling } from "../src/directive";
 import AgentDock from "../src/components/AgentDock.vue";
 import { PLING_PRESENCE_Z_INDEX, PLING_UI_Z_INDEX } from "../src/presence";
-import inlineSource from "../src/components/AgentInline.vue?raw";
 
 /**
  * `<AgentDock />`：一个标签接完。
@@ -83,7 +83,7 @@ function setup(options: { turns?: unknown[]; agent?: Record<string, unknown>; ui
 type AnyWrap = Pick<VueWrapper, "find" | "findAll">;
 
 const launcher = (wrapper: AnyWrap) => wrapper.find(".dock__launcher");
-const input = (wrapper: AnyWrap) => wrapper.find(".dock__chat .composer input");
+const input = (wrapper: AnyWrap) => wrapper.find(".dock__chat .composer textarea, .composer input");
 const setTab = (wrapper: AnyWrap, index: 0 | 1) => wrapper.findAll(".dock__tabs button")[index]!.trigger("click");
 
 async function say(wrapper: AnyWrap, text: string): Promise<void> {
@@ -106,7 +106,7 @@ describe("<AgentDock>：悬浮入口 + 自动接线", () => {
     expect(launcher(wrapper).text()).toContain("Ask Pling");
 
     await launcher(wrapper).trigger("click");
-    expect(wrapper.find(".dock__chat").text()).toContain("Page assistant");
+    expect(wrapper.find(".dock__chat").text()).toContain("Pling can only operate elements");
     expect(wrapper.findAll(".dock__tabs button").map((button) => button.text())).toEqual([
       "Chat",
       "Activity",
@@ -208,7 +208,7 @@ describe("<AgentDock>：悬浮入口 + 自动接线", () => {
 
     await launcher(wrapper).trigger("click");
     expect(wrapper.find(".dock__panel").exists()).toBe(true);
-    expect(wrapper.find(".dock__chat").text()).toContain("页面助手");
+    expect(wrapper.find(".dock__chat").text()).toContain("只会操作页面上已声明的元素");
 
     await wrapper.find(".dock__ghost:last-child").trigger("click");
     expect(wrapper.find(".dock__panel").exists()).toBe(false);
@@ -267,7 +267,7 @@ describe("<AgentDock>：悬浮入口 + 自动接线", () => {
     pi.ui.setTheme("dark");
     await nextTick();
     expect(pi.ui.resolvedTheme).toBe("dark");
-    expect(dock.style.getPropertyValue("--pling-color-primary")).toBe("#56b4ff");
+    expect(dock.style.getPropertyValue("--pling-color-primary")).toBe("#64b5ff");
   });
 
   it("把当前 UI 语言带进系统提示，切换语言后下一条消息立即生效", async () => {
@@ -350,9 +350,9 @@ describe("<AgentDock>：悬浮入口 + 自动接线", () => {
     await wrapper.find(".dock__quick button").trigger("click");
     await waitFor(() => onRun.mock.calls.length > 0);
     expect(onRun).toHaveBeenCalledOnce();
-    // Quick prompts are durable actions, not onboarding that vanishes after one use.
-    expect(wrapper.find(".dock__quick").exists()).toBe(true);
-    expect(wrapper.findAll(".dock__quick button").map((button) => button.text())).toEqual(["帮我保存"]);
+    // Quick prompts start the empty state, then yield to the conversation.
+    expect(wrapper.find(".dock__quick").exists()).toBe(false);
+    expect(wrapper.findAll(".dock__tabs button").map((button) => button.text())).toEqual(["Chat", "Activity 1"]);
   });
 
   it("结构化推荐任务使用短标签，但发送完整提示", async () => {
@@ -610,7 +610,7 @@ describe("<AgentDock>：悬浮入口 + 自动接线", () => {
     expect(wrapper.find(".dock__run").element.parentElement).toBe(chatParent);
     expect(wrapper.find(".dock__activity").element.parentElement?.classList.contains("dock__run-section")).toBe(true);
 
-    const panel = /\.dock__panel\s*\{[^}]*\}/.exec(inlineSource)?.[0] ?? "";
+    const panel = /\.pling-inline__panel\s*\{[^}]*\}/.exec(PLING_UI_STYLES)?.[0] ?? "";
     expect(panel).toContain("height:");
     expect(panel).not.toContain("max-height:");
   });

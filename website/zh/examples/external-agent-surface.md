@@ -13,7 +13,7 @@ locale: zh
 
 ## 线上页面
 
-直接打开 [案例 05 线上页面](https://plingjs.dev/demos/external-agent-surface/?mcp=1&lang=zh)。页面分成三个工作区：
+直接打开 [案例 05 线上页面](https://demo.plingjs.com/demos/external-agent-surface/?mcp=1&lang=zh)。页面分成三个工作区：
 
 - **Todo**：真实的业务页面，手工操作与外部 Agent 操作共用同一组数据。
 - **协议检查器**：直接发送 `describe` / `invoke`，观察外部客户端实际收到什么。
@@ -38,7 +38,7 @@ locale: zh
 export PLING_AGENT_TOKEN='页面上的 token'
 codex mcp remove pling-todo 2>/dev/null || true
 codex mcp add pling-todo \
-  --url https://surface.hunger-valley.com/mcp \
+  --url https://surface.plingjs.com/mcp \
   --bearer-token-env-var PLING_AGENT_TOKEN
 codex --no-daemon
 ```
@@ -54,7 +54,7 @@ codex --no-daemon
 export PLING_AGENT_TOKEN='页面上的 token'
 claude mcp remove pling-todo >/dev/null 2>&1 || true
 claude mcp add --transport http pling-todo \
-  https://surface.hunger-valley.com/mcp \
+  https://surface.plingjs.com/mcp \
   --header "Authorization: Bearer $PLING_AGENT_TOKEN"
 claude
 ```

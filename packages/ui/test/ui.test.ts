@@ -4,7 +4,9 @@ import {
   DARK_THEME,
   EN_US_MESSAGES,
   ERROR_MESSAGE_KEYS,
+  LEGACY_LIGHT_THEME,
   LIGHT_THEME,
+  PLAIN_LIGHT_THEME,
   createUiController,
   describePlingDiagnostic,
   describePlingError,
@@ -146,7 +148,13 @@ describe("@plingjs/ui", () => {
     expect(resolveTheme({ mode: "light", tokens: { colorPrimary: "#123456" } }).cssVars["--pling-color-primary"]).toBe(
       "#123456",
     );
-    expect(themeCssVars(LIGHT_THEME)["--pling-radius-lg"]).toBe("12px");
+    expect(themeCssVars(LIGHT_THEME)["--pling-radius-lg"]).toBe("14px");
+  });
+
+  it("defaults to the plain surface and can restore the legacy palette", () => {
+    expect(LIGHT_THEME).toEqual(PLAIN_LIGHT_THEME);
+    expect(resolveTheme(undefined).tokens).toEqual(PLAIN_LIGHT_THEME);
+    expect(resolveTheme({ preset: "legacy" }).tokens).toEqual(LEGACY_LIGHT_THEME);
   });
 
   it("shares one snapshot and only notifies on real changes", () => {

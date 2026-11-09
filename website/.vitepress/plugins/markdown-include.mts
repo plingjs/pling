@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { tutorialRunnerMarkdown } from "../../../scripts/lib/tutorial-previews.mjs";
+import { PUBLIC_DEMO_ORIGIN, tutorialRunnerMarkdown } from "../../../scripts/lib/tutorial-previews.mjs";
 
 const tutorialRegistry = JSON.parse(
   readFileSync(new URL("../../../examples/tutorials/registry.json", import.meta.url), "utf8"),
@@ -51,10 +51,16 @@ export function markdownIncludePlugin() {
  * Keeping this at the wrapper level means all 65 fixtures stay in sync without
  * duplicating links in the English and Chinese source Markdown.
  */
-export function tutorialPreviewPlugin() {
+export function tutorialPreviewPlugin(options: { demoOrigin?: string } = {}) {
+  let demoOrigin = options.demoOrigin?.trim() || process.env.PLING_DEMO_ORIGIN?.trim() || "";
   return {
     name: "pling-tutorial-preview",
     enforce: "pre" as const,
+    configResolved(config: { command: string }) {
+      if (!demoOrigin) {
+        demoOrigin = config.command === "serve" ? "http://localhost:5191" : PUBLIC_DEMO_ORIGIN;
+      }
+    },
     transform(code: string, id: string) {
       if (!id.endsWith(".md")) return;
       if (code.includes('class="tutorial-runner"')) return;
@@ -67,7 +73,7 @@ export function tutorialPreviewPlugin() {
       if (!heading?.index && heading?.index !== 0) return;
       const afterHeading = heading.index + heading[0].length;
       const locale = frontmatterValue(code, "locale") === "zh" ? "zh" : "en";
-      const runner = tutorialRunnerMarkdown(previewId, locale, tutorialRegistry[previewId]?.dir);
+      const runner = tutorialRunnerMarkdown(previewId, locale, tutorialRegistry[previewId]?.dir, demoOrigin);
       return `${code.slice(0, afterHeading)}\n\n${runner}\n${code.slice(afterHeading)}`;
     },
   };

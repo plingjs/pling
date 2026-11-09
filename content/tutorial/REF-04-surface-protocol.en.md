@@ -164,7 +164,7 @@ const response = await surface.handle({
 });
 ```
 
-The adapter around this call still owns authentication, HTTP, SSE, CORS, body limits, and response redaction. `surface.plingjs.dev` is a demonstration endpoint, not a shared proxy for customer applications.
+The adapter around this call still owns authentication, HTTP, SSE, CORS, body limits, and response redaction. `surface.plingjs.com` is a demonstration endpoint, not a shared proxy for customer applications.
 
 ## Deliberate omissions
 

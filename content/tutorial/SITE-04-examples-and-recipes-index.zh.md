@@ -11,14 +11,15 @@ status: drafted
 
 示例展示完整应用，任务方案处理可复用的界面边界。两者现在都以可运行页面为准：每篇方案都有自己的页面、源码、启动路径和验证步骤，不再把多个问题引向同一个演示。
 
-## 六个经典案例
+## 经典案例与对照示例
 
 - [案例01：待办事项](/zh/examples/quickstart)覆盖新增、完成、编辑、筛选与清理。
 - [案例02：订单工作台](/zh/examples/orders)覆盖业务队列、记录、行级动作与确认。
 - [案例03：单页多路由工作台](/zh/examples/vue3-spa-routing)在客户端路由切换后继续任务。
 - [案例04：多页工作台](/zh/examples/multi-page-continuity)跨完整 document 导航继续任务。
 - [案例05：暴露能力给外部](/zh/examples/external-agent-surface)把具名能力暴露给页面之外的 Agent。
-- [案例06：引导任务创建课程](/zh/examples/course-workspace-vue3)在一个真实页面里完成“创建课程”，长推荐不撑宽按钮，助手只追问真正的缺口。
+- [案例06：持久目标创建课程](/zh/examples/course-workspace-vue3)在同一张课程页面上加一个目标。助手自己打开真实弹窗、操作真实控件、请用户上传封面，保存并回读课程库。
+- [案例07：只用指令创建课程](/zh/examples/course-create-directives-vue3)用 `v-scope`、`v-record`、`v-tool` 完成同样的创建流程，不引入任务层。适合一张稳定的单页表单。
 
 每个案例页都提供可操作预览、带标记的源码与接入说明。模型请求通过服务端网关发出，浏览器不持有供应商密钥。
 

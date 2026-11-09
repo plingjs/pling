@@ -54,12 +54,11 @@ The shell exposes only presentation choices. It does not change what the agent c
 
 ## Use a sidebar when the page has a natural work column
 
-For a dense workspace, a side panel can make the assistant feel like part of the application rather than an overlay. The sidebar has two modes: `overlay` stays above the page, while `fused` becomes a real grid column with its own space.
+For a dense workspace, a side panel can make the assistant feel like part of the application rather than an overlay. The sidebar defaults to `fused`: when open, it becomes a real grid column with its own space. Choose `overlay` explicitly only when the assistant should cover the page.
 
-```vue{4-8}
+```vue
 <AgentDock
   layout="sidebar"
-  sidebar-mode="overlay"
   side="right"
   launcher-placement="bottom"
   launcher-label="Ask Pling"
@@ -67,18 +66,20 @@ For a dense workspace, a side panel can make the assistant feel like part of the
 />
 ```
 
+This example uses the default fused mode. Add `sidebar-mode="overlay"` only when temporary coverage is the intended behavior.
+
 The supported presentation props are:
 
 | Prop | Values | Effect |
 | --- | --- | --- |
 | `layout` | `"dock"` or `"sidebar"` | Floating corner or viewport edge |
-| `sidebar-mode` | `"overlay"` or `"fused"` | Cover the page or join its grid |
+| `sidebar-mode` | `"overlay"` or `"fused"` | Cover the page or join its grid; defaults to `fused` |
 | `side` | `"right"` or `"left"` | Edge used by the sidebar layout |
 | `launcher-placement` | `"bottom"` or `"center"` | Position of the collapsed launcher |
 | `launcher-label` | string | Visible text on the collapsed launcher |
 | `default-open` | boolean | Whether the shell begins open |
 
-`side`, `sidebar-mode`, `launcher-placement`, and `launcher-label` do not apply to the floating dock. `launcher-placement` only affects overlay mode; a fused sidebar has no launcher floating outside the page grid. Keeping the surface variants in one component means an application can remember a user's preference and switch shells at runtime without rebuilding the conversation.
+`side`, `sidebar-mode`, `launcher-placement`, and `launcher-label` do not apply to the floating dock. `launcher-placement` only affects overlay mode; a fused sidebar uses a fixed bottom-right launcher while collapsed, then joins the page grid when opened. Keeping the surface variants in one component means an application can remember a user's preference and switch shells at runtime without rebuilding the conversation.
 
 Fused mode expects the application to provide a column. `AgentDock` still owns the open state, launcher, and the one conversation history:
 
@@ -102,7 +103,7 @@ Fused mode expects the application to provide a column. `AgentDock` still owns t
 }
 ```
 
-Use `fused` when the assistant should keep its launcher and collapse behavior, but must not cover a table or editor when open. On narrow screens the component falls back to a floating panel so the working area does not collapse into a sliver.
+`fused` is the default: the assistant keeps its launcher and collapse behavior, but does not cover a table or editor when open. On narrow screens the component falls back to a floating panel so the working area does not collapse into a sliver. Use `overlay` only when covering the business content is acceptable.
 
 An application that needs its own grid can mount `AgentInline` in a column:
 

@@ -76,7 +76,7 @@ For a gradual release, run the new build under the old capability scope with rea
 - Cross-origin iframe runtimes do not share in-memory objects; they require an explicit transport.
 - The reference delegation and continuity packages do not provide a production database, Redis, SSO, or complete audit archive.
 - In-memory adapters under `*/testing` are for tests and local reference only.
-- `surface.plingjs.dev` is an official demonstration endpoint, not a multi-tenant customer gateway.
+- `surface.plingjs.com` is an official demonstration endpoint, not a multi-tenant customer gateway.
 - There is currently no public third-party Surface conformance suite or certification mark.
 
 ## Release records

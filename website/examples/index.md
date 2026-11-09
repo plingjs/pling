@@ -15,11 +15,11 @@ Open a live example first, then read its integration guide and source. The guide
 
 The public demos send model requests through a server-side gateway. The browser receives a same-origin endpoint and a model name; provider credentials stay on the server.
 
-Every tutorial chapter also has a complete runnable page. To inspect the result before reading the code, open the <a href="/demos/tutorials/" target="_blank" rel="noopener noreferrer">chapter preview gallery</a>. Each tutorial page repeats its own live preview and local command at the top.
+Every tutorial chapter also has a complete runnable page. To inspect the result before reading the code, open the <a href="https://demo.plingjs.com/demos/tutorials/" target="_blank" rel="noopener noreferrer">chapter preview gallery</a>. Each tutorial page repeats its own live preview and local command at the top.
 
-## Six classic examples
+## Classic examples and one comparison
 
-These six cover the product from different angles: the smallest working integration, a business workspace, a task that crosses client-side routes, a task that survives a full page navigation, a capability surface for an agent outside the page, and a guided task that completes a real create flow.
+The first six cover the product from different angles: the smallest working integration, a business workspace, a task that crosses client-side routes, a task that survives a full page navigation, a capability surface for an agent outside the page, and a guided task that completes a real create flow. The seventh rebuilds that same create flow with nothing but `v-scope`, `v-record`, and `v-tool`, so the trade-off is visible side by side.
 
 <DemoGallery />
 

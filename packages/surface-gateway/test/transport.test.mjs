@@ -6,7 +6,7 @@ import { normalizeConfig } from "../src/config.mjs";
 import { createSurfaceServer } from "../src/server.mjs";
 
 const ORIGIN = "https://demo.example";
-const PUBLIC_DEMO_ORIGIN = "https://plingjs.dev";
+const PUBLIC_DEMO_ORIGIN = "https://demo.plingjs.com";
 const ADMIN = "transport-admin-token";
 
 async function startServer(options = {}) {

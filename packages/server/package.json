@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/server",
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.9",
   "private": false,
   "type": "module",
   "description": "Thin Node layer for Pling: OpenAI-compatible proxy, server-side keys, auth hooks, and audit.",

@@ -77,8 +77,7 @@ describe("React agent surfaces", () => {
     expect(dock.getAttribute("data-side")).toBe("left");
     expect(document.querySelector(".pling-dock__panel")).not.toBeNull();
 
-    await click([...document.querySelectorAll<HTMLButtonElement>(".pling-dock__ghost")]
-      .find((button) => button.textContent?.includes("Collapse")) ?? null);
+    await click(document.querySelector<HTMLButtonElement>('.pling-dock__ghost[aria-label="Collapse"]'));
     expect(document.querySelector<HTMLButtonElement>(".pling-dock__launcher")!.textContent)
       .toContain("Open copilot");
   });
@@ -102,7 +101,7 @@ describe("React agent surfaces", () => {
     expect(document.querySelectorAll(".pling-dock")).toHaveLength(1);
   });
 
-  it("keeps overlay as the sidebar default", async () => {
+  it("uses fused as the sidebar default", async () => {
     const pling = setup();
     await render(
       <PlingProvider pling={pling}>
@@ -111,8 +110,8 @@ describe("React agent surfaces", () => {
     );
 
     const dock = document.querySelector(".pling-dock")!;
-    expect(dock.getAttribute("data-sidebar-mode")).toBe("overlay");
-    expect(dock.classList).not.toContain("pling-dock--fused");
+    expect(dock.getAttribute("data-sidebar-mode")).toBe("fused");
+    expect(dock.classList).toContain("pling-dock--fused");
   });
 
   it("routes pling.ask into the mounted dock and expands it", async () => {

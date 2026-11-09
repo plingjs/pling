@@ -62,7 +62,8 @@ function taskTexts(): Array<string | null> {
 async function fillDraft(text: string): Promise<void> {
   const input = document.querySelector<HTMLInputElement>("#new-task");
   if (!input) throw new Error("待办输入框不存在");
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, "value")!.set!;
   await act(async () => {
     setter.call(input, text);
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -95,10 +96,11 @@ async function waitFor(read: () => boolean, timeoutMs = 2_000): Promise<void> {
 }
 
 async function say(text: string): Promise<void> {
-  const input = document.querySelector<HTMLInputElement>(".pling-chat__composer input");
+  const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(".pling-chat__composer textarea, .pling-chat__composer input");
   const form = document.querySelector<HTMLFormElement>(".pling-chat__composer");
   if (!input || !form) throw new Error("聊天输入框不存在");
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  const prototype = input instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, "value")!.set!;
   await act(async () => {
     setter.call(input, text);
     input.dispatchEvent(new Event("input", { bubbles: true }));

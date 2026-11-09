@@ -129,7 +129,25 @@ for (const entry of allow) {
   if ((await stat(source)).isDirectory()) await collectExportedFiles(source, expectedFiles);
   else expectedFiles.push(entry);
 }
-const unexported = expectedFiles.filter((file) => !existsSync(join(target, file)));
+const missingExports = () => expectedFiles.filter((file) => !existsSync(join(target, file)));
+
+// copyFile() on macOS has intermittently reported success while leaving a file
+// absent (observed for package READMEs and tutorial pages). Retry every missing
+// entry from the verified source tree before failing the export.
+async function repairMissingExports() {
+  let unexported = missingExports();
+  for (let attempt = 0; unexported.length && attempt < 2; attempt += 1) {
+    for (const file of unexported) {
+      const source = join(root, file);
+      if (!existsSync(source)) continue;
+      await copyTree(source, join(target, file));
+    }
+    unexported = missingExports();
+  }
+  return unexported;
+}
+
+let unexported = await repairMissingExports();
 if (unexported.length) {
   throw new Error(`公开导出不完整（${unexported.length} 个文件缺失）：${unexported.slice(0, 20).join(", ")}`);
 }
@@ -180,6 +198,14 @@ execFileSync("pnpm", ["install", "--lockfile-only", "--ignore-scripts"], {
   cwd: target,
   stdio: "inherit",
 });
+
+// Some pnpm versions on macOS prune package-level files while regenerating the
+// public lockfile. Re-verify after install so the exported tree is still exactly
+// the verified source snapshot.
+unexported = await repairMissingExports();
+if (unexported.length) {
+  throw new Error(`公开导出在安装后不完整（${unexported.length} 个文件缺失）：${unexported.slice(0, 20).join(", ")}`);
+}
 
 const requiredFiles = [
   ".dockerignore",

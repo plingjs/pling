@@ -51,7 +51,7 @@ The important shared property is that changing the shell does not recreate the r
 
 ## Floating dock and sidebar
 
-The example keeps the floating entrance and also allows an edge sidebar. The sidebar can either `overlay` the page or use `fused` mode to become a grid column:
+The example keeps the floating entrance and also allows an edge sidebar. The sidebar defaults to `fused` so it becomes a grid column; choose `overlay` explicitly only when the assistant should cover the page:
 
 ```tsx{4-8}
 <AgentDock
@@ -71,13 +71,13 @@ The placement props are:
 | Prop | Values | Effect |
 | --- | --- | --- |
 | `layout` | `"dock"` / `"sidebar"` | A floating corner or a viewport-edge work surface |
-| `sidebarMode` | `"overlay"` / `"fused"` | Cover the page or join its grid |
+| `sidebarMode` | `"overlay"` / `"fused"` | Cover the page or join its grid; defaults to `fused` |
 | `side` | `"right"` / `"left"` | Which viewport edge the sidebar uses |
 | `launcherPlacement` | `"bottom"` / `"center"` | A bottom-corner launcher or a centered edge tab while collapsed |
 | `launcherLabel` | string | Copy for the collapsed launcher; defaults to the localized “Ask Pling” |
 | `surfaceId` | string | Stable task-routing identifier; defaults to `"dock"` |
 
-`side`, `sidebarMode`, `launcherPlacement`, and `launcherLabel` only apply to the sidebar layout. `launcherPlacement` only affects overlay mode. Layout can follow a user preference or viewport change without unmounting and remounting the assistant.
+`side`, `sidebarMode`, `launcherPlacement`, and `launcherLabel` only apply to the sidebar layout. `launcherPlacement` only affects overlay mode; a fused sidebar uses a fixed bottom-right launcher while collapsed. Layout can follow a user preference or viewport change without unmounting and remounting the assistant.
 
 Fused mode expects the application to provide a column. `AgentDock` still owns the open state, launcher, and one conversation history:
 
@@ -101,7 +101,7 @@ Fused mode expects the application to provide a column. `AgentDock` still owns t
 }
 ```
 
-Use `fused` when a table, editor, or dashboard must remain visible while the assistant is open. Keep `overlay` when temporary coverage is acceptable. On narrow screens, the component returns to a floating panel.
+`fused` is the default: a table, editor, or dashboard remains visible while the assistant is open. Choose `overlay` explicitly only when temporary coverage is acceptable. On narrow screens, the component returns to a floating panel.
 
 On narrow screens the sidebar degrades to a floating panel. A full-height sidebar would leave no usable work area on a phone. Keeping the entrance and changing its form is more useful than preserving a desktop layout at all costs. The component owns that fallback; application code does not need a separate mobile branch.
 

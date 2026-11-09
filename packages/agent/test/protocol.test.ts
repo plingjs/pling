@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ActionView, JsonSchema } from "@plingjs/core";
-import { buildProtocol, toolNameOf } from "../src/protocol";
+import { buildProtocol, PLING_LOCATE_TOOL, toolNameOf } from "../src/protocol";
 import { snapshotOf, type FakeAction } from "./helpers";
 
 const action = (id: string, extra: Partial<ActionView> = {}): ActionView => ({
@@ -122,7 +122,24 @@ describe("模型协议层：id ↔ function name", () => {
     // 注册表不允许重复 id，这里直接造快照：测的是协议层对重复项的去重
     const snapshot = snapshotOf([]);
     const protocol = buildProtocol({ ...snapshot, actions: [action("dup"), action("dup")] });
-    expect(protocol.tools).toHaveLength(1);
+    expect(protocol.tools.filter((tool) => tool.function.name === "dup")).toHaveLength(1);
+    expect(protocol.tools).toContainEqual(PLING_LOCATE_TOOL);
+  });
+
+  it("有动作时附带只读定位工具；没有动作时不出现", () => {
+    const withAction = buildProtocol(snapshotOf([action("upload_cover")]));
+    const locate = withAction.tools.find((tool) => tool.function.name === "pling_locate");
+    expect(locate).toEqual(PLING_LOCATE_TOOL);
+    expect(locate?.function.description).toContain("without executing it");
+    expect(withAction.nameToId.has("pling_locate")).toBe(false);
+
+    expect(buildProtocol(snapshotOf([])).tools).toEqual([]);
+  });
+
+  it("页面动作叫 pling_locate 时让出内建工具名，但原动作仍可执行", () => {
+    const protocol = buildProtocol(snapshotOf([action("pling_locate")]));
+    expect(protocol.tools.map((tool) => tool.function.name)).toEqual(["pling_locate_2", "pling_locate"]);
+    expect(protocol.nameToId.get("pling_locate_2")).toBe("pling_locate");
   });
 
   it("同类行内动作折叠成一个带 record 参数的工具（S2b）", () => {
@@ -149,7 +166,7 @@ describe("模型协议层：id ↔ function name", () => {
     expect(remove.function.description).toContain("Row actions of the same type are folded into one");
 
     // 每行一个 id 的旧清单没有了；但成员的原名仍然可解析（同一个动作，不是一个新动作）
-    expect(protocol.tools.map((tool) => tool.function.name).sort()).toEqual(["remove", "reorder"]);
+    expect(protocol.tools.map((tool) => tool.function.name).sort()).toEqual(["pling_locate", "remove", "reorder"]);
     expect(protocol.nameToId.get("remove_t1")).toBe("remove@t1");
     expect(protocol.idToName.get("remove@t1")).toBe("remove");
     expect(protocol.templates.get("remove")!.template).toBe("remove@");
@@ -157,7 +174,7 @@ describe("模型协议层：id ↔ function name", () => {
 
   it("只有一条的行内动作不折叠：`remove@t1` 比 `remove { record }` 更短", () => {
     const protocol = buildProtocol(snapshotOf([action("remove@t1")], [{ id: "t1" }]));
-    expect(protocol.tools.map((tool) => tool.function.name)).toEqual(["remove_t1"]);
+    expect(protocol.tools.map((tool) => tool.function.name)).toEqual(["remove_t1", "pling_locate"]);
     expect(protocol.templates.size).toBe(0);
   });
 
@@ -189,7 +206,7 @@ describe("模型协议层：id ↔ function name", () => {
         [{ id: "t1" }, { id: "t2" }],
       ),
     );
-    expect(protocol.tools.map((tool) => tool.function.name)).toEqual(["remove"]);
+    expect(protocol.tools.map((tool) => tool.function.name)).toEqual(["remove", "pling_locate"]);
     expect(protocol.nameToId.get("remove_t1")).toBe("remove@t1");
     expect(protocol.nameToId.get("remove_t2")).toBe("remove@t2");
   });
@@ -198,6 +215,6 @@ describe("模型协议层：id ↔ function name", () => {
     const protocol = buildProtocol(
       snapshotOf([action("send@email"), action("send@wechat")], [{ id: "t1" }]),
     );
-    expect(protocol.tools.map((tool) => tool.function.name).sort()).toEqual(["send_email", "send_wechat"]);
+    expect(protocol.tools.map((tool) => tool.function.name).sort()).toEqual(["pling_locate", "send_email", "send_wechat"]);
   });
 });

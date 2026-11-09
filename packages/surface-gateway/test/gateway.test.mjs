@@ -4,7 +4,7 @@ import { normalizeConfig } from "../src/config.mjs";
 import { createSurfaceGateway } from "../src/gateway.mjs";
 
 const ORIGIN = "https://demo.example";
-const PUBLIC_DEMO_ORIGIN = "https://plingjs.dev";
+const PUBLIC_DEMO_ORIGIN = "https://demo.plingjs.com";
 const ADMIN = "admin-token-for-tests";
 
 class MockSocket {

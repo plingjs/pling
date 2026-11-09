@@ -46,7 +46,7 @@ clear_completed
 | 企业 Gateway | 应用所有者 | 租户 allowlist、身份集成、审计存储 |
 | 客户 BFF | 应用后端 | 用户会话、业务数据、页面会话创建 |
 
-`surface.plingjs.dev` 是官方演示端点，不是客户应用共用的代理。企业应在自己控制的源上部署 `@plingjs/surface-gateway`，例如 `surface.example.com`，并由自己的后端创建页面会话。
+`surface.plingjs.com` 是官方演示端点，不是客户应用共用的代理。企业应在自己控制的源上部署 `@plingjs/surface-gateway`，例如 `surface.example.com`，并由自己的后端创建页面会话。
 
 Gateway 配置中的租户 Origin 列表不是认证。它只回答一个更窄的问题：哪些浏览器源可以为该租户打开 WebSocket。
 
@@ -168,8 +168,8 @@ pling_surface_approval_status
 公开演示使用独立主机：
 
 ```text
-https://todo.plingjs.dev     应用页面与 BFF
-https://surface.plingjs.dev  官方演示 Gateway
+https://todo.plingjs.com     应用页面与 BFF
+https://surface.plingjs.com  官方演示 Gateway
 ```
 
 企业部署对应为：

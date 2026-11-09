@@ -170,9 +170,47 @@ describe("guided task renderer", () => {
     expect(guide.element.querySelector(".pling-guide__rail-item.is-filled .pling-guide__rail-dot")?.textContent).toBe("✓");
     expect(guide.element.querySelector(".pling-guide__rail-item.is-suggested")).not.toBeNull();
 
-    guide.element.querySelector<HTMLButtonElement>('.pling-guide__rail-item[data-field="note"] button')!.click();
+    guide.element.querySelector<HTMLButtonElement>('.pling-guide__rail-item[data-guide-field="note"] button')!.click();
     expect(commands).toHaveBeenCalledWith(expect.objectContaining({
       action: expect.objectContaining({ command: "focus-note" }),
+    }));
+
+    guide.destroy();
+  });
+
+  it("can keep task status and actions without rendering the field rail", () => {
+    const commands = vi.fn();
+    const guide = createTaskGuide({
+      definition: {
+        ...definition,
+        compact: true,
+        cancel: { label: "Cancel task", command: "cancel-task" },
+        fields: [
+          { field: "name", label: "Name", required: true, filled: true },
+          { field: "cover", label: "Cover", required: true },
+        ],
+      },
+      onCommand: commands,
+    });
+    document.body.append(guide.element);
+
+    expect(guide.element.classList.contains("pling-guide--compact")).toBe(true);
+    expect(guide.element.querySelector(".pling-guide__rail")).toBeNull();
+    expect(guide.element.querySelector(".pling-guide__body")).toBeNull();
+    expect(guide.element.textContent).toContain("Create a record");
+    expect(guide.element.textContent).toContain("In progress");
+
+    guide.element.querySelector<HTMLButtonElement>(".pling-guide__cancel")!.click();
+    expect(commands).toHaveBeenCalledWith(expect.objectContaining({
+      action: expect.objectContaining({ command: "cancel-task" }),
+    }));
+
+    guide.complete();
+    expect(guide.element.textContent).toContain("Record created");
+    guide.element.querySelector<HTMLButtonElement>(".pling-guide__compact-actions button")!.click();
+    expect(commands).toHaveBeenCalledWith(expect.objectContaining({
+      action: expect.objectContaining({ command: "view-record" }),
+      done: true,
     }));
 
     guide.destroy();
@@ -193,12 +231,47 @@ describe("guided task renderer", () => {
     });
     document.body.append(guide.element);
 
-    const skipped = guide.element.querySelector('.pling-guide__rail-item[data-field="note"]');
-    const current = guide.element.querySelector('.pling-guide__rail-item[data-field="cover"]');
+    const skipped = guide.element.querySelector('.pling-guide__rail-item[data-guide-field="note"]');
+    const current = guide.element.querySelector('.pling-guide__rail-item[data-guide-field="cover"]');
     expect(skipped?.classList.contains("is-skipped")).toBe(true);
     expect(skipped?.querySelector(".pling-guide__rail-dot")?.textContent).toBe("–");
     expect(skipped?.textContent).toContain("Skipped");
     expect(current?.classList.contains("is-current")).toBe(true);
+
+    guide.destroy();
+  });
+
+  it("keeps result actions available after a rail guide completes", () => {
+    const commands = vi.fn();
+    const guide = createTaskGuide({
+      definition: {
+        ...definition,
+        fields: [
+          { field: "name", label: "Name", required: true, filled: true },
+          { field: "cover", label: "Cover", required: true, filled: true },
+        ],
+        done: {
+          title: "Record created",
+          description: "Read back from the page.",
+          actions: [
+            { label: "View record", command: "view-record" },
+            { label: "Create another", command: "restart" },
+          ],
+        },
+      },
+      onCommand: commands,
+    });
+    document.body.append(guide.element);
+
+    guide.complete();
+
+    const actions = [...guide.element.querySelectorAll<HTMLButtonElement>(".pling-guide__rail-actions button")];
+    expect(actions.map((action) => action.textContent)).toEqual(["View record", "Create another"]);
+    actions[1]!.click();
+    expect(commands).toHaveBeenCalledWith(expect.objectContaining({
+      action: expect.objectContaining({ command: "restart" }),
+      done: true,
+    }));
 
     guide.destroy();
   });

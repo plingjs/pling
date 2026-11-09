@@ -58,7 +58,7 @@ The word “gateway” can hide three different responsibilities. Keep them sepa
 | Enterprise Gateway | the application owner | tenant allowlists, identity integration, audit storage |
 | Customer BFF | the application backend | user sessions, application data, page-session creation |
 
-`surface.plingjs.dev` is the official demonstration endpoint. It is not a shared
+`surface.plingjs.com` is the official demonstration endpoint. It is not a shared
 proxy for customer applications. An enterprise deploys
 `@plingjs/surface-gateway` at an origin it controls, such as
 `surface.example.com`, and creates page sessions from its own backend.
@@ -216,8 +216,8 @@ correlation.
 For a public demonstration, use dedicated hosts:
 
 ```text
-https://todo.plingjs.dev     application page and BFF
-https://surface.plingjs.dev  official demo Gateway
+https://todo.plingjs.com     application page and BFF
+https://surface.plingjs.com  official demo Gateway
 ```
 
 For an enterprise, the corresponding shape is:

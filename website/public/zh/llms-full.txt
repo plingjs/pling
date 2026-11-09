@@ -2218,205 +2218,268 @@ Canonical: https://plingjs.dev/zh/concepts/projection-shadow-dom-and-iframes
 
 Canonical: https://plingjs.dev/zh/concepts/tasks-references-and-guided-execution
 
-一个空白聊天框，要求用户先学会怎么提问；而应用本身还没有告诉用户它能做什么。对预约台、管理后台或客服队列来说，这不是好的起点。用户通常知道自己要完成什么，但不知道提示词、动作 id，也不知道客户记录背后的数据库主键。
+一个空白聊天框要求用户先学会怎么提问。应用本身还没有告诉用户它能做什么。对预约台、管理后台或客服队列来说，这不是好的起点。
 
-引导任务把“结果”变成**目标 + 约束 + 工作记忆**：应用给出任务名称、完成条件与边界，只询问此刻仍缺失或必须由人决定的内容，解析学员、课程等引用，最后说明发生了什么。确定性的业务写入仍可使用有序步骤，但对话不是逐字段脚本；助手要结合同一份任务状态处理问题、修正、委托选择和异常。
+用户通常知道自己要完成什么，但不知道提示词、动作 id，也不知道客户记录背后的数据库主键。引导任务把“结果”变成**目标 + 约束 + 工作记忆**：应用说明要达成什么、哪些边界不能越过、怎样算完成，助手再结合当前页面决定这一轮该回答、追问、执行，还是停下来等人。
 
-## 为什么任务层要独立于 Agent 循环
+## 先判断是否需要任务层
 
-Agent 循环根据上下文决定下一步。日常业务任务不应该每次重新发明，但也不应该退化成“下一个字段”。应用声明目标、约束、成功判据和真正需要人决定的字段；模型把这份状态当作工作记忆，再决定这一轮该回答、追问、更新一个值、暂停，还是先不动任务。
+一张短表单通常不需要任务层。页面用 `v-scope`、`v-record` 和 `v-tool` 声明区域、草稿和动作，助手就能理解一句话、操作真实控件并核对结果。这样接入最少，也最接近原有业务代码。
 
-任务层还提供了聊天记录无法替代的东西：稳定的入口列表。新员工不需要先学会提示词，就能看到“查学员会员卡”或“排一节课”。
+任务层解决另一类问题：
 
-但“有任务”不等于“任务一直出现”。真实页面里，任务是否可用取决于路由、弹窗、选中行和用户权限。把这些判断塞进每个组件，很快会出现两套事实：页面一套，助手一套。任务目录（task catalog）负责把这层判断集中起来。
+- 流程跨多个页面，需要保留进度；
+- 弹窗关闭或路由切换后，任务还要继续；
+- 任务要从固定入口反复启动；
+- 多个步骤必须共用一份工作记忆；
+- 外部 Agent 需要一份可审计的任务说明和完成边界。
 
-### 任务目录负责“此刻能做什么”
+只有出现这些条件，才值得增加任务声明。
 
-页面用 `pling.task.define()` 注册一个任务，并声明它的上下文：
+| 场景 | 推荐做法 |
+| --- | --- |
+| 一页内完成，字段稳定，保存路径单一 | `v-scope` + `v-record` + `v-tool` |
+| 弹窗关闭后结果还要继续存在 | 加一个 `pling.task.goal()` |
+| 任务跨路由、需要取消和完成记录 | `pling.task.goal()` |
+| 外部 Agent 要复用同一份 playbook | `pling.task.goal()` |
+| 字段需要校验、查找、固定多步执行 | 进阶 `TaskDefinition` + `TaskController` |
+
+这张表的第一列不是“能力从低到高”。它是接入成本从低到高。能用页面动作说清楚的事，不要写进任务定义。
+
+## 目标回答页面回答不了的问题
+
+页面动作能说明“这个按钮做什么”“这个输入框接收什么值”。它说不清“这件事在弹窗关闭后还算不算数”。
+
+一个目标只包含：
 
 ```ts
-pling.task.define({
-  definition: courseTask,
-  guide: courseGuide,
-  controller,
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口，不要另造表单。",
+    "封面必须由用户亲自上传。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "名称、老师、可用卡和封面与用户确认的一致",
+  ],
+});
+```
+
+没有字段表，没有步骤数组，没有执行回调。字段从真实页面读，执行走真实动作。
+
+目标解决四件事：
+
+1. **连续性**：显式启动后，弹窗关闭或区域消失，目标仍然 active。
+2. **可用范围**：`route` 和 `scope` 决定目标从哪里能开始。
+3. **生命周期**：用户可以取消，模型可以在成功条件满足后标记完成。
+4. **外部说明**：Surface 可以拿到同一份目标、约束和成功条件。
+
+目标不解决权限。每条动作仍然经过自己的风险、确认、作用域和审计。目标也不执行保存。保存永远是页面自己的动作。
+
+## 任务目录负责“此刻能做什么”
+
+页面用 `pling.task.goal()` 或 `pling.task.define()` 注册任务。任务目录（task catalog）负责判断当前上下文里哪些任务可用，同一时刻只激活一个。
+
+```ts
+pling.task.goal({
+  ...courseGoal,
   route: "/courses",
-  scope: "create-course-form",
-  autoStart: true,
-  onCommand,
+  scope: "course-catalogue",
 });
 ```
 
 - `route`：只在当前路由匹配时可用；
-- `scope`：只有某个区域或弹窗存在时可用；
-- `autoStart`：上下文匹配时自动展示引导；
-- 省略二者表示全局任务，但仍要由页面或助手显式开启。
+- `scope`：只有某个区域存在时可用；
+- `keepActive`：显式启动后，短暂离开上下文是否保留；
+- 省略路由和作用域表示全页面可用，但仍要由人或模型显式启动。
 
-任务目录只保存注册信息和当前 active guide，不执行任务。真正的写入仍然交给 `controller`，再由现有执行器处理。
+把可用性判断放在目录里，页面和助手就不需要各维护一套。页面负责渲染真实控件，目录负责“这个任务现在能不能开始”，执行器负责“这条动作能不能执行”。
 
-### 助手可以从清单中选择，但不能发明任务
+## 助手可以从清单中选择，但不能发明任务
 
-模型每轮会拿到当前可用任务、字段和步骤摘要。用户说“帮我新建一门瑜伽课”时，模型可以调用一个窄动作 `pling_start_task`：
+模型每轮会拿到当前可用的目标或任务。用户说“帮我新建一门瑜伽课”时，模型可以调用窄动作 `pling_start_task`：
 
 ```json
 {
-  "task": "course.create",
-  "values": { "name": "瑜伽基础", "teacherId": "teacher_zhoumin" }
+  "task": "course.create"
 }
 ```
 
-这条动作只接受当前可用的任务 id；`values` 也只能包含该任务声明过的字段。未知 id 或未知字段直接返回 `INVALID_ARGS`。传入值只是预填一次任务运行，不会跳过动作自己的权限、确认和审计。
+这条动作只接受当前可用的任务 id。未知 id 直接返回 `INVALID_ARGS`。模型不能临时拼出一个不存在的工作流，也不能绕过动作自己的权限。
 
-因此，现在支持的是“助手从已注册任务中创建一次运行”。任务激活后，模型还可以通过独立的 `pling_update_task` 动作更新这次运行的工作记忆。它只能写当前任务、声明过且允许 Agent 写入的字段，不会直接执行业务写入；页面可以订阅运行快照，把变化同步回原表单。以后若要让助手组合出新的流程，也必须先把任务模板注册进来，经过校验和用户确认，再进入同一个目录；不能让模型直接拼动作序列。
+目标启动后，模型还可以看到一个完成动作 `pling_complete_task`。它只在成功条件满足时调用，只关闭目标，不写业务数据。
 
-三条边界需要同时成立：
+如果任务是进阶定义，模型还可能看到 `pling_update_task`、`pling_focus_field`、`pling_review_task`、`pling_propose_save` 和 `pling_cancel_task`。这些动作由任务声明决定，不是默认全部开放。
 
-| 层 | 负责 | 不能负责 |
+三条边界同时成立：
+
+| 层 | 负责 | 不负责 |
 | --- | --- | --- |
-| 应用任务定义 | 目标、约束、成功判据、字段、查找来源、确定性步骤 | DOM 选择器或模型传输 |
-| 任务运行 | 已填字段、进度、错误、取消 | 第二套权限系统 |
-| 现有动作执行器 | 可用性、确认、执行、验证 | 业务任务命名 |
-| Agent 循环 | 模糊请求与异常处理 | 成为日常任务的唯一入口 |
+| 页面 | 真实控件、区域、记录、保存函数 | 意图识别、任务调度 |
+| 任务目录 | 可用性、激活、取消、完成 | 业务写入、权限放宽 |
+| 模型 | 理解这一句话、选择动作、说明结果 | 发明动作、绕过确认 |
 
-## 只描述人需要决定的内容
+## 用户已经说出的内容要先接住
 
-任务字段不是数据库列。它存在，是因为用户必须做选择。当前店铺、操作人、请求时间与授权范围来自会话和服务端；客户标识来自选中的行、搜索结果，或由服务端解析的稳定引用。
+创建课程需要很多项。逐项追问会把对话变成表单问答。这个示例没有在页面里写意图分类器，也没有把“下一步问什么”写死。
 
-下面的定义只询问学员与会员卡，不询问 `shopId`、`operatorId`，也不要求用户填写学员主键。
+用户说：
 
-```ts
-import { createTaskController } from "@plingjs/agent";
-
-const tasks = createTaskController({
-  invoke: (action, args) => businessApi.invoke(action, args),
-});
-
-tasks.register({
-  id: "student.cards",
-  title: "查看学员会员卡",
-  description: "按姓名或手机号找到学员，再读取会员卡。",
-  objective: "找到正确学员，并展示他真正可用的会员卡。",
-  constraints: ["重名时必须让用户明确选择。"],
-  successCriteria: ["返回的卡片属于用户确认的那名学员。"],
-  fields: [
-    {
-      name: "studentRef",
-      label: "学员",
-      type: "lookup",
-      recommended: "student_li_na",
-      lookup: (query) => businessApi.searchStudents(query),
-    },
-  ],
-  steps: [
-    { label: "读取学员", action: "get_student" },
-    { label: "读取会员卡", action: "get_student_cards" },
-  ],
-});
+```text
+孕妇瑜伽，陈静，2 星，月卡，介绍自动填写
 ```
 
-动作名仍然属于现有注册表或业务服务。任务控制器只把参数交给宿主提供的 `invoke`，不自己操作 DOM、不替动作审批，也不重新解释权限。
+模型看到目标、约束、页面动作、草稿记录和缺口，把这句话理解成多个值。它调用页面动作，把名称、老师、难度、可用卡和介绍写进真实表单。随后只问真正缺的内容，例如封面。
 
-### 先接住用户已经说出的内容
+如果老师不在列表里，它停下来问人，不会拿相近的名字替换。如果用户说“随便填”，动作说明允许在明确委托时生成介绍；如果没有委托，它不替用户编造。
 
-引导任务不等于逐字段问答。用户说“孕妇瑜伽，陈老师，2 星，介绍自动填写”时，页面应该一次写入已经明确的值，然后只追问缺失、冲突或必须由人完成的部分。逐项弹问会让助手像一张会聊天的表单，反而比直接填写更慢。用户说“卡片你来选”时，模型可以使用该字段声明的 `recommended` 值，即使其他必填字段还没填；推荐值只是建议，不是自动写入。
+字段校验属于页面。原生控件的 `min` / `max`、`select` 的选项集合、禁用和只读状态，都在写入时检查。类型不对、选项不存在或字段不存在时，动作返回原因，不会留下填了一半的表单。
 
-字段值不需要页面先做一轮意图分类。模型拿到 active task 的字段、当前值与缺口后，直接调用 `pling_update_task` 写入它从整句话里理解到的值；页面只负责校验这些值是否属于声明过的字段、类型是否匹配、业务约束是否满足。校验失败时不写入任何部分值，模型可以重试或向用户追问。后续的“难度改成 4 星”同样是当前任务的修正，而不是一次全新的创建请求；是否理解正确由模型结合工作记忆判断，页面不再维护一套正则或关键词表。
+## 引用要先解析成人能确认的结果
 
-## 先把引用解析成人能确认的结果
+真实任务里，用户说的是“李娜的会员卡”，不是 `student_0018`。模型不应该猜主键，也不应该让用户输入主键。
 
-人认名字、行和最近活动，API 要稳定引用。引导任务要跨过这道边界，同时不让人或模型去猜。
+进阶任务可以声明 `lookup` 字段：
 
-| 来源 | 例子 | 界面做法 |
-| --- | --- | --- |
-| 当前选择 | 学员详情页中的一行 | 绑定行上下文，不再询问 id |
-| 小型封闭集合 | 课程类型、会员卡模板 | 带标签值的下拉框 |
-| 大集合 | 学员、课程 | 由 `lookup` 调搜索接口 |
-| 服务端事实 | 店铺、操作人、请求时间 | 服务端推导，不作为字段 |
+```ts
+const studentField: TaskField = {
+  name: "studentRef",
+  label: "学员",
+  type: "lookup",
+  minChars: 2,
+  searchAction: "search_students",
+  lookup: async (query, { signal }) => api.searchStudents(query, { signal }),
+};
+```
 
-查找结果必须带足以区分重名的信息。两个“李娜”需要不同的手机号尾号、会员编号或最近上课时间。写操作不能默认选第一条。
+模型调用 `search_students`，拿到与用户看到的同一批候选，再带着用户确认的结果写入。重名时必须展示候选人和脱敏信息，不能静默选第一个。
 
-引用也会过期。页面刷新前的引用可能失效，一个店铺得到的引用不能被另一个店铺接受。执行写操作前，服务端要重新解析引用，并校验权限、归属与有效期。浏览器里的选择只是意图，不是授权。
+小集合可以直接用 `values`。大列表用异步查找，避免把几千条记录塞进上下文。
 
 ## 绑定已选记录，不再重复索要 id
 
-最可靠的引用，是页面已经拿到的那一个。员工打开某节课的行，点“写备注”时，课程 id 不是表单要问的问题，而是当前视图的事实。通过 `start(id, values, binding)` 传入，可以把它挡在用户输入和模型提示词之外。
+很多任务从表格行或详情页开始。用户点“写备注”时，页面已经知道是哪一节课、哪张订单。
 
-任务离开这条记录就无法工作时，用 `requiresRecord: true` 声明。通用任务列表仍可以显示入口，但必须从表格行或详情页带着记录打开，而不是启动一个空运行。步骤里用 `args(values, binding)` 读取 `binding.record?.id`；表单只问备注。对模型也更安全：它不必猜，也不该复述一个不透明的 id。
+`TaskBinding` 承载页面事实：
+
+```ts
+const addNote: TaskDefinition = {
+  id: "lesson.note",
+  title: "写课程备注",
+  requiresRecord: true,
+  fields: [{ name: "note", label: "备注", type: "textarea" }],
+  steps: [{
+    label: "保存备注",
+    action: "update_lesson_note",
+    args: (values, binding) => ({
+      lessonId: binding.record?.id,
+      note: values.note,
+    }),
+  }],
+};
+```
+
+`requiresRecord` 为真且没有记录 id 时，`start()` 会抛错。任务列表应把这类任务显示成入口，而不是允许在没有上下文时直接启动。
 
 ## 保持一条执行路径
 
-任务步骤引用已注册的动作。动作可以由按钮、函数级工具、业务 API 或受治理的 Surface 调用实现。应用可以先接可见流程，稳定后再把某一步换成只读 API，而任务名称和用户心智不变。
+任务层不另造执行器。进阶任务的步骤调用已经注册的动作，经过同一个执行器、同一套确认和审计。
 
-查询通常更适合只读 API：更快，也不必为了回答一个问题滚动整张表。写入通常更适合走应用服务层，这样原有校验、幂等、审计和通知仍然生效。裁剪图片、输入验证码、拖动排期等视觉操作继续走 UI。
+```ts
+const controller = createTaskController({
+  invoke: (action, args, context) => executor.execute(action, JSON.stringify(args), context),
+});
+```
 
-原则不是“API 优先”或“DOM 优先”，而是任务必须经过和真人操作相同的业务边界。成功不是 HTTP 200；写入后要能通过刷新、回读或已声明的期望观察到结果。
+目标层更简单：它根本不执行动作。模型直接调用页面动作，执行器逐条处理。
+
+无论哪条路径，都不允许通用 `click(selector)` 或 `eval` 这类逃逸口。能做的操作必须是页面声明过的窄动作。
 
 ## 让进度可读
 
-任务界面要回答四个问题，但不泄露实现细节：
-
-1. 用户要完成什么？
-2. 应用现在需要用户提供什么？
-3. 正在执行哪一步，为什么？
-4. 改了什么，或者为什么停下？
-
-步骤文案要写给人看：“检查时间段冲突”“创建课程”“核对会员卡余额”。原始动作 id、参数对象和堆栈留在诊断面板。错误也一样：先说明原因和下一步安全做法，内部错误码供支持人员查。
-
-进度里有三个时刻，很容易被误合并。`planned` 表示路线已经确定，但还没有执行；`running` 表示调用正在进行；`verifying` 表示调用已返回，页面正在被读取以核对结果。只显示“运行中”的界面，无法告诉用户写入到底发生了没有。
-
-任务级确认也不同于动作审批。任务问的是“这份计划要不要继续”，执行器仍然判断“这次写入是否允许”。两者谁也不能覆盖谁。`waitingFor: "confirmation"` 的快照由 `confirm()` 推进；`waitingFor: "handoff"` 则在等人于页面上完成操作。
-
-## 为人工作与歧义暂停
-
-有些步骤必须由人完成：签名、验证码、支付确认，或无法可靠描述的视觉选择。任务应暂停并交还控制权，而不是模拟点击。人完成后，从下一步继续，不从头重跑。
-
-这类步骤用 `handoff` 标记。运行进入 `waitingFor: "handoff"`，由宿主负责观察页面并判定操作完成。长执行桥也可以用 `context.report("waiting", "handoff")` 或 `report("verifying")` 上报同样的子状态，避免界面只会转圈。
-
-歧义不同于人工步骤。两个学员同名时，问清楚是哪一个；课程时间不可用时，说明冲突并给出其他时间。不要静默换一条记录，也不要留下半成品。任务运行应停在可见、可恢复的状态。
-
-## 失败也是契约的一部分
-
-一次运行从收集字段进入就绪，然后经过执行到完成、失败或取消。缺少必填字段时不能执行；写入失败时停止；补充信息失败时可以跳过，但必须让人看见；取消会中止正在进行的步骤，不能报告成功。
+用户需要知道现在在做什么、还差什么、是否失败。任务快照承担这份可见状态。
 
 | 状态 | 对用户的意思 | 恢复方式 |
 | --- | --- | --- |
 | `collecting` | 还需要信息 | 补全指定字段 |
 | `ready` | 可以开始 | 运行或切换任务 |
 | `running` | 正在执行某一步 | 等待或取消 |
-| `done` | 步骤已完成 | 查看结果 |
+| `waiting` | 等待确认或人工接力 | 确认，或在页面上完成 |
+| `verifying` | 动作已返回，正在核对结果 | 查看证据后继续 |
+| `done` | 已完成 | 查看结果 |
 | `failed` | 某一步失败 | 阅读原因，重试或改输入 |
 | `cancelled` | 用户停止了任务 | 准备好后重新开始 |
 
+目标层只有“进行中”和“已完成”两个状态。它没有字段轨道，也没有步骤控制器。界面只显示目标、取消和完成，不显示假的表单控件。
+
+## 人工步骤与歧义
+
+有些步骤只能由人完成：签名、验证码、支付确认，或无法可靠描述的视觉选择。任务应暂停并交还控制权，而不是模拟点击。
+
+在页面动作里用 `handoff` 标记：
+
+```ts
+v-tool="{
+  id: 'course_cover',
+  desc: '上传课程封面',
+  handoff: {
+    reason: '请选择一张本地图片',
+    expect: { desc: '页面已记录用户选择的封面', check: () => draft.cover }
+  }
+}"
+```
+
+运行进入等待，由宿主观察页面并判断是否完成。模型不能替用户选择文件，也不能伪造完成状态。
+
+歧义不同于人工步骤。两个学员同名时，问清楚是哪一个；课程时间冲突时，说明冲突并给出其他时间。不要静默替换记录，也不要留下半成品。
+
+## 失败也是契约的一部分
+
+缺少必填项时不能保存；写入失败时停止；可选步骤失败时可以跳过，但必须让人看见；取消会中止正在进行的步骤，不能报告成功。
+
+动作的 `expect` 负责结果验证：
+
+```ts
+expect: {
+  desc: "新课程出现在课程库第一位",
+  check: () => courses.value[0]?.id === newCourseId.value,
+}
+```
+
+执行器在动作返回后检查。条件不成立时，失败原因可见。完成卡展示这次回读的结果，不是预写的“成功”文案。
+
 ## 实现放在哪里
 
-业务任务定义留在应用。与框架无关的运行模型在 `@plingjs/agent`。现有动作注册表与执行器仍在 `@plingjs/core`。任务渲染属于适配层，不属于 Agent 循环。这样 Vue、React、Vue 2 与原生 JS 可以共用同一套任务模型，而不出现四套执行引擎。
+业务任务定义留在应用。与框架无关的运行模型在 `@plingjs/agent`。动作注册表与执行器在 `@plingjs/core`。任务渲染属于适配层，不属于 Agent 循环。
 
-任务目录在 `@plingjs/agent`，它只判断可用性、激活和命令转发。适配器负责把 active guide 放进自己的界面。Vue 3 的 `<AgentInline>` 会自动订阅任务目录并渲染引导；业务页面不需要再手写一套聊天壳，也不必手动挂载任务卡。只有产品确实需要另一种呈现时，才使用 `#task` 插槽替换默认引导。
+任务目录只判断可用性、激活和命令转发。Vue 3 的 `<AgentInline>` 自动订阅目录并渲染引导；业务页面不需要再手写聊天壳，也不必手动挂载任务卡。
 
-`@plingjs/vanilla` 仍然保留 `createTaskPanel()` / `createTaskCard()` 这类底层渲染能力，供原生 JS 或自定义布局使用。它们和内置助手共用同一份任务运行、查找、确认与失败处理，不形成第二套执行引擎。
+Vue、React、Vue 2.7 和原生 JS 共用同一份任务模型和 DOM 渲染器，不出现四套执行引擎。
 
-下一步动作的紧凑行由 `@plingjs/dom` 提供，而不是每个适配器各写一份。`GuideActionItem` 把动作压到一行：短标签、业务命令、可选类型；长推荐放在 `preview`，单行省略，完整值仍在聊天正文、`title` 与 `aria-label`。这样按钮宽度不会由业务文案决定，操作行也不会把对话挤走。渲染器只发出命令，写字段、定位和调用执行器仍由宿主完成。
-
-`registerTaskLookupActions` 还可以把 lookup 字段注册成只读搜索动作。模型先按人名搜索，再带着与用户看到的同一批候选去写入。这样，“模型知道这里需要 id”与“人知道自己指的是哪一行”之间不再断档。
-
-同一个任务也可以通过 Surface 的 `tasks` 描述给外部 Agent。描述是地图，不是钥匙：它解释哪些能力配合完成一件事，但 `invoke` 仍要经过现有暴露清单、会话作用域、审批与审计。
+同一个目标也可以通过 Surface 的 `tasks` 描述给外部 Agent。描述是地图，不是钥匙：它解释哪些能力配合完成一件事，但 `invoke` 仍要经过现有暴露清单、会话作用域、审批与审计。
 
 ## 可运行示例
 
-[课程管理后台](/demos/course-workspace/?lang=zh)把这一章的几件事放在同一页：新建课程、重名查找、新增老师、时段冲突失败、绑定课程行的备注任务，以及任务卡执行后同步更新的课程库和课表。先跑五个任务，再看[源码与接入说明](/zh/examples/course-workspace)。
+[案例06：持久目标创建课程](/demos/course-workspace-vue3/?lang=zh)只注册一个目标。页面是原本的课程管理后台，助手自己打开弹窗、操作真实字段、请用户上传封面、保存并回读课程库。
 
-课程创建演示采用更接近真实后台的方式：进入页面时打开原有的“创建新课程”表单，助手在聊天里承接任务。用户可以直接输入一整段课程描述，模型把它理解为若干字段并调用 `pling_update_task`，页面校验后一次写回原表单，只追问仍然缺失的内容；有问题的老师、难度或需要本人上传的封面会定位到原字段。这个案例故意用 `task-placement="none"` 隐藏了内置任务卡和字段轨道：课程表单本身已经连续，聊天上方再放一条并行的步骤条只会多一条操作路径。字段缺口、建议、定位和核对操作放在对话末尾的操作行里，信息齐了以后给出只读摘要和“确认保存”，写入后从课程库回读结果。`examples/shared/course-create/guide.ts` 负责引导文案、字段状态与页面命令，`CourseWorkspace.vue` 里的原表单仍是业务输入的唯一来源；`legacy-intake.ts` 只是早期确定性解析的历史快照，当前 demo 不再引用它。
+[案例07：只用指令创建课程](/demos/course-create-directives-vue3/?lang=zh)使用同一张页面，没有任务层。它适合对照：同样的创建流程，页面动作已经足够表达时，不需要目标。
+
+两个案例的完整源码和接入说明在[示例页](/zh/examples/course-workspace-vue3)。
 
 ## 核对清单
 
-- 用户不写提示词也能开始任务；任务只在路由和作用域匹配时出现。
-- 每个字段都对应一个人能做出的决定。
+- 用户不写提示词也能开始任务；目标只在路由和作用域匹配时出现。
+- 启动目标不会打开弹窗、填写字段或保存。
+- 每个字段都对应一个人能做出的真实操作。
+- 自定义控件用真实点击或参数化动作接入，不改写成第二张表单。
 - 查找出现重名时，必须明确选择。
-- 服务端重新校验引用及其店铺、会话范围。
 - 行级任务通过绑定拿到记录，不靠隐藏输入框。
-- 每个步骤都调用现有动作或业务服务；助手只能选择已注册任务，不能编造 id 或字段。
-- 界面能区分成功、失败、取消与可选步骤跳过。
-- `planned`、`running` 与 `verifying` 没有被合成一个标签。
-- 写入后经过验证，而不是从请求成功推断。
+- 每个写入动作都经过现有执行器和回读验证。
+- 界面能区分成功、失败、取消与人工等待。
+- 完成目标之前，页面已经满足成功条件。
 - 原始动作 id 与参数只出现在诊断中。
 
 ---
@@ -2994,7 +3057,7 @@ clear_completed
 | 企业 Gateway | 应用所有者 | 租户 allowlist、身份集成、审计存储 |
 | 客户 BFF | 应用后端 | 用户会话、业务数据、页面会话创建 |
 
-`surface.plingjs.dev` 是官方演示端点，不是客户应用共用的代理。企业应在自己控制的源上部署 `@plingjs/surface-gateway`，例如 `surface.example.com`，并由自己的后端创建页面会话。
+`surface.plingjs.com` 是官方演示端点，不是客户应用共用的代理。企业应在自己控制的源上部署 `@plingjs/surface-gateway`，例如 `surface.example.com`，并由自己的后端创建页面会话。
 
 Gateway 配置中的租户 Origin 列表不是认证。它只回答一个更窄的问题：哪些浏览器源可以为该租户打开 WebSocket。
 
@@ -3116,8 +3179,8 @@ pling_surface_approval_status
 公开演示使用独立主机：
 
 ```text
-https://todo.plingjs.dev     应用页面与 BFF
-https://surface.plingjs.dev  官方演示 Gateway
+https://todo.plingjs.com     应用页面与 BFF
+https://surface.plingjs.com  官方演示 Gateway
 ```
 
 企业部署对应为：
@@ -6041,434 +6104,777 @@ Canonical: https://plingjs.dev/zh/vue/nuxt-and-ssr
 
 Canonical: https://plingjs.dev/zh/vue/guided-tasks-for-a-real-workflow
 
-前面的 Todo 已经证明：页面把动作声明清楚，助手就能完成一次具体操作。真实后台的难点通常不在“能不能点击”，而在于一个业务任务要跨过多个字段、几处判断和一次人工决定。
+前面的章节用 Todo 说明了一件事：页面把动作声明清楚，助手就能完成一次具体操作。真实后台更难。一个业务任务要跨越弹窗、多个字段和一次人工上传，用户还会中途提问、改主意，甚至把弹窗关掉。
 
-以创建课程为例。员工知道要新建一门课，却未必记得先填什么、老师和可用卡如何关联、封面是否需要本人选择，也不一定知道保存后去哪里确认。把这些内容全部塞进聊天，会变成第二套表单；只留在原页面，用户又容易迷路。
+## 出发点：不要复制一行业务表单
 
-这一章用“创建课程”这一件事来拆解引导任务。页面仍然只有原来的课程表单，助手在对话框里说明当前步骤、展示只读摘要、定位真实字段，并在保存后回读课程库确认结果。
+这一章只做“创建课程”一件事。页面是原本的课程管理后台：课程库在左侧，右上角有“新建课程”按钮，点开后是原表单。我们没有另做一套聊天专用表单，也没有让页面代码替助手打开弹窗、填写字段或保存。
 
-## 让模型接住一整句话
+同一张页面提供了两个可运行版本：
 
-创建课程本来需要填很多项，逐项追问会把人拖回表单问答。这个示例没有在页面里写意图分类器；助手直接读当前任务上下文，再把一句话里的字段写进工作记忆：
+- [案例07：只用指令创建课程](/zh/examples/course-create-directives-vue3) 只用 `v-scope`、`v-record`、`v-tool`。
+- [案例06：持久目标创建课程](/zh/examples/course-workspace-vue3) 在同一张页面上多注册一个目标。
+
+两个版本都能完成创建课程。区别不在功能多少，而在页面能不能自己说清楚，以及结果需不需要跨过页面变化继续存在。
+
+## 先看两条接入路径
+
+| 你的页面 | 建议路径 |
+| --- | --- |
+| 一张稳定表单，保存后结束 | 只用指令，不引入任务层 |
+| 弹窗会关，用户会离开再回来 | 指令加一个目标 |
+| 任务要跨路由或跨页面继续 | 指令加一个目标 |
+| 需要固定任务入口、取消和完成记录 | 指令加一个目标 |
+| 外部 Agent 需要同一份任务说明和完成边界 | 指令加一个目标 |
+| 字段要校验、查找、按固定顺序调用多个动作 | 进阶 `TaskDefinition` 和 `TaskController` |
+
+这张表是本章的主线。大多数页面停在第一行就够了。只有出现后面几行的需求，才值得增加目标层。
+
+## 只用指令时，页面已经能说清什么
+
+案例07 没有任何任务声明。页面通过三类指令把自己交给助手：
+
+```vue
+<button
+  type="button"
+  v-tool="{
+    id: 'new_course',
+    kind: 'read',
+    label: page.newCourse,
+    desc: copy.newCourseDesc
+  }"
+  @click="openCreate"
+>
+  {{ page.newCourse }}
+</button>
+```
+
+`new_course` 绑定在真实按钮上。页面加载时弹窗是关闭的。助手要新建课程，就调用这条动作，按钮自己的 `@click` 打开弹窗。页面没有 `if (agent) openCreate()` 这样的分支。
+
+弹窗内部用 `v-scope` 划出区域：
+
+```vue
+<section
+  class="course-modal"
+  v-scope="{
+    id: 'create-course-form',
+    label: page.form.title,
+    description: copy.formScope,
+    role: 'dialog'
+  }"
+  v-record="draftRecord"
+>
+```
+
+`v-scope` 只给这组控件一个稳定的区域 id。它不暴露数据，也不提供执行能力。弹窗关闭后，这个区域和区域里的动作一起从页面消失。
+
+`v-record` 把当前草稿公开成只读记录：
+
+```ts
+const draftRecord = computed(() => ({
+  data: { ...draft },
+  id: "course-draft",
+  label: copy.value.draftLabel,
+  fields: {
+    name: draft.name,
+    difficulty: draft.difficulty,
+    teacher: teacherName.value || draft.teacherId,
+    cards: draft.cards,
+    intro: draft.intro,
+    cover: draft.cover,
+    required: [page.value.form.name, page.value.form.teacher, page.value.form.cards, page.value.form.cover],
+    missing: requiredMissing.value,
+  },
+}));
+```
+
+助手因此能回答“还差什么”，不需要再声明一个读取工具。记录里的 `missing` 由页面计算，和页面自己的保存校验使用同一份规则。
+
+每个真实控件再声明一条动作：
+
+```vue
+<input
+  v-model="draft.name"
+  v-tool="{
+    id: 'course_name',
+    action: 'fill',
+    label: page.form.name,
+    desc: copy.fieldDesc.name
+  }"
+/>
+```
+
+`action: 'fill'` 表示这条动作接收一个文本值。下拉框用 `action: 'select'`。难度不是原生输入框，而是一排自绘的星星按钮，所以每一颗星各自声明一条点击动作：
+
+```vue
+<button
+  v-for="score in 5"
+  :key="score"
+  type="button"
+  v-tool="{
+    id: `course_difficulty_${score}`,
+    kind: 'write',
+    label: `${page.form.difficulty} ${score}`,
+    desc: copy.difficultyDesc(score)
+  }"
+  @click="setDifficulty(score)"
+>
+  ★
+</button>
+```
+
+这就是自定义组件的处理方式。控件是不是 `input` 不重要，重要的是它有没有一个真实、可点击或可输入的入口。星星按钮走点击动作，上传按钮走人工接力，保存按钮走页面自己的保存函数。
+
+上传必须由人完成：
+
+```vue
+<button
+  class="upload-tile"
+  v-tool="{
+    id: 'course_cover',
+    kind: 'write',
+    label: page.form.cover,
+    desc: copy.coverDesc,
+    handoff: {
+      reason: copy.coverHandoff,
+      expect: { desc: copy.coverExpect, check: () => draft.cover }
+    }
+  }"
+  @click="coverInput?.click()"
+>
+```
+
+`handoff` 让执行器停下来等人。助手可以调用 `pling_locate` 把上传区滚进视野并高亮，但不能替用户选择本地文件。人完成后，页面用 `draft.cover` 给出完成证据。
+
+保存动作带一条回读条件：
+
+```ts
+const saveTool = computed(() => ({
+  id: "save_course",
+  kind: "write",
+  label: page.value.form.save,
+  desc: copy.value.saveDesc,
+  run: () => saveCourse(),
+  expect: {
+    desc: copy.value.saveExpect,
+    check: () => courses.value[0]?.id === newCourseId.value,
+  },
+}));
+```
+
+`expect` 由执行流水线在动作返回后检查。新课程没有出现在课程库第一位，保存就按失败处理。助手得到的不是“接口返回 200”，而是页面上的真实结果。
+
+### 一句话如何变成几次动作
+
+用户说：
 
 ```text
-孕妇瑜伽，陈老师，2 星，介绍自动填写
+孕妇瑜伽，陈静，2 星，月卡，介绍自动填写
 ```
 
-模型看到的是当前 active task 的目标、约束、字段、已填值、缺口与当前阶段。它把这句话理解为 `name`、`teacherId`、`difficulty` 和 `intro` 四个值，调用一次 `pling_update_task`；页面按字段声明逐项校验，再把变化同步回原表单。助手只追问真正缺少的内容，例如“可用卡还没定”；如果老师不在列表里，它会停下来问人，不会把相近的名字偷偷替换掉。缺少封面时，助手把页面定位到上传区，然后把选择文件交还给人。
+页面里没有正则表达式，也没有意图分类器。助手拿到的是：
 
-字段校验属于页面，不属于对话。`TaskField` 可以声明数值的 `min` / `max`、文本的 `minLength` / `maxLength`、`pattern`，可以给小型封闭集合一个 `values` 列表，也可以写一个使用当前工作记忆的 `validate(value, values)`。这些检查在写入任务快照之前执行：类型不对、老师不存在、难度越界或扣次格式错误都会返回失败，不会出现“写了一半”的页面状态。模型可以重试、换一种问法或请用户确认，但它无法绕过这条边界。
+- 当前可用的动作和它们的说明；
+- 课程草稿的当前值、必填项和缺口；
+- 每个控件的标签、输入类型和可选值；
+- 哪些动作是人工接力。
+
+它先打开真实弹窗，再按用户给出的信息调用 `course_name`、`course_teacher`、`course_difficulty_2`、`course_cards` 和 `course_intro`。遇到“介绍自动填写”这种明确委托，动作说明允许它根据课程名称、难度和老师生成一段介绍。没有给出封面时，它不会假装上传成功，而是请用户选择文件。
+
+用户如果问“还差什么”，助手读 `draftRecord` 就能回答。用户如果说“老师换成林老师”，它只改老师，不会从头再问一遍课程名。对话由模型根据当前页面状态决定，不是固定字段脚本。
+
+### 业务动作 id 不是框架 API
+
+`course_name`、`course_intro`、`course_cover` 这些名字由这个示例自己决定。Pling 提供的是声明机制，不是一套课程字段表。换到订单后台，同一套写法会声明 `order_note`、`refund_reason` 或 `approve_order`。
+
+动作 id 起什么名字，模型看到的就是什么名字。名字要稳定、具体，说明要讲清楚这个控件做什么、什么时候可用、完成后页面会变成什么样。
+
+## 什么时候还需要一个目标
+
+案例07 有一个边界：弹窗一关，`create-course-form` 区域和里面的字段动作都不存在了。用户如果这时问“刚才那门课还差什么”，助手只能看到课程库，看不到草稿。
+
+这时可以加一个目标。案例06 的全部任务接入只有三行：
 
 ```ts
-const courseTask = {
-  id: "course.create",
-  fields: [
-    { name: "name", label: "课程名称", type: "text", minLength: 1, maxLength: 40 },
-    {
-      name: "teacherId",
-      label: "授课老师",
-      type: "lookup",
-      lookup: teacherLookup,
-      validate: (value) =>
-        teachers.some((teacher) => teacher.id === value) ? null : "请从 search_teachers 的结果中选择老师。",
-    },
-    { name: "difficulty", label: "难度", type: "number", optional: true, min: 1, max: 5 },
-  ],
-};
+const pling = usePling();
+const disposeGoal = pling.task.goal(courseGoal(props.locale));
+onBeforeUnmount(disposeGoal);
 ```
 
-模型不会因为“这一轮还没回答”就把用户的问题当成字段值。用户问“这个字段是什么意思”、说“先帮我看看”，或者临时改主意，都留在同一段对话里；任务状态只是工作记忆，不是必须照做的脚本。后续“难度改成 4 星”或“把课程名字改成减脂瑜伽”同样由模型理解为当前任务的修正，只更新对应字段。只有它确实无法判断指哪一项时，才会向用户确认。
-
-## 两种进入方式，一套任务
-
-用户可能从两个方向开始：
-
-- 打开“创建课程”弹窗时，任务因为当前上下文自动出现；
-- 对助手说“帮我创建一门瑜伽课”，助手从当前可用任务中选择并开启它。
-
-这两条路最终都落到同一个任务定义、同一个引导定义和同一个执行器上。页面不需要为“自动出现”和“助手开启”各写一套界面。
-
-先看页面注册任务的代码：
+`courseGoal()` 只描述结果和边界：
 
 ```ts
-pling.task.define({
-  definition: createCourseTaskDefinition(taskOptions),
-  guide: guideDefinition,
-  controller,
-  scope: "create-course-form",
-  autoStart: true,
-  initialValues: currentTaskValues,
-  state: () => ({
-    snapshot: taskSnapshot.value,
-    step: 1,
-    busy: busy.value,
-    error: taskError.value,
-    completed: completed.value,
-  }),
-  onActivate: applyTaskRunValues,
-  onCommand,
-});
+export function courseGoal(locale: Locale): TaskGoalInput {
+  return {
+    id: "course.create",
+    title: locale === "zh" ? "创建课程" : "Create a course",
+    goal: "在课程管理里新建一门课程：自己打开真实表单，按用户给出的信息填写，封面请用户上传，保存后回读课程库确认新课程在第一位。",
+    constraints: [
+      "页面上的动作是唯一操作入口；不要另造字段名、选择器或表单。",
+      "只填写用户明确给出或明确委托的内容；不确定就问。",
+      "封面必须由用户亲自上传，你不能替用户选择本地文件。",
+      "用户的问题、修改、暂停和放弃优先于继续填表。",
+    ],
+    successCriteria: [
+      "新课程出现在课程库第一位",
+      "名称、老师、可用卡和封面与用户确认的一致",
+      "保存动作已回读课程库并确认了这条新记录",
+    ],
+    examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+  };
+}
 ```
 
-`scope` 表示只有创建课程弹窗存在时任务才可用。`autoStart` 让它在上下文匹配时自动展示。关闭弹窗后作用域消失，引导随之隐藏；重新打开时再恢复。
+这里没有 `fields`，没有 `steps`，没有 `controller`，没有表单回调，也没有保存函数。目标只回答四个问题：
 
-如果希望助手能在用户提出请求时主动开启，也不需要再加一段逻辑。任务注册后，模型会看到当前可用的任务；它调用 `pling_start_task`，任务目录就会激活同一个 `course.create`，内置助手面板随即显示引导。
+- 这件事要达成什么；
+- 哪些边界不能越过；
+- 怎样才算完成；
+- 弹窗关闭或路由变化后，为什么它还在。
 
-## 任务与引导为什么分开
+`goal()` 默认 `keepActive: true`。目标由人或模型显式启动后，弹窗关闭、区域消失或短暂离开原路由，目标仍然 active。助手可以继续对话，重新打开表单，或者请用户先上传封面。
 
-`TaskDefinition` 回答“要完成什么、受什么约束、怎样算完成”：`objective` 是目标，`constraints` 是模型必须守住的边界，`successCriteria` 是可观察的完成条件，`fields` 只是当前已知的工作记忆。固定 `steps` 只在业务写入确实可以确定性执行时使用；它不是对话脚本。
+`route` 和 `scope` 可以限制目标从哪里启动。比如只在课程管理页显示，或只在某个区域出现时可用。它们决定“此刻能不能开始”，不决定“能不能操作页面”。真正的操作仍然逐条经过页面动作。
+
+### 目标不是权限，也不是执行器
+
+这一点要单独说清楚：
+
+- 目标不会打开弹窗。`new_course` 才是打开弹窗的动作。
+- 目标不会填写字段。`course_name`、`course_teacher` 才是填写动作。
+- 目标不会保存。`save_course` 才是保存动作。
+- 目标不会放宽权限。每条动作仍然执行自己的风险等级、确认、作用域和审计规则。
+
+目标只做生命周期管理。它让一件事在页面变化后仍然存在，并在完成或取消时留下一个明确状态。
+
+### 目标如何结束
+
+模型启动目标后，会多看到一条 `pling_complete_task`。它只在页面已经满足全部成功条件时调用。调用它不会写业务数据，也不会代替 `save_course`，只把目标标成完成。
+
+保存动作的 `expect` 先通过，目标才应该完成。顺序是：
+
+1. 助手调用 `save_course`；
+2. 页面自己的保存函数写入课程库；
+3. `expect` 回读课程库，确认新课程在第一位；
+4. 助手看到回读成功，调用 `pling_complete_task`；
+5. 目标卡显示已完成。
+
+用户也可以取消。取消只结束目标，不回滚已经写进表单的值。页面是用户正在编辑的地方，框架不替用户撤销输入。
+
+## 从一句话到一门课程
+
+下面按真实操作顺序走一遍案例06。
+
+### 1. 用户提出任务
+
+```text
+创建课程：孕妇瑜伽，陈静，2 星，月卡，介绍自动填写
+```
+
+助手在当前页面看到 `course.create` 这个目标，也看到页面上的 `new_course`。它先调用 `pling_start_task`，再调用 `new_course`。
+
+启动目标不会改变页面。弹窗仍然是关闭的。只有 `new_course` 的点击处理会打开它。
+
+### 2. 助手打开真实表单
+
+`new_course` 执行后，`@click="openCreate"` 运行：
 
 ```ts
-export const courseTask = {
-  id: "course.create",
-  title: "创建课程",
-  objective: "帮用户把一门可上架的课程创建到课程库，而不是逐项盘问字段。",
-  constraints: [
-    "封面必须由用户亲自上传，助手不能伪造。",
-    "所有写入仍走 create_course 动作、执行器和回读校验。",
-    "用户的问题、修改、暂停和放弃优先于继续收集字段。",
-  ],
-  successCriteria: [
-    "新课程出现在课程库第一位",
-    "名称、老师、可用卡和封面与用户确认的一致",
-  ],
-  fields: [
-    { name: "name", label: "课程名称", type: "text", recommended: "瑜伽基础" },
-    {
-      name: "teacherId",
-      label: "授课老师",
-      type: "lookup",
-      lookup: searchTeachers,
-      searchAction: "search_teachers",
-      recommended: "teacher_zhoumin",
-    },
-    { name: "cards", label: "课程可用卡片", type: "select", values: cardChoices },
-    { name: "cover", label: "课程封面", type: "boolean", agentWritable: false },
-  ],
-  steps: [
-    {
-      id: "course.save",
-      label: "写入课程库并回读",
-      action: "create_course",
-      args: (values) => ({
-        name: values.name,
-        teacherId: values.teacherId,
-        cards: values.cards,
-        cover: values.cover,
-      }),
-    },
-  ],
-};
-```
-
-它不依赖 Vue，也不知道聊天窗口长什么样。任务可以只有执行步骤，也可以带一份用户可见的引导。
-
-`TaskGuideDefinition` 回答“用户看到什么”：任务标题、欢迎语、当前字段表，以及模型可以调用的界面命令。
-
-```ts
-export const courseGuide: TaskGuideDefinition = {
-  taskId: "course.create",
-  title: "创建课程",
-  welcome: "把课程信息一次说给我，也可以直接在页面填写，我来补缺。",
-  agent: {
-    review: "review-task",
-    proposeSave: "propose-save",
-    cancel: "cancel-task",
-  },
-  fields: () => courseCreateFieldNodes(locale, draft(), teachers, skipped),
-  steps: [
-    {
-      id: "course.fill",
-      label: "创建课程",
-      title: "创建课程",
-      description: "把课程信息写进原表单，再由人确认保存。",
-    },
-  ],
-};
-```
-
-`steps` 只描述业务阶段，供标题和进度文案使用，不决定下一步问什么。这个案例只有一个阶段；真正的“还差哪一项”来自 `fields()` 对页面当前值的推导。引导里没有 `input`、`textarea` 或 `select`，真正写值、打开弹窗、定位字段，仍由页面处理。
-
-分开还有一个直接好处：同一个任务可以自动执行，也可以只作为对话里的操作手册。没有界面也能跑；没有执行步骤时，也可以只给助手一段 playbook。
-
-## 助手只能选择，不能发明任务
-
-任务目录是当前页面对“可以做什么”的声明。模型拿到的是一份可用任务清单，以及每个任务的目标、约束、字段和步骤摘要。任务激活后，模型还会看到当前字段值、仍缺失的必填项、当前引导步骤和可用的引导动作；这份状态是每轮重建的工作记忆，不是一段必须照做的脚本。它可以选择其中一个任务，也可以把用户已经说出的字段值一并传入：
-
-```json
-{
-  "task": "course.create",
-  "values": {
-    "name": "瑜伽基础",
-    "teacherId": "teacher_zhoumin"
+function openCreate(): void {
+  if (newCourseId.value) {
+    Object.assign(draft, emptyCourseDraft());
+    newCourseId.value = "";
+    highlightedCourseId.value = "";
   }
+  modalOpen.value = true;
+  saveError.value = "";
 }
 ```
 
-这里有三条边界：
+这是页面原本的“新建课程”逻辑。清空上一次草稿、打开弹窗、重置错误提示，全部由页面负责。助手只是点了按钮。
 
-- 任务 id 必须来自当前可用清单，编造 id 会返回 `INVALID_ARGS`；
-- `values` 只能出现任务定义里声明过的字段，未知字段同样拒绝；
-- 传入值只是填写任务草稿，不会绕过 `create_course` 的权限、确认和审计。
+### 3. 助手填写用户给出的字段
 
-所以“助手主动创建任务”并不等于让模型自由生成一套流程。它创建的是**一次已注册任务的运行**。未来如果要做真正的动态任务组合，仍然应该先经过任务模板、校验和用户确认，再进入同一个任务目录，而不是让模型直接调用任意动作拼装工作流。
+弹窗打开后，字段动作进入页面。助手按动作说明调用：
 
-### 激活后，任务不是脚本
+- `course_name` 写入“孕妇瑜伽”；
+- `course_teacher` 选中“陈静”；
+- `course_difficulty_2` 点击第二颗星；
+- `course_cards` 选中“月卡”；
+- `course_intro` 根据“介绍自动填写”生成并写入介绍。
 
-任务激活后，模型会收到一份结构化的当前状态，再决定这一轮该回答、追问、写值、暂停还是交还给人。它不会因为“下一个必填字段是课程名”就把整句话塞进课程名，也不会在用户问“你会做什么”时继续走下一步。
+每一步都是人也能做的同一个操作。Vue 的 `v-model`、`@change` 和页面校验照常运行。
 
-模型只通过一个窄动作更新工作记忆：
+### 4. 只追问真正的缺口
 
-```json
-{
-  "task": "course.create",
-  "values": { "cards": "月卡" },
-  "clear": []
-}
-```
+助手读 `draftRecord.fields.missing`，发现课程封面还没上传。它会说还差封面，并在用户问“在哪里点”时调用 `pling_locate`，把上传区标记出来。
 
-对应动作是 `pling_update_task`。它只写当前 active task、只接受声明过的字段，并拒绝 `agentWritable: false` 的页面专属字段。`TaskField.recommended` 只是在用户明确委托时给模型的推荐值，不是自动写入；`agentWritable: false` 的封面仍由用户在页面上传。工作记忆更新后，Vue 页面订阅 `TaskRunSnapshot`，把变化同步回原表单并高亮字段。真正的业务写入仍由 `create_course`、执行器、确认和回读完成。
+用户选择文件后，`handleCoverSelected` 把 `draft.cover` 设为 `true`。`handoff` 的 `expect` 通过，助手继续下一步。
 
-### 页面保留最后一下
+### 5. 保存并回读
 
-模型能感知、解释、追问和修正，但页面仍然掌握三个不可让渡的动作：定位、核对与保存。
+助手调用 `save_course`。页面校验四项必填：名称、老师、可用卡、封面。通过后创建课程，把新记录放到课程库第一位。
 
-- `pling_focus_field` 只把某个已声明字段滚进视野并高亮，不写值；
-- `pling_review_task` 打开页面自己的只读核对；
-- `pling_propose_save` 只打开确认，不执行业务写入；
-- `pling_cancel_task` 结束引导，已经写进页面的值不会自动回滚。
-
-这些工具不是框架的隐藏默认值。引导必须在 `guide.agent` 里显式声明 `review` / `proposeSave` / `cancel` 命令，模型才会看到对应工具；没有声明就不出现，也不会产生“点了没反应”的空动作。这样业务可以决定自己的保存路径：有的先弹确认，有的要求二次校验，有的根本不允许在任务里保存。
+`expect` 检查：
 
 ```ts
-guide: {
-  taskId: "course.create",
-  agent: {
-    review: "review-task",
-    proposeSave: "propose-save",
-    cancel: "cancel-task",
-  },
-}
+check: () => courses.value[0]?.id === newCourseId.value
 ```
 
-`proposeSave` 对应的页面命令由页面自己处理，例如打开原有确认弹窗、重新读取表单、执行 `create_course` 和回读。模型只能说“我准备保存了，请在页面确认”，不能在用户没有确认时宣称已经完成。
+检查通过，助手才调用 `pling_complete_task`。目标卡从“进行中”变成“已完成”。
 
-## 不再手写第二套聊天界面
+### 6. 中途关掉弹窗
 
-旧写法需要页面在聊天消息流里手动挂载 `AgentTaskGuide`，再自己维护标题、消息区和样式。这样很容易出现一个案例一种外观，业务页面也会被助手 UI 绑住。
+用户如果在这时关掉弹窗，`create-course-form` 区域消失，字段动作也不在页面上了。目标仍然 active，因为 `goal()` 默认保留。
 
-现在页面只保留业务表单和任务注册，助手界面直接使用内置组件：
+用户可以继续问：
+
+```text
+刚才那门课还差什么？
+```
+
+助手会说明当前目标还在，但表单已经关闭；它可以重新调用 `new_course` 打开表单，再读草稿继续。表单里的值还在 `draft` 里，因为页面组件没有被卸载。
+
+### 7. 用户可以随时提问或改主意
+
+引导不是“下一题”。用户可以说：
+
+- “为什么封面不能你来传？”
+- “老师换成林老师。”
+- “先别建了。”
+- “这门课的名字改成孕妇流瑜伽。”
+
+助手先回答或处理这句话，再决定要不要继续目标。改一个字段时，它只调用对应动作。取消时，调用 `pling_cancel_task` 或点目标卡上的取消按钮。目标结束，页面上的值保持原样。
+
+## 自定义控件怎么接
+
+真实后台里，很多控件不是 `input` 或 `select`。按控件的真实交互声明动作，不需要为了 Agent 改写成表单：
+
+| 控件 | 接法 |
+| --- | --- |
+| 原生输入框 | `v-tool` 加 `action: 'fill'` |
+| 原生下拉框 | `v-tool` 加 `action: 'select'` |
+| 一排星级按钮 | 每颗星一条点击动作 |
+| 自绘日期选择器 | 打开面板、选择日期各一条动作，或封装成一个带参数的动作 |
+| 上传、签名、验证码 | `handoff`，由人完成 |
+| 需要多步弹窗的操作 | 每条真实按钮一条动作，必要时用 `steps` 组合 |
+
+自绘日期选择器如果需要接收一个值，可以用带参数的动作：
+
+```ts
+v-tool="{
+  id: 'course_start_date',
+  desc: '设置课程开始日期，格式 YYYY-MM-DD',
+  params: [{ name: 'date', label: '开始日期' }],
+  run: ({ date }) => setStartDate(String(date))
+}"
+```
+
+这里的 `run` 仍然调用页面自己的 `setStartDate`。Agent 不需要知道日期面板长什么样，只需要知道这个动作接收什么值。
+
+上传、验证码、支付确认这类步骤不要模拟。用 `handoff` 把控制权交还给人，再用 `expect` 检查页面是否真的完成。
+
+## 为什么不在页面里写意图判断
+
+有些接入会在页面里写：
+
+```ts
+if (/创建课程/.test(text)) openCreate();
+```
+
+这条正则会把“创建课程需要哪些信息？”也当成创建命令。用户问问题、改需求、说“先别建”，正则都理解不了。页面一旦承担意图识别，就会变成第二套对话逻辑，还要和模型争谁说了算。
+
+这个案例把理解交给模型，把执行留给页面。模型能看到目标、动作说明、记录和当前页面状态，所以它能区分提问、修改、委托和取消。页面只负责真实控件的可用性和结果。
+
+## 跟着做：从一张真实页面开始
+
+下面按文件改。每一步都能单独运行，也能单独验证。先完成案例07 的七步，再看是否需要第八步。
+
+### 准备：运行两个案例
+
+在仓库根目录执行：
+
+```bash
+pnpm dev:examples
+```
+
+打开：
+
+- `http://127.0.0.1:5191/demos/course-create-directives-vue3/?lang=zh`
+- `http://127.0.0.1:5191/demos/course-workspace-vue3/?lang=zh`
+
+先手动点一次“新建课程”，填几个字段，再关闭弹窗。你会看到两个案例的页面完全相同，差别只在案例06 多注册了一个目标。
+
+案例07 的入口文件只有一层：
 
 ```vue
-<aside class="assistant" aria-label="页灵助手">
-  <AgentInline
-    class="assistant-agent"
-    :title="createCopy.assistantTitle"
-    :placeholder="page.assistant.placeholder"
-    task-placement="none"
-    guide-placement="end"
-    :debug="{ maxCalls: 8 }"
-    model-settings="readonly"
+<!-- examples/demos/course-create-directives-vue3/src/App.vue -->
+<script setup lang="ts">
+import CourseCreatePage from "../../../shared/course-create/CourseCreatePage.vue";
+import type { Locale } from "../../../shared/course-workspace/copy";
+
+defineProps<{ locale: Locale }>();
+</script>
+
+<template>
+  <CourseCreatePage :locale="locale" task-placement="none" />
+</template>
+```
+
+真正的接入代码在 `examples/shared/course-create/CourseCreatePage.vue`。你不需要为 Agent 新做一张表单，也不需要把业务页面搬进聊天窗口。
+
+### 第一步：保留原页面，先确认基线
+
+先只启动原页面。弹窗保持关闭，课程库正常显示。不要急着加任务，也不要在页面加载时调用 `openCreate()`。
+
+基线有三个特征：
+
+1. 页面停在课程列表，用户能看到“新建课程”；
+2. 点“新建课程”才出现表单；
+3. 关闭弹窗后，表单和字段一起消失。
+
+这三点决定了后面的接入方式。助手必须像用户一样，先找到新建按钮，再操作表单。
+
+### 第二步：给真实按钮加 `v-tool`
+
+找到页面右上角的“新建课程”按钮，加一条动作：
+
+```vue
+<button
+  class="primary-button"
+  type="button"
+  v-tool="{
+    id: 'new_course',
+    kind: 'read',
+    label: page.newCourse,
+    desc: copy.newCourseDesc
+  }"
+  @click="openCreate"
+>
+  <span>＋</span>{{ page.newCourse }}
+</button>
+```
+
+这条声明只告诉助手“这个按钮做什么”。点击后执行的仍然是页面自己的 `@click="openCreate"`。
+
+打开助手的调试面板，确认动作清单里出现 `new_course`。然后对助手说：
+
+```text
+帮我新建一门课程
+```
+
+助手应该调用 `new_course`，由按钮打开弹窗。页面里不应该出现 `if (agent) openCreate()` 这类分支。
+
+### 第三步：用 `v-scope` 圈出弹窗
+
+弹窗打开后，才把表单区域暴露给助手：
+
+```vue
+<div v-if="modalOpen" class="modal-layer">
+  <section
+    class="course-modal"
+    role="dialog"
+    aria-modal="true"
+    v-scope="{
+      id: 'create-course-form',
+      label: page.form.title,
+      description: copy.formScope,
+      role: 'dialog'
+    }"
+    v-record="draftRecord"
   >
-    <template #guide>
-      <AgentGuideActions :items="guideActions" @command="onGuideCommand" />
-    </template>
-  </AgentInline>
-</aside>
+    <!-- 原表单控件 -->
+  </section>
+</div>
 ```
 
-`AgentInline` 订阅任务目录，但这里用 `task-placement="none"` 关掉了内置任务卡，并用 `guide-placement="end"` 把 `#guide` 插槽放到最新消息之后。不是任务层不重要，而是“创建课程”本身就是一张连续填写的表单：顶部再放一条字段轨道，会让聊天变成第二套操作路径。用户只需要一个叙事入口，下一步动作直接出现在对话末尾；`AgentGuideActions` 只发出页面已声明的命令，不写字段，也不调用业务动作。
+`v-scope` 只命名区域。区域里的控件还没有自动变成可执行动作，数据也还没有暴露。
 
-任务定义仍然负责字段、顺序、命令和结果判据，只是把展示权交还给业务。`task-placement` 有三个值：默认的 `inline` 把内置引导放进对话流，`pinned` 把它固定在聊天标题下方，`none` 则完全隐藏。需要常驻步骤条的产品可以选前两种；像这个案例一样，页面和聊天各自只做一件事时，`none` 更干净。
+验证点在关闭弹窗之后：`create-course-form` 应该从助手的上下文里消失。这样助手不会误以为一个已经关掉的表单还能填写。
 
-如果产品需要自己的任务展示，仍然可以用 `#task` 插槽覆盖默认引导。关键是不要一边保留内置字段轨道，一边又在聊天里重复同一套引导。
+### 第四步：用 `v-record` 公开草稿
 
-## 长推荐不该把按钮撑开
-
-“自动填写”最初把推荐值直接拼进按钮文案。课程名称短的时候没有暴露问题；到了“约课须知”这种一句话的字段，按钮被撑成横跨整个面板的宽块，操作行换行，聊天内容被挤到下面，用户第一眼看到的是一个大按钮，而不是下一步该做什么。
-
-最简单的修法是把文案截断，但截断解决不了这个交互问题：用户点按钮之前，必须知道点完会填进什么。把全文藏进图标或二级菜单也不行，那只是把“不确定”换成了“找不到”。
-
-现在的规则是**短动作 + 单行预览**：
-
-- 按钮只保留动作，例如“自动填写”“定位 · 课程名称”；
-- 推荐值放在按钮内的灰色预览里，单行、最多约 `300px`、超出省略；
-- 完整值仍在聊天气泡里，鼠标悬停有 `title`，读屏用户拿到的是完整的 `aria-label`；
-- 推荐值只代表“点击后会写入”，在用户点击之前，页面表单没有任何变化。
+表单需要一份可读的当前值。用计算属性生成只读记录：
 
 ```ts
-const items: GuideActionItem[] = [
-  {
-    id: "use-note",
-    label: "自动填写",
-    preview: "请提前 10 分钟到店；开课前 2 小时内不可取消。",
-    ariaLabel: "自动填写约课须知：请提前 10 分钟到店；开课前 2 小时内不可取消。",
-    command: "apply-note",
-    kind: "suggestion",
+const draftRecord = computed(() => ({
+  data: { ...draft },
+  id: "course-draft",
+  label: copy.value.draftLabel,
+  fields: {
+    name: draft.name,
+    difficulty: draft.difficulty,
+    teacher: teacherName.value || draft.teacherId,
+    cards: draft.cards,
+    intro: draft.intro,
+    cover: draft.cover,
+    required: [
+      page.value.form.name,
+      page.value.form.teacher,
+      page.value.form.cards,
+      page.value.form.cover,
+    ],
+    missing: requiredMissing.value,
   },
-];
+}));
 ```
 
-这段渲染逻辑不属于某一个适配器。它放在 `@plingjs/dom`，Vue、React 和原生 JS 只是各自的生命周期外壳：
+记录里只放助手需要的业务字段。不要把整个 store、整个表单实例或所有内部状态倒进去。
+
+`missing` 由页面自己的校验规则计算。这样助手回答“还差什么”时，和用户点保存时看到的是同一份结果。
+
+验证方法：先打开空表单，问“还差什么”；填上课程名和老师，再问一次。助手应该读到 `draftRecord`，缺口从四项减少到两项，而不是靠猜。
+
+### 第五步：给每个真实控件加动作
+
+输入框用 `fill`：
 
 ```vue
-<AgentGuideActions :items="guideActions" @command="onGuideCommand" />
+<input
+  v-model="draft.name"
+  v-tool="{
+    id: 'course_name',
+    action: 'fill',
+    label: page.form.name,
+    desc: copy.fieldDesc.name
+  }"
+/>
 ```
 
-渲染器只发回业务自己声明的 `command`，它不认识课程、字段或表单，也不会替页面写入任何值。这样三端不会各写一份 CSS，长文案在三个适配器里的折行、省略和禁用态才是同一套行为。
+下拉框用 `select`，说明里列出页面真实的选项：
 
-几个容易忽略的边界：
-
-- 写入过程中按钮进入 `disabled`，但标签保留“保存中……”而不是整行消失，用户知道操作还在进行；
-- 可选字段给一个“跳过”，避免用户为了前进而编一个值；
-- 窄屏下 `max-width: 100%`，预览先省略，动作永远不换行；
-- 英文推荐通常更长，预览仍然只能占一行，不能靠 `word-break` 把按钮拉高；
-- 这条规则只约束“操作行”。聊天正文该展示的完整推荐仍然完整展示，两者不是同一层信息。
-
-## 把值写回原表单
-
-第一版的引导会把推荐内容直接当成页面值展示，用户看不出“这是建议”还是“页面已经填了”。现在两者分开。下面这些行状态描述的是内置引导的契约；这个案例虽然隐藏了任务卡，推荐值与命令仍然按同一套规则工作：
-
-- 页面表单仍然是唯一输入源；
-- 推荐值只带 `suggested` 状态，标注“尚未写入页面”；
-- 用户点“采用”后，值才写进原控件，状态变成 `current`；
-- 用户直接在页面里改，下一次引导读到的是页面新值。
-
-字段表由页面当前值推导，不需要 `status` / `badge` 行模板，也不需要步骤计数器：
-
-```ts
-const guideField = computed(() => {
-  const gaps = courseCreateFieldNodes(locale, draft, teachers, skipped.value);
-  return gaps.find((field) => field.required && !field.filled && !field.skipped)
-    ?? gaps.find((field) => !field.filled && !field.skipped);
-});
+```vue
+<select
+  :value="draft.teacherName"
+  v-tool="{
+    id: 'course_teacher',
+    action: 'select',
+    label: page.form.teacher,
+    desc: copy.teacherDesc(teacherValues)
+  }"
+  @change="setTeacher(($event.target as HTMLSelectElement).value)"
+>
+  <option value="">{{ page.form.teacherPlaceholder }}</option>
+  <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.name">
+    {{ teacher.name }} · {{ teacher.subject }}
+  </option>
+</select>
 ```
 
-`guideActions` 只根据这个缺口生成短动作：定位当前字段、使用推荐值、跳过可选项；必填项齐了才出现“核对”。十个输入框不等于十个步骤，字段级差异由字段表表达。
+`teacherValues` 来自页面数据，不是另写一份常量。老师列表变化时，动作说明会跟着变化。
 
-建议不符合实际时，用户不需要先“拒绝”：直接在页面里改就行。引导读到的是页面新值，后续“采用”也不会覆盖用户已经输入的内容。
+自绘控件按真实交互拆动作。难度是五颗星，每颗星就是一条点击动作：
 
-按钮不会打开新的输入框。它把值写进页面上已经存在的控件，然后滚动到对应字段，并在表单上打出蓝色标记。用户看到的是“填这里”，不是聊天里的一句“已定位”。
+```vue
+<button
+  v-for="score in 5"
+  :key="score"
+  type="button"
+  v-tool="{
+    id: `course_difficulty_${score}`,
+    kind: 'write',
+    label: `${page.form.difficulty} ${score}`,
+    desc: copy.difficultyDesc(score)
+  }"
+  @click="setDifficulty(score)"
+>
+  ★
+</button>
+```
 
-页面只处理显式命令，不解析自然语言：
+上传不能由模型代做，使用 `handoff`：
+
+```vue
+<button
+  class="upload-tile"
+  type="button"
+  v-tool="{
+    id: 'course_cover',
+    kind: 'write',
+    label: page.form.cover,
+    desc: copy.coverDesc,
+    handoff: {
+      reason: copy.coverHandoff,
+      expect: { desc: copy.coverExpect, check: () => draft.cover }
+    }
+  }"
+  @click="coverInput?.click()"
+>
+  <!-- 上传区 -->
+</button>
+```
+
+验证时输入一句完整需求：
+
+```text
+创建课程：孕妇瑜伽，陈静，2 星，月卡，介绍自动填写
+```
+
+助手应该打开真实弹窗，再分别调用名称、老师、难度、可用卡和介绍动作。它不能直接把值写进某个隐藏对象。
+
+再问：
+
+```text
+上传封面在哪里点？
+```
+
+助手应该调用 `pling_locate`，把上传区滚进视野并高亮。文件选择器不会自己弹出，用户仍然要亲自选文件。
+
+### 第六步：保存要回读页面结果
+
+保存不是“接口返回 200”就结束。给保存按钮加一个 `expect`：
 
 ```ts
-function onGuideCommand(command: string): void {
-  if (command === "save-course") void saveCourse();
-  else if (command === "resume-editing") resumeEditing();
-  else if (command === "pick-cover") void pickCover();
-  else if (command === "locate-field") locateField(guideField.value);
-  else if (command === "use-suggestion") useSuggestion(guideField.value);
-  else if (command === "skip-field") skipField(guideField.value);
-  else if (command === "start-review") startReview();
-  else if (command === "focus-save") focusSave();
+const saveTool = computed(() => ({
+  id: "save_course",
+  kind: "write",
+  label: page.value.form.save,
+  desc: copy.value.saveDesc,
+  run: () => saveCourse(),
+  expect: {
+    desc: copy.value.saveExpect,
+    check: () => courses.value[0]?.id === newCourseId.value,
+  },
+}));
+```
+
+`saveCourse()` 仍然是页面原来的保存函数。它校验必填项，创建课程，把新记录放到课程库第一位。
+
+`expect` 在动作返回后运行。新课程没有出现在第一位，保存就按失败处理。此时助手不能报告成功，也不能完成目标。
+
+验证方法：
+
+1. 故意不上传封面，点保存，页面应提示缺少封面；
+2. 上传封面后保存，新课程应出现在列表第一位；
+3. 观察动作结果，`expect` 应该返回通过；
+4. 刷新页面，确认这是页面自己的保存逻辑，不是聊天记录伪造的结果。
+
+### 第七步：需要连续性时再加目标
+
+只有前面六步还不满足时，才进入这一步。典型情况是弹窗会关闭，用户会离开再回来，或者外部 Agent 需要固定的完成边界。
+
+案例06 的全部任务接入只有三行：
+
+```ts
+const pling = usePling();
+const disposeGoal = pling.task.goal(courseGoal(props.locale));
+onBeforeUnmount(disposeGoal);
+```
+
+`courseGoal()` 只写结果、边界和成功条件：
+
+```ts
+export function courseGoal(locale: Locale): TaskGoalInput {
+  return {
+    id: "course.create",
+    title: locale === "zh" ? "创建课程" : "Create a course",
+    goal: "在课程管理里新建一门课程：自己打开真实表单，按用户给出的信息填写，封面请用户上传，保存后回读课程库确认新课程在第一位。",
+    constraints: [
+      "页面上的动作是唯一操作入口；不要另造字段名、选择器或表单。",
+      "只填写用户明确给出或明确委托的内容；不确定就问。",
+      "封面必须由用户亲自上传，你不能替用户选择本地文件。",
+      "用户的问题、修改、暂停和放弃优先于继续填表。",
+    ],
+    successCriteria: [
+      "新课程出现在课程库第一位",
+      "名称、老师、可用卡和封面与用户确认的一致",
+      "保存动作已回读课程库并确认了这条新记录",
+    ],
+    examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+  };
 }
 ```
 
-判断“用户想创建课程还是想先问功能”属于模型的工作；页面只负责执行“定位课程名称”“采用这个推荐”这类明确命令。这样用户中途问问题、改主意或暂停，都不会被页面误当成下一步。
+这里不能加 `fields`、`steps`、`controller` 或保存回调。字段来自真实页面，保存来自 `save_course`，目标只负责让这件事在页面变化后继续存在。
 
-当助手带着字段值开启任务时，页面也需要把这些值同步回原表单。这个案例在 `onActivate` 里做一次：
+验证方法：
 
-```ts
-function applyTaskRunValues(task: ActiveGuidedTask): void {
-  const values = task.state.snapshot?.values;
-  if (!values) return;
-  if (values.name !== undefined) draft.name = String(values.name ?? "");
-  if (values.teacherId !== undefined) {
-    draft.teacherId = String(values.teacherId ?? "");
-    draft.teacherName = teachers.find((teacher) => teacher.id === draft.teacherId)?.name ?? "";
-  }
-  // 其余字段同理
-}
-```
+1. 启动创建任务，等助手打开弹窗；
+2. 关闭弹窗，问“刚才那门课还差什么”；
+3. 案例06 的目标仍然存在，助手可以重新打开表单继续；
+4. 案例07 没有目标，助手只能从当前页面重新判断；
+5. 保存并通过 `expect` 后，助手才调用 `pling_complete_task`。
 
-页面始终是事实来源。用户在表单里手动改了值，下一步重新读取的就是页面当前值，而不是任务定义里的初始示例。
+### 第八步：只有页面动作不够时才用进阶 API
 
-## 取消，以及在页面之间活下来
+进阶 `TaskDefinition` 和 `TaskController` 解决这些问题：
 
-任务菜单和模型都可以发出“取消任务”。它只是一个普通命令：
+- 字段需要类型、范围、正则或业务校验；
+- 大集合需要异步查找和候选确认；
+- 多个动作必须按固定顺序执行，并共用一份字段值；
+- 任务要在没有界面的宿主里运行。
 
-```ts
-const guide: TaskGuideDefinition = {
-  taskId: "course.create",
-  title: "创建课程",
-  cancel: { label: "取消任务", command: "cancel-task" },
-  agent: { cancel: "cancel-task" },
-  // ...
-};
-```
+它能做更多事，也会带来第二份字段定义。单页表单不需要它。先用页面动作把流程跑通，再判断是否真的缺少这些能力。
 
-页面收到 `cancel-task` 后调用 `pling.task.deactivate()`。引导消失，控制器里的运行被取消，不会留下一个“看起来还在，其实已经结束”的面板。取消不会回滚已经写入表单的值，因为页面才是用户正在编辑的事实来源。
+## 常见错误
 
-如果任务会关闭弹窗、跳到详情页，或者中间短暂离开原作用域，登记时加 `keepActive`：
+### 页面替助手打开弹窗
 
-```ts
-pling.task.define({
-  definition: courseDefinition,
-  guide: courseGuide,
-  controller,
-  scope: "create-course-form",
-  autoStart: true,
-  keepActive: true,
-  // ...
-});
-```
+如果页面在加载时直接设置 `modalOpen = true`，助手就失去了“找到新建按钮并点击”的机会。任务也应该从课程库开始，不能默认把表单摊开。
 
-`keepActive` 只对“人或助手明确开启”的任务生效，不会让一个自动出现的任务无限粘住页面。它解决的是上下文暂时不匹配时任务被误关；跨页面的阶段切换、未保存保护和分支编排仍然要由业务流程自己定义，不能指望一个布尔值包办。
+### 给自绘控件补一个隐藏输入框
 
-## 人工接力要明确停下来
+隐藏输入框看起来省事，实际会制造第二套交互。用户在页面上点星星，助手却写隐藏字段，两边状态很容易不一致。按控件真实行为声明动作。
 
-上传封面要读取本地文件，不适合由助手代选。封面是必填项，引导不会伪造一个布尔值，而是把用户带到原页面的上传区域；操作行此时只保留“上传封面”，不提供“继续”。
+### 动作说明不写可选值
 
-用户选完图片后，页面从文件输入和原表单重新读取全部字段，才出现“核对”。这个停顿不是失败，而是任务边界的一部分。没有它，流程看上去更快，但用户会在最后一步才发现自己漏了一项必须亲自完成的操作。
+老师列表来自页面数据，说明里却不列姓名。模型只能猜，猜错后动作会失败。说明应该由页面数据生成，页面变化时一起变化。
 
-核对读取名称、老师、卡片、封面、扣卡次数和金额。只有这些值都有效，操作行才会出现“确认保存”；点击后才执行 `create_course`。
+### `expect` 只检查函数有没有抛错
 
-## 保存后从页面确认
+保存函数没有抛错，不代表业务已经生效。`expect` 要读页面结果，例如新记录是否在列表第一位。检查不到结果，就不能报告成功。
 
-动作返回成功不等于业务完成。这个案例在写入后检查课程库：新记录必须出现在第一位，且名称、老师和可用卡与核对值一致。
+### 在页面里写正则判断意图
 
-```ts
-const result = await controller.run();
-if (result.status === "done" && courses.value[0]?.id === newCourseId.value) {
-  modalOpen.value = false;
-  reviewOpen.value = false;
-  return true;
-}
-```
+`if (/创建课程/.test(text)) openCreate()` 会把提问也当成命令。意图理解应该交给模型，页面只提供动作和状态。
 
-完成卡展示的是这次回读的结果，不是预先写好的“成功”文案。
+### 目标里重复写字段
+
+目标里再写一份 `fields`，页面表单就成了第二份真相。字段改名、选项变化或校验调整时，两处很容易漂移。目标是生命周期，不是表单 schema。
+
+## 最终效果
+
+完成前面六步后，页面已经能完成创建课程：
+
+| 用户说 | 助手做 | 页面反应 |
+| --- | --- | --- |
+| “创建孕妇瑜伽，陈静，2 星，月卡” | 调用 `new_course`，再填写对应字段 | 弹窗打开，原表单出现用户给出的值 |
+| “还差什么？” | 读 `draftRecord` 的 `missing` | 只报告真实缺口，不猜 |
+| “上传封面在哪里点？” | 调用 `pling_locate` | 上传区滚进视野并高亮 |
+| 用户选择封面并说“保存” | 调用 `save_course`，等待 `expect` | 新课程进入课程库第一位 |
+| 保存结果通过 | 报告保存结果 | 列表回读与页面状态一致 |
+
+完成第七步后，弹窗关闭也不会丢掉目标。助手可以重新打开表单继续，只有保存并回读成功后才调用 `pling_complete_task`。
 
 ## 在浏览器里核对
 
-打开 [Vue 3 创建课程案例](/demos/course-workspace-vue3/?lang=zh)，依次检查：
+打开 [案例06](/demos/course-workspace-vue3/?lang=zh) 和 [案例07](/demos/course-create-directives-vue3/?lang=zh)，依次检查：
 
-- 首屏只出现课程库和创建课程表单，不混入老师排课等其他模块。
-- 聊天卡里没有输入框、下拉框或文本域。
-- 打开创建课程弹窗后任务处于激活状态；聊天里不出现独立任务卡或字段轨道。
-- 输入“孕妇瑜伽，陈老师，2 星，介绍自动填写”，四项值一次出现在原表单，只追问还缺的可用卡。
-- 接着说“难度改成 4 星”，只更新难度，不重新询问课程名和老师。
-- 输入一个不存在的老师，助手应列出可选老师并在表单里标记授课老师，不静默替换。
-- 输入“帮我改一下”这类没有指向的修正，助手应先问清楚要改哪一项。
-- 输入“瑜伽进阶2星 老师随意，月卡”，老师取推荐值，课程名保持“瑜伽进阶”，不出现“进阶老师”这种误判。
-- 没有选择封面就保存时，任务停在封面并给出明确提示。
-- 完成封面后保存，新课程出现在课程列表第一位；扣卡次数显示为 `1`，不是 `1.0`。
-- 再点“再做一次”创建第二门课，第一门课仍在课程库中；消息变多后聊天记录仍可上下滚动。
-- 聊天和页面操作过程中没有控制台错误。
+- 首次进入时弹窗是关闭的，页面停在课程库。
+- 输入“创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写”，助手自己点击“新建课程”，弹窗由页面按钮打开。
+- 名称、老师、难度、可用卡和介绍写进原表单，样式和手动填写一致。
+- 问“还差什么”，助手读草稿记录回答，不凭空猜。
+- 问“上传封面在哪里点”，页面滚到上传区并高亮，文件选择器不会自己弹出。
+- 用户选择封面后，保存成功，新课程出现在课程库第一位。
+- 保存后目标才完成；完成动作没有再次写入课程。
+- 关掉弹窗再问“刚才那门课还差什么”，案例06 的目标仍然 active，案例07 没有目标层。
+- 点取消后目标消失，已经填进表单的值不被回滚。
+- 聊天变长后记录仍能滚动，页面没有控制台错误。
 
-## 接入另一个页面
+## 和进阶 API 的边界
 
-不需要复制这套界面。按下面顺序做：
+`pling.task.goal()` 是默认的任务接入。它没有字段表，也没有步骤控制器。字段来自真实页面，执行来自真实动作。
 
-1. 用 `TaskDefinition` 定义字段、动作和回读条件。
-2. 用 `TaskGuideDefinition` 写面向用户的步骤、摘要和命令名。
-3. 在页面里调用 `pling.task.define()`，声明 `route`、`scope` 和 `autoStart`。
-4. 实现命令处理函数：写入已有控件、定位、打开弹窗或调用任务控制器。
-5. 写入后重新读取业务数据，用页面结果决定是否显示完成。
+`pling.task.define()` 仍然保留，用于这些确实需要声明的场景：
 
-当任务需要由用户主动选择，或者只能在某个详情页、某一行记录上启动时，把 `route`、`scope` 或 `requiresRecord` 写清楚。不要用页面上的临时状态去猜——任务目录会根据这些声明判断当前是否可用。
+- 字段需要类型、范围、正则或业务校验；
+- 大集合需要异步查找和候选确认；
+- 多个动作必须按固定顺序执行，并且要共用一份字段值；
+- 任务需要在没有界面的宿主里运行。
 
-React 19、React 16.3、Vue 2.7 和原生 JS 版本沿用同一套任务定义、字段推导和操作行，只替换适配器的挂载方式。五个版本都已经提供同样的创建课程流程、人工确认和回读验证。
+这些能力解决的是“页面动作不够表达”的问题，不是“接 Agent 必须先写任务”的问题。大多数单页表单不需要它们。
+
+完整的参数、状态和方法见[引导任务 API](/zh/reference/guided-task-api)。
 
 ---
 
@@ -9137,7 +9543,7 @@ React 适配器把这两种职责拆成两个组件。
 
 ## 浮动与侧栏
 
-示例先保留浮动入口，再允许切换为贴边侧栏。侧栏既可以是覆盖页面的 `overlay`，也可以是进入页面栅格的 `fused`：
+示例先保留浮动入口，再允许切换为贴边侧栏。侧栏默认是进入页面栅格的 `fused`；只有需要覆盖页面时才显式选择 `overlay`：
 
 ```tsx{4-8}
 <AgentDock
@@ -9157,13 +9563,13 @@ React 适配器把这两种职责拆成两个组件。
 | 参数 | 取值 | 作用 |
 | --- | --- | --- |
 | `layout` | `"dock"` / `"sidebar"` | 页面角落的浮层，或视口边缘的工作栏 |
-| `sidebarMode` | `"overlay"` / `"fused"` | 覆盖页面，或作为栅格的一列 |
+| `sidebarMode` | `"overlay"` / `"fused"` | 覆盖页面，或作为栅格的一列；默认 `fused` |
 | `side` | `"right"` / `"left"` | 侧栏贴在哪一侧 |
 | `launcherPlacement` | `"bottom"` / `"center"` | 收起后入口位于底部角落，或作为边缘标签居中 |
 | `launcherLabel` | 字符串 | 收起入口的文案；默认使用当前语言的“Ask Pling” |
 | `surfaceId` | 字符串 | 任务路由使用的稳定标识，默认是 `"dock"` |
 
-`side`、`sidebarMode`、`launcherPlacement` 和 `launcherLabel` 只在侧栏模式下有意义。`launcherPlacement` 只影响覆盖模式。布局可以随用户偏好或窗口尺寸改变，但不需要卸载后再挂载一个新的助手。
+`side`、`sidebarMode`、`launcherPlacement` 和 `launcherLabel` 只在侧栏模式下有意义。`launcherPlacement` 只影响覆盖模式；融合模式收起时使用右下角的固定入口。布局可以随用户偏好或窗口尺寸改变，但不需要卸载后再挂载一个新的助手。
 
 融合模式要求外层给助手留出一列。`AgentDock` 仍负责展开状态、启动入口和同一份历史：
 
@@ -9187,7 +9593,7 @@ React 适配器把这两种职责拆成两个组件。
 }
 ```
 
-如果业务表格、编辑器或看板不能被面板盖住，用 `fused`；如果助手只是临时覆盖内容，保留 `overlay`。窄屏下组件会退回浮动面板。
+`fused` 是默认值：业务表格、编辑器或看板不会被面板盖住。只有助手确实可以临时覆盖内容时，才显式改用 `overlay`。窄屏下组件会退回浮动面板。
 
 侧栏在窄屏下会降级为浮动面板。全高侧栏在手机上会挤掉工作区域；保留入口、改换形态比强行维持桌面布局更实用。这个降级由组件内部完成，业务代码不需要再写一套移动端分支。
 
@@ -15014,7 +15420,7 @@ Canonical: https://plingjs.dev/zh/surface/deploy-a-surface-gateway
 
 Surface 网关位于外部 Agent 与打开页面之间。它携带协议包络，把页面绑定到用户与租户，签发委托 Agent 会话并转发请求。它不能成为页面业务状态的第二份副本。
 
-仓库中的已鉴权 Todo 示例是参考拓扑，不是托管服务。尤其要说明：`surface.plingjs.dev` 是演示端点，不是共享客户代理。生产企业应在自己的 origin 运行同样的边界，并接入自己的身份与数据系统。
+仓库中的已鉴权 Todo 示例是参考拓扑，不是托管服务。尤其要说明：`surface.plingjs.com` 是演示端点，不是共享客户代理。生产企业应在自己的 origin 运行同样的边界，并接入自己的身份与数据系统。
 
 ## 可用拓扑
 
@@ -15994,7 +16400,7 @@ MCP facade 必须：
 
 ## 当前实现的边界
 
-仓库提供协议内核、参考委托 HTTP handler 与案例中的本地桥。`surface.plingjs.dev` 只用于演示，不是所有客户共享的生产网关。任何生产传输都应由部署方实现 TLS、身份、租户隔离、持久化、限流与审计。
+仓库提供协议内核、参考委托 HTTP handler 与案例中的本地桥。`surface.plingjs.com` 只用于演示，不是所有客户共享的生产网关。任何生产传输都应由部署方实现 TLS、身份、租户隔离、持久化、限流与审计。
 
 ---
 
@@ -18752,6 +19158,18 @@ Canonical: https://plingjs.dev/zh/reference/agent-runtime-sessions-context-limit
 
 注入 `llm` 后，确定性测试或自定义网关客户端不需要 `baseUrl` 与 `apiKey` 才能就绪。运行时仍会检查限额与重试参数。
 
+## 内建的定位工具
+
+当前页面至少有一个动作时，运行时会在工具清单末尾加入 `pling_locate`。它只有 `actionId` 一个参数，只接受页面当前可见的动作 id。它不经过确认闸门，不调用动作的 `run`，也不会产生业务写入。
+
+| 参数 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `actionId` | `string` | 是 | 当前动作清单中的准确 id |
+
+调用后，执行器会把目标滚进视口，并以 `locate` 状态高亮。定位高亮默认保持 6 秒，可通过创建执行器时的 `locateDurationMs` 调整；设为 `0` 时保持到下一次动作或页面卸载。动作 id 不存在，或动作没有 DOM 目标时，返回 `ACTION_NOT_FOUND` 或 `ACTION_UNAVAILABLE`。
+
+页面不需要额外声明定位动作。开发者动作如果占用了 `pling_locate` 这个名字，协议层会把它改成 `pling_locate_2`，内建工具仍保留原名。
+
 ## 压缩历史时发生什么
 
 历史预算不等于供应商的完整上下文窗口。Pling 先为下一次回复留出空间，并提前压缩：
@@ -19287,7 +19705,7 @@ const response = await surface.handle({
 });
 ```
 
-包住这次调用的适配器仍负责身份验证、HTTP、SSE、CORS、请求体上限与响应脱敏。`surface.plingjs.dev` 是演示端点，不是面向客户应用的共享代理。
+包住这次调用的适配器仍负责身份验证、HTTP、SSE、CORS、请求体上限与响应脱敏。`surface.plingjs.com` 是演示端点，不是面向客户应用的共享代理。
 
 ## 刻意不提供
 
@@ -20052,7 +20470,7 @@ legacy 入口通过 render-prop 组件提供页面反馈、分步指引和任务
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/react` `0.1.0-alpha.8` |
+| 适用版本 | `@plingjs/react` `0.1.0-alpha.9` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | Hooks 入口要求 React 16.8+，legacy 入口支持 React 16.3+；浏览器需支持 ES2022 模块；SSR 与构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | `react >=16.3` |
@@ -20312,7 +20730,7 @@ $("#add").on("click", addTask);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.8` |
+| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.9` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；jQuery 为可选项 |
@@ -21091,54 +21509,375 @@ SESSION_REVOKED
 
 Canonical: https://plingjs.dev/zh/reference/guided-task-api
 
-引导任务处理的是这样一类场景：用户清楚自己要的结果，却说不清中间步骤。定义描述目标、约束、成功判据和工作记忆字段；确定性的业务写入可以使用有序步骤，但对话不是逐字段脚本。所有界面渲染同一份任务快照。
+引导任务处理的是这样一类场景：用户清楚自己要的结果，却说不清中间步骤。API 提供两种接入方式：
 
-API 在 `@plingjs/agent`，参考 DOM 面板在 `@plingjs/vanilla`。两者都不另建权限模型。宿主注入的仍是页面已经在用的执行器、Surface 或业务服务。
+- `pling.task.goal()` 只声明目标、约束和成功条件。字段来自真实页面，执行走真实动作。这是默认方式。
+- `pling.task.define()` 声明字段、步骤和运行控制器。只有页面动作无法表达校验、查找或固定顺序时才使用。
+
+两种方式共用任务目录、权限、确认和审计。目标不会另建执行通道，进阶任务也不会。
 
 ```ts
-import {
-  createTaskController,
-  type TaskDefinition,
-  type TaskRunSnapshot,
-} from "@plingjs/agent";
+import type { TaskGoalInput } from "@plingjs/agent";
 ```
 
-## 组成
+## 先选路径
 
-| 组成 | 回答什么 | 不做什么 |
+| 需求 | 使用 |
+| --- | --- |
+| 一句话操作现有表单，随后保存 | `v-scope` + `v-record` + `v-tool`，不需要任务 API |
+| 结果要在弹窗关闭或路由变化后继续存在 | `pling.task.goal()` |
+| 要固定任务入口、取消和完成记录 | `pling.task.goal()` |
+| 外部 Agent 需要任务说明和完成边界 | `pling.task.goal()` |
+| 字段需要类型、范围、正则或业务校验 | 进阶 `define()` + `TaskField` |
+| 大集合需要异步查找和候选确认 | 进阶 `define()` + `lookup` |
+| 多个动作必须按固定顺序执行 | 进阶 `define()` + `TaskStep` |
+| 任务在无界面宿主里运行 | `createTaskController()` |
+
+大多数页面停在第一行或第二行。不要因为“要接 Agent”就先写字段表。
+
+## 最小接入：goal()
+
+```ts
+const disposeGoal = pling.task.goal(courseGoal(props.locale));
+onBeforeUnmount(disposeGoal);
+```
+
+`goal()` 返回注销函数。组件卸载时调用它，目标和它的引导一起移除。
+
+`goal()` 注册的是目标，不是工作流。它不接受字段、步骤、控制器、表单工具或业务回调。完整参数如下。
+
+### TaskGoalInput
+
+| 属性 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | 是 | 无 | 稳定目标 id，在同一目录内唯一 |
+| `title` | `string` | 是 | 无 | 面向人的目标名称 |
+| `goal` | `string` | 是 | 无 | 要达成的结果。不能为空 |
+| `description` | `string` | 否 | 取 `goal` | 目标卡或任务列表里的补充说明 |
+| `constraints` | `readonly string[]` | 否 | 无 | 模型必须守住的边界，例如页面动作是唯一入口、上传必须由人完成 |
+| `successCriteria` | `readonly string[]` | 否 | 无 | 可观察的完成条件，例如新记录出现在列表第一位 |
+| `examples` | `readonly string[]` | 否 | 无 | 用户可能说出的示例句子 |
+| `risk` | `read` / `write` / `danger` | 否 | `write` | 目标级风险提示；动作仍执行自己的风险规则 |
+| `route` | `string \| readonly string[] \| (page) => boolean` | 否 | 全路由 | 限制目标可以从哪些路径或路由名启动 |
+| `scope` | `string \| readonly string[]` | 否 | 无限制 | 列出的区域必须全部活跃，目标才可用 |
+| `keepActive` | `boolean` | 否 | `true` | 显式启动后，路由或区域暂时不匹配时是否保留 |
+| `labels` | `TaskGuideLabels` | 否 | 内置文案 | 覆盖运行中、已完成等标签 |
+| `cancelLabel` | `string` | 否 | `Cancel task` | 取消按钮文案 |
+| `stepSubtitle` | `string` | 否 | 内置文案 | 紧凑目标卡的副标题 |
+
+示例：
+
+```ts
+const goal: TaskGoalInput = {
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程：自己打开真实表单，按用户给出的信息填写，封面请用户上传，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口；不要另造字段名、选择器或表单。",
+    "只填写用户明确给出或明确委托的内容；不确定就问。",
+    "封面必须由用户亲自上传，你不能替用户选择本地文件。",
+    "用户的问题、修改、暂停和放弃优先于继续填表。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "名称、老师、可用卡和封面与用户确认的一致",
+    "保存动作已回读课程库并确认了这条新记录",
+  ],
+  examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+  cancelLabel: "取消任务",
+};
+```
+
+### 它注册了什么
+
+`goal()` 内部会：
+
+1. 创建一份没有字段的 `TaskDefinition`，把 `goal` 写进 `objective`；
+2. 创建一张紧凑引导卡，只有标题、目标、取消和完成状态；
+3. 默认 `keepActive: true`；
+4. 注册 `pling_start_task`、`pling_cancel_task`、`pling_complete_task` 三条生命周期动作；
+5. 把目标、约束、成功条件和示例投影给模型。
+
+它不会：
+
+- 打开弹窗；
+- 读取或写入表单；
+- 调用保存函数；
+- 放宽任何动作的权限；
+- 生成第二套页面。
+
+### 目标的生命周期
+
+```ts
+const active = pling.task.active();
+active?.goal;                  // true
+active?.startedBy;             // "page" | "agent"
+active?.state.snapshot?.status; // "running" | "done"
+active?.state.completed;       // boolean
+```
+
+启动方式有两种：
+
+- 页面调用 `pling.task.activate("course.create")`；
+- 模型调用 `pling_start_task`，并传 `task: "course.create"`。
+
+启动只改变任务目录状态。目标不会调用页面上任何函数。真实页面仍然停在原处，等模型调用 `new_course` 等动作。
+
+目标状态只有两种：
+
+| 状态 | 含义 |
+| --- | --- |
+| `running` | 目标已启动，尚未完成或取消 |
+| `done` | 页面满足成功条件，模型调用了完成动作 |
+
+取消后目标从 active 状态移除，不保留 `cancelled` 快照。已经写进页面的值不回滚。
+
+### 完成与取消
+
+模型在目标激活后会看到 `pling_complete_task`：
+
+```json
+{
+  "task": "course.create"
+}
+```
+
+这条动作只关闭目标。它不保存、不提交、不改业务数据。模型只能在页面已经满足成功条件时调用。通常顺序是：
+
+1. 调用页面保存动作；
+2. 保存动作的 `expect` 回读结果；
+3. 回读通过；
+4. 调用 `pling_complete_task`。
+
+如果保存还没发生，模型不应该完成目标。目标卡显示已完成，只代表生命周期结束，不代表又执行了一次写入。
+
+取消由人点目标卡上的按钮，或模型调用 `pling_cancel_task`。取消只结束目标。页面上的草稿和已填值保持原样。
+
+### 模型看到什么
+
+目标激活后，系统提示会包含：
+
+```text
+Active task: course.create — 创建课程
+Objective: 在课程管理里新建一门课程……
+Constraints: 页面上的动作是唯一操作入口；……
+Success criteria: 新课程出现在课程库第一位 | ……
+Started by: agent
+Mode: goal only. The page's real actions are the only way to operate the page.
+```
+
+同时明确告诉模型：
+
+- 这个任务没有字段 schema；
+- 不要调用 `pling_update_task`；
+- 不要发明字段名或第二张表单；
+- 用页面真实动作操作；
+- 页面满足成功条件后调用 `pling_complete_task`。
+
+目标没有字段时，`pling_update_task` 不可用。模型不会看到一份空的字段表，也不会被要求逐项填写。
+
+## TaskCatalog
+
+`createTaskCatalog()` 管理“当前页面此刻有哪些任务”。它不执行任务，只负责可用性、激活、命令转发和向模型投影任务清单。
+
+```ts
+import { createTaskCatalog } from "@plingjs/agent";
+
+const catalog = createTaskCatalog({
+  registry: pling.registry,
+  isScopeActive: (id) => pling.registry.isScopeActive(id),
+});
+```
+
+Vue 3、React、Vue 2.7 和原生 JS 的适配器都通过 `pling.task` 暴露同一份目录。页面通常直接调用 `pling.task.goal()`、`pling.task.define()` 和 `pling.task.active()`。
+
+### 属性
+
+| 属性 | 类型 | 说明 |
 | --- | --- | --- |
-| `TaskDefinition` | 目标、约束、成功判据、工作记忆，以及可选的确定性步骤 | 不执行，也不批准任何东西 |
-| `TaskRunSnapshot` | 用户此刻应该看到什么 | 不持有模型会话 |
-| `TaskInvoke` | 调用交给哪个现有执行器 | 不新增传输层或权限规则 |
-| `GuidedTaskPanel` | 怎样用普通 DOM 把一次运行渲染成完整面板或对话卡片 | 不替代框架组件，也不执行任务 |
+| `actionId` | `readonly string` | 当前实际绑定的 `pling_start_task` id |
+| `updateActionId` | `readonly string` | 当前实际绑定的 `pling_update_task` id |
+| `focusActionId` | `readonly string` | 指向已声明引导字段的动作 id |
+| `reviewActionId` | `readonly string` | 打开页面只读核对的动作 id |
+| `proposeSaveActionId` | `readonly string` | 打开页面确认步骤的动作 id |
+| `cancelActionId` | `readonly string` | 结束 active 引导的动作 id |
+| `completeActionId` | `readonly string` | 完成 goal-only 目标的动作 id |
 
-带 `steps` 的定义是确定性任务；没有步骤时进入 Agent 模式，必须提供 `prompt` 或 `prompt(values)`。
+多个运行时共享一个注册表时，读取这些属性，不要假定默认 id。比如第一个目录使用 `pling_start_task`，第二个目录会自动使用 `pling_start_task_2`。
+
+### 方法
+
+| 方法 | 签名 | 行为 |
+| --- | --- | --- |
+| `goal(input)` | `(input: TaskGoalInput) => () => void` | 注册最小目标，返回注销函数 |
+| `define(registration)` | `(registration: GuidedTaskRegistration) => () => void` | 注册进阶任务，返回注销函数 |
+| `get(id)` | `(id: string) => GuidedTaskRegistration \| undefined` | 读取一个登记项，即使当前不可用 |
+| `list()` | `() => readonly GuidedTaskRegistration[]` | 按注册顺序列出全部任务 |
+| `available()` | `() => readonly GuidedTaskRegistration[]` | 列出当前路由和作用域匹配的任务 |
+| `active()` | `() => ActiveGuidedTask \| null` | 返回当前展示的任务 |
+| `activate(id, options?)` | `(id: string, options?: GuidedTaskActivationOptions) => ActiveGuidedTask` | 显式启动或恢复任务 |
+| `deactivate()` | `() => void` | 结束当前任务 |
+| `command(command)` | `(command: TaskGuideCommand) => boolean` | 把引导命令转发给 `onCommand` |
+| `complete()` | `() => boolean` | 标记当前 goal-only 目标完成；进阶任务返回 `false` |
+| `views()` | `() => readonly GuidedTaskView[]` | 当前可用任务的紧凑只读说明 |
+| `refresh()` | `() => void` | 通知订阅者实时状态变化 |
+| `subscribe(listener)` | `(listener: () => void) => () => void` | 订阅可用性、激活和快照变化 |
+| `destroy()` | `() => void` | 注销动作、清理订阅并释放控制器登记 |
+
+`activate()` 的 `options`：
+
+| 属性 | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| `values` | `TaskValues` | `{}` | 已提供的字段值；只接受定义中声明过的字段 |
+| `startedBy` | `"page" \| "agent"` | `"page"` | 记录由页面还是模型开启 |
+
+目标没有字段，所以 `values` 通常不需要。进阶任务会校验字段名和值。
+
+### ActiveGuidedTask
+
+| 属性 | 类型 | 说明 |
+| --- | --- | --- |
+| `id` | `string` | 任务 id |
+| `definition` | `TaskDefinition` | 本次运行使用的定义 |
+| `guide` | `TaskGuideDefinition` | 当前引导，可能没有 |
+| `controller` | `TaskController` | 运行控制器；目标层没有 |
+| `state` | `TaskGuideState` | 实时渲染状态 |
+| `startedBy` | `"page" \| "agent"` | 由谁开启 |
+| `goal` | `boolean` | 是否为 `goal()` 创建的紧凑目标 |
+
+## 进阶：define(registration)
+
+只有页面动作无法表达需求时，才使用 `define()`。
+
+```ts
+pling.task.define({
+  definition: courseDefinition,
+  guide: courseGuide,
+  controller,
+  route: "/courses/new",
+  scope: "create-course-form",
+  autoStart: true,
+  state: () => ({ snapshot: controller.snapshot(), step: currentStep.value }),
+  onCommand: (command) => runCourseCommand(command),
+});
+```
+
+| 属性 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `string` | 否 | 注册 id；默认取 `definition.id`，两者不一致会抛错 |
+| `definition` | `TaskDefinition` | 是 | 可执行任务定义 |
+| `guide` | `TaskGuideDefinition` | 否 | 用户可见的展示定义；没有 guide 时任务仍可无界面执行 |
+| `controller` | `TaskController` | 否 | 任务运行控制器；有 controller 才会真正启动运行 |
+| `route` | `GuidedTaskRoute` | 否 | 匹配页面路径或路由名；省略表示不限制 |
+| `scope` | `string \| readonly string[]` | 否 | 这些作用域必须全部活跃 |
+| `autoStart` | `boolean` | 否 | 上下文匹配时自动展示；默认 `false` |
+| `keepActive` | `boolean` | 否 | 显式启动后，上下文暂时不匹配时是否保留；默认 `false` |
+| `initialValues` | `TaskValues \| () => TaskValues` | 否 | 自动或显式启动时的初始值 |
+| `binding` | `TaskBinding \| () => TaskBinding` | 否 | 当前记录等页面事实 |
+| `state` | `() => TaskGuideState` | 否 | 渲染时读取的实时状态 |
+| `onActivate` | `(task) => void \| Promise<void>` | 否 | 任务变为 active 后调用 |
+| `onDeactivate` | `(task) => void` | 否 | 任务失去 active 状态时调用 |
+| `onCommand` | `(command, task) => void \| Promise<void>` | 否 | 接收引导按钮发出的业务命令 |
+
+`define()` 返回注销函数。注销会移除 controller 注册、清理 active 状态并刷新订阅者。
+
+同一时刻只有一个 active guide。自动任务按注册顺序选择；显式激活覆盖当前自动任务。调用 `deactivate()` 后，当前上下文不会立刻重新自动激活。
 
 ## TaskDefinition
 
 | 属性 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `id` | `string` | 是 | 稳定任务 id，在同一控制器内唯一 |
+| `id` | `string` | 是 | 稳定任务 id |
 | `title` | `string` | 是 | 面向人的任务名称 |
 | `description` | `string` | 否 | 任务做什么、什么场景下选它 |
 | `objective` | `string` | 否 | 任务要达成的结果 |
-| `constraints` | `readonly string[]` | 否 | 助手在协助过程中必须守住的边界 |
-| `successCriteria` | `readonly string[]` | 否 | 怎样才算真正完成，必须可观察 |
+| `constraints` | `readonly string[]` | 否 | 助手必须守住的边界 |
+| `successCriteria` | `readonly string[]` | 否 | 可观察的完成条件 |
 | `requiresRecord` | `boolean` | 否 | 必须由页面提供已选记录后才能启动 |
 | `examples` | `readonly string[]` | 否 | 任务卡上的示例说法 |
-| `fields` | `readonly TaskField[]` | 否 | 当前工作记忆，以及可能需要人做出的决定 |
-| `risk` | `read` / `write` / `danger` | 否 | 展示用风险提示；动作仍执行自己的风险规则 |
-| `steps` | `readonly TaskStep[]` | 否 | 确定性业务动作调用；存在时进入步骤模式 |
+| `fields` | `readonly TaskField[]` | 否 | 工作记忆和需要人做出的决定 |
+| `risk` | `read` / `write` / `danger` | 否 | 展示用风险提示 |
+| `steps` | `readonly TaskStep[]` | 否 | 确定性业务动作调用 |
 | `prompt` | `string \| (values) => string` | Agent 模式必填 | 把任务交给助手时使用的模板 |
 | `confirm` | `boolean \| "always"` | 否 | 任务级确认偏好 |
 
-`examples` 只负责填入表单，不能直接执行写操作。这样一条建议不会变成误触的命令。
+带 `steps` 的定义是确定性任务。没有步骤时进入 Agent 模式，必须提供 `prompt` 或 `prompt(values)`。
 
-## 绑定当前记录
+## TaskField
 
-很多业务任务从表格行或详情页开始。用户点「写备注」时，页面已经知道是哪一节课、哪张订单或哪个会员。再让用户在表单里输入这个 id，既别扭又容易出错。
+字段是用户要做出的决定，不是数据库列。当前店铺、租户、操作人等由服务端确定的事实不要放进字段。
 
-`TaskBinding` 承载页面事实，它不是另一份字段值。
+| 属性 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `name` | `string` | 是 | 写入值与步骤参数函数使用的键 |
+| `label` | `string` | 是 | 面向人的字段名 |
+| `type` | `text` / `textarea` / `number` / `boolean` / `date` / `select` / `lookup` | 否 | 输入控件；默认 `text` |
+| `optional` | `boolean` | 否 | 允许为空；默认必填 |
+| `placeholder` | `string` | 否 | 输入提示或选择提示 |
+| `help` | `string` | 否 | 字段旁的简短说明 |
+| `defaultValue` | `TaskValue` | 否 | 运行开始时的初始值 |
+| `values` | `readonly TaskChoice[]` | 否 | 小型封闭选项集 |
+| `recommended` | `TaskValue` | 否 | 仅在用户明确委托这一项时使用的建议值 |
+| `lookup` | `TaskLookup` | 否 | 大集合的异步搜索 |
+| `min` / `max` | `number` | 否 | 数值字段的最小值与最大值 |
+| `minLength` / `maxLength` | `number` | 否 | 文本长度边界，按去除首尾空白后的字符数计算 |
+| `pattern` | `string` | 否 | 不带分隔符的正则源码 |
+| `validate` | `(value, values) => string \| null \| undefined` | 否 | 业务级校验，在写入前运行 |
+| `searchAction` | `string` | 否 | 为该查找暴露的动作 id；默认 `search_<name>` |
+| `minChars` | `number` | 否 | 最少查询字符数；默认 1 |
+| `agentWritable` | `boolean` | 否 | 上传、验证码等页面专属值设为 `false`；默认 `true` |
+
+每个 `TaskChoice` 都有稳定的 `value`、给人看的 `label`，以及可选的 `description`，用于区分重名结果。
+
+```ts
+const studentField: TaskField = {
+  name: "studentRef",
+  label: "学员",
+  type: "lookup",
+  minChars: 2,
+  searchAction: "search_students",
+  recommended: "student_li_na",
+  lookup: async (query, { signal }) => api.searchStudents(query, { signal }),
+  validate: (value) =>
+    students.some((student) => student.id === value)
+      ? null
+      : "请从搜索结果中选择学员。",
+};
+```
+
+这些检查在 `pling_update_task` 写入之前执行。一次提交里只要有字段类型不对、越界、长度不符、正则不匹配或 `validate` 返回原因，整次更新都不会落地。
+
+`validate` 接收本次提交后的候选值视图。它不能绕过字段白名单、`agentWritable`、权限、确认或业务执行器。
+
+## TaskStep
+
+一个步骤调用一个现有动作，不声明第二套执行器。
+
+| 属性 | 类型 | 必填 | 说明 |
+| --- | --- | --- | --- |
+| `id` | `string` | 否 | 稳定步骤 id；默认使用从 1 开始的序号 |
+| `label` | `string` | 是 | 面向人的步骤名称 |
+| `summary` | `string` | 否 | 为什么执行这一步，或在检查什么 |
+| `action` | `string` | 是 | 已注册动作或受治理业务操作 |
+| `args` | `object \| (values, binding) => object` | 否 | 静态参数、已填字段与绑定的页面事实 |
+| `optional` | `boolean` | 否 | 失败记为跳过，后续步骤继续 |
+| `handoff` | `boolean \| string` | 否 | 这一步必须由用户在页面上完成 |
+
+`args` 收到字段值与绑定的副本。步骤修改参数对象，不会改到控制器内部保存的状态。
+
+```ts
+const approve: TaskStep = {
+  label: "在页面上签署审批",
+  action: "sign_approval",
+  handoff: "这次审批必须由当前用户亲自签署。",
+};
+```
+
+`handoff` 会把运行暂停在 `waitingFor: "handoff"`。宿主恢复任务时必须自己核对页面。任务层返回一个布尔值，不能证明用户已经完成操作。
+
+## TaskBinding
+
+很多业务任务从表格行或详情页开始。用户点“写备注”时，页面已经知道是哪一节课。
 
 ```ts
 interface TaskRecordBinding {
@@ -21169,98 +21908,12 @@ const addNote: TaskDefinition = {
   }],
 };
 
-panel.open("lesson.note", {}, {
+controller.start("lesson.note", {}, {
   record: { id: "lesson_42", label: "瑜伽基础 · 2026-03-16 10:00" },
 });
 ```
 
-`requiresRecord` 为真且没有非空记录 id 时，`start()` 会抛错。通用任务列表应把这类任务显示成入口，而不是允许在没有上下文时直接启动的按钮。
-
-## TaskField
-
-字段是用户要做出的决定，不是数据库列。当前店铺、租户、操作人等由服务端确定的事实不要放进字段。
-
-| 属性 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `name` | `string` | 是 | 写入值与步骤参数函数使用的键 |
-| `label` | `string` | 是 | 面向人的字段名 |
-| `type` | `text` / `textarea` / `number` / `boolean` / `date` / `select` / `lookup` | 否 | 输入控件；默认 text |
-| `optional` | `boolean` | 否 | 允许为空；默认必填 |
-| `placeholder` | `string` | 否 | 输入提示或选择提示 |
-| `help` | `string` | 否 | 字段旁的简短说明 |
-| `defaultValue` | `TaskValue` | 否 | 运行开始时的初始值 |
-| `values` | `readonly TaskChoice[]` | 否 | 小型封闭选项集 |
-| `recommended` | `TaskValue` | 否 | 仅在用户明确委托这一项选择时使用的建议值 |
-| `lookup` | `TaskLookup` | 否 | 大集合的异步搜索 |
-| `min` / `max` | `number` | 否 | 数值字段的最小值与最大值；在模型建议值写入任务快照前校验 |
-| `minLength` / `maxLength` | `number` | 否 | 文本长度边界；按去除首尾空白后的字符数计算 |
-| `pattern` | `string` | 否 | 不带分隔符的正则源码；对文本值测试。需要整值匹配时请写锚点，例如 `^[1-9]\d*$` |
-| `validate` | `(value, values) => string \| null \| undefined` | 否 | 业务级校验，在写入前运行。返回可直接展示给用户的拒绝原因；通过时返回空。它只校验值，不得做意图识别或产生副作用 |
-| `searchAction` | `string` | 否 | 为该查找暴露的动作 id；默认 `search_<name>` |
-| `minChars` | `number` | 否 | 最少查询字符数；默认 1，且不会更低 |
-| `agentWritable` | `boolean` | 否 | 上传、验证码等页面专属值设为 `false`；默认 `true` |
-
-每个 `TaskChoice` 都有稳定的 `value`、给人看的 `label`，以及可选的 `description`，用于区分重名结果。
-
-```ts
-const studentField: TaskField = {
-  name: "studentRef",
-  label: "学员",
-  type: "lookup",
-  minChars: 2,
-  searchAction: "search_students",
-  recommended: "student_li_na",
-  lookup: async (query, { signal }) => api.searchStudents(query, { signal }),
-  validate: (value) =>
-    students.some((student) => student.id === value)
-      ? null
-      : "请从搜索结果中选择学员。",
-};
-```
-
-这些检查在 `pling_update_task` 写入之前执行，页面不需要再维护一套自然语言解析器。一次提交里只要有字段类型不对、越界、长度不符、正则不匹配或 `validate` 返回原因，整次更新都不会落地，避免出现“写了一半”的表单。`validate` 接收的是本次提交后的候选值视图，但它仍然不能绕过字段白名单、`agentWritable`、权限、确认或业务执行器。
-
-## TaskStep
-
-一个步骤调用一个现有动作，不声明第二套执行器。
-
-| 属性 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `id` | `string` | 否 | 稳定步骤 id；默认使用从 1 开始的序号 |
-| `label` | `string` | 是 | 面向人的步骤名称 |
-| `summary` | `string` | 否 | 为什么执行这一步，或在检查什么 |
-| `action` | `string` | 是 | 已注册动作或受治理业务操作 |
-| `args` | `object \| (values, binding) => object` | 否 | 静态参数、已填字段与绑定的页面事实 |
-| `optional` | `boolean` | 否 | 失败记为跳过，后续步骤继续 |
-| `handoff` | `boolean \| string` | 否 | 这一步必须由用户在页面上完成 |
-
-`args` 收到的是字段值与绑定的副本。步骤修改参数对象，不会改到控制器内部保存的状态。
-
-```ts
-const approve: TaskStep = {
-  label: "在页面上签署审批",
-  action: "sign_approval",
-  handoff: "这次审批必须由当前用户亲自签署。",
-};
-```
-
-`handoff` 会把运行暂停在 `waitingFor: "handoff"`。宿主恢复任务时必须自己核对页面；任务层返回一个布尔值，并不能证明用户已经完成操作。
-
-## 运行状态
-
-| 状态 | 含义 | 常见下一步 |
-| --- | --- | --- |
-| `collecting` | 仍缺少必填值 | 填写字段 |
-| `ready` | 字段齐全，尚未执行 | `plan()` 或 `run()` |
-| `planned` | 计划已确定并可见 | 确认，或开始执行 |
-| `running` | 某个步骤正在执行 | 等待，或上报进度 |
-| `waiting` | 正在等待确认或人工接力 | `confirm()`，或在页面上完成 |
-| `verifying` | 动作已返回，宿主正在核对结果 | 查看证据后继续 |
-| `done` | 所有必需步骤已完成 | 展示结果 |
-| `failed` | 某个必需步骤失败 | 修正原因或重试 |
-| `cancelled` | 运行被取消或被新运行替换 | 需要时重新开始 |
-
-`planned`、`running` 和 `verifying` 不是同一时刻的三个名字。`planned` 表示执行前路线已经冻结；`running` 表示调用正在进行；`verifying` 表示调用已返回，页面正在被读取以确认结果。把它们合并，进度界面就会误导用户「事情到底做没做」。
+`requiresRecord` 为真且没有非空记录 id 时，`start()` 会抛错。通用任务列表应把这类任务显示成入口，而不是允许没有上下文时直接启动。
 
 ## createTaskController
 
@@ -21284,7 +21937,7 @@ const controller = createTaskController({
 });
 ```
 
-## TaskController 方法
+### TaskController 方法
 
 | 方法 | 签名 | 行为 |
 | --- | --- | --- |
@@ -21317,79 +21970,56 @@ if (run.status === "waiting" && run.waitingFor === "confirmation") {
 }
 ```
 
-任务级确认不是第二套权限系统。它回答的是「这份具体计划要不要继续」，底层动作仍执行自己的风险、审批、作用域与审计规则。任务不可能批准一个执行器本来就会拒绝的动作。
+任务级确认不是第二套权限系统。它回答“这份具体计划要不要继续”，底层动作仍执行自己的风险、审批、作用域与审计规则。
 
-## 任务目录（TaskCatalog）
+### 运行状态
 
-`createTaskCatalog()` 管理“当前页面此刻有哪些任务”。它不执行任务，只负责可用性、激活、命令转发和向模型投影任务清单。
+| 状态 | 含义 | 常见下一步 |
+| --- | --- | --- |
+| `collecting` | 仍缺少必填值 | 填写字段 |
+| `ready` | 字段齐全，尚未执行 | `plan()` 或 `run()` |
+| `planned` | 计划已确定并可见 | 确认，或开始执行 |
+| `running` | 某个步骤正在执行 | 等待，或上报进度 |
+| `waiting` | 正在等待确认或人工接力 | `confirm()`，或在页面上完成 |
+| `verifying` | 动作已返回，宿主正在核对结果 | 查看证据后继续 |
+| `done` | 所有必需步骤已完成 | 展示结果 |
+| `failed` | 某个必需步骤失败 | 修正原因或重试 |
+| `cancelled` | 运行被取消或被新运行替换 | 需要时重新开始 |
 
-```ts
-import { createTaskCatalog } from "@plingjs/agent";
+`planned`、`running` 和 `verifying` 不是同一时刻的三个名字。`planned` 表示执行前路线已经冻结；`running` 表示调用正在进行；`verifying` 表示调用已返回，宿主正在读取页面确认结果。
 
-const catalog = createTaskCatalog({
-  registry: pling.registry,
-  isScopeActive: (id) => pling.registry.isScopeActive(id),
-});
-```
+## TaskGuideDefinition
 
-Vue 3 通过 `pling.task` 暴露同一份目录，并把任务目录与任务控制器合并成一个对象。因此页面通常直接调用 `pling.task.define()`、`pling.task.active()` 和 `pling.task.command()`。
-
-目录暴露 `actionId` 与 `updateActionId`。前者是当前实际绑定的 `pling_start_task` id，后者是当前实际绑定的 `pling_update_task` id。多个运行时共享一个注册表时，应读取这两个属性，而不是假定默认 id。
-
-当 active 引导声明了页面控制命令时，目录还会暴露 `focusActionId`、`reviewActionId`、`proposeSaveActionId` 与 `cancelActionId`。它们对应四个窄动作，不会形成第二条执行路径：
-
-| 动作 id 属性 | 模型动作 | 作用 | 何时可用 |
-| --- | --- | --- | --- |
-| `focusActionId` | `pling_focus_field` | 把已声明的引导字段滚进视野并高亮，不写值 | active 引导有字段时 |
-| `reviewActionId` | `pling_review_task` | 打开页面自己的只读核对，不保存 | `guide.agent.review` 声明命令时 |
-| `proposeSaveActionId` | `pling_propose_save` | 只打开页面确认面，不执行业务写入 | `guide.agent.proposeSave` 声明命令时 |
-| `cancelActionId` | `pling_cancel_task` | 结束引导，不回滚已经写进页面的值 | `guide.agent.cancel` 或 `guide.cancel` 声明命令时 |
-
-未声明对应命令时，模型不会看到该工具；调用时返回 `ACTION_UNAVAILABLE`，而不是执行一个没有页面的空动作。真正的保存仍由页面按钮、执行器、确认与回读完成。
-
-### define(registration)
+`goal()` 会自动生成一张紧凑引导。进阶任务可以自己声明：
 
 | 属性 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `id` | `string` | 否 | 注册 id；默认取 `definition.id`，两者不一致会抛错 |
-| `definition` | `TaskDefinition` | 是 | 可执行任务定义 |
-| `guide` | `TaskGuideDefinition` | 否 | 用户可见的展示定义；没有 guide 时任务仍可无界面执行 |
-| `controller` | `TaskController` | 否 | 任务运行控制器；有 controller 才会真正启动运行 |
-| `route` | `string \| readonly string[] \| (page) => boolean` | 否 | 匹配页面路径或路由名；省略表示不限制路由 |
-| `scope` | `string \| readonly string[]` | 否 | 这些作用域必须全部活跃；省略表示不限制区域 |
-| `autoStart` | `boolean` | 否 | 上下文匹配时自动展示；默认 `false` |
-| `initialValues` | `TaskValues \| () => TaskValues` | 否 | 自动或显式启动时的初始值 |
-| `binding` | `TaskBinding \| () => TaskBinding` | 否 | 当前记录等页面事实 |
-| `state` | `() => TaskGuideState` | 否 | 渲染时读取的实时状态；`snapshot` 缺省时自动取 controller 快照 |
-| `onActivate` | `(task) => void \| Promise<void>` | 否 | 任务变为 active 后调用，适合同步表单、打开弹窗、定位字段 |
-| `onDeactivate` | `(task) => void` | 否 | 任务失去 active 状态时调用 |
-| `onCommand` | `(command, task) => void \| Promise<void>` | 否 | 接收引导按钮发出的业务命令 |
+| `taskId` | `string` | 是 | 必须与任务定义 id 一致 |
+| `title` | `string` | 是 | 引导卡标题 |
+| `compact` | `boolean` | 否 | 只显示目标、取消和完成状态 |
+| `welcome` | `string` | 否 | 步骤轨前方的引导说明 |
+| `footer` | `string` | 否 | 引导正文下的小字说明 |
+| `cancel` | `TaskGuideAction` | 否 | 标题栏离开任务操作 |
+| `stepSubtitle` | `string` | 否 | 步骤副标题模板，支持 `{step}` 和 `{total}` |
+| `avatar` | `string` | 否 | 短头像文字或首字母 |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | 否 | 模型可以触发的页面命令 |
+| `labels` | `TaskGuideLabels` | 否 | 覆盖运行中、已完成、当前、完成、未开始、已跳过与错误文案 |
+| `fields` | `readonly TaskGuideField[] \| (snapshot) => readonly TaskGuideField[]` | 否 | 字段轨道的只读投影 |
+| `steps` | `readonly TaskGuideStep[]` | 是 | 面向人的步骤；目标卡传空数组 |
+| `done` | `{ title?, description? }` | 否 | 完成卡文案 |
 
-`define()` 返回注销函数。注销会同时移除 controller 注册、清理 active 状态并刷新订阅者。
+`guide.agent` 里的命令只打开页面自己的界面，不执行写入：
 
-登记项提供 `controller` 时，目录会订阅它的运行状态。`setValue()`、`run()`、`cancel()` 等操作产生的新快照会继续通知目录订阅者。因此 Vue 3 的内置 `AgentInline` / `AgentDock` 不需要页面手动调用 `refresh()`，步骤、忙碌态、错误和完成结果会随运行更新。
+- `focusField` 启用 `pling_focus_field`，只做滚动和高亮；
+- `review` 启用 `pling_review_task`，打开只读核对；
+- `proposeSave` 启用 `pling_propose_save`，打开确认界面；
+- `cancel` 启用 `pling_cancel_task`，结束任务。
 
-同一时刻只有一个 active guide。自动任务的优先级按注册顺序；显式激活会覆盖当前自动任务。上下文不再匹配时，显式激活会被清除。调用 `deactivate()` 后，该上下文不会立刻重新自动激活；直到路由或可用任务集合发生变化才恢复。
+省略对应命令时，模型看不到该工具；调用返回 `ACTION_UNAVAILABLE`，而不是执行一个没有页面的空动作。
 
-### 激活与状态
+## 更新工作记忆
 
-```ts
-const task = catalog.activate("course.create", {
-  values: { name: "瑜伽基础" },
-  startedBy: "agent",
-});
-
-catalog.active();   // ActiveGuidedTask | null
-catalog.available(); // 当前上下文中可用的注册项
-catalog.command({ action, step: null, stepIndex: 0, done: false });
-catalog.deactivate();
-```
-
-`activate()` 会拒绝该任务未声明的字段，返回 `INVALID_ARGS`，不会留下半激活状态。
-
-### 更新工作记忆
-
-任务启动后，模型会看到目标、约束、成功判据、字段值、缺口和当前引导步骤。这份状态每轮重建。模型可以只回答用户的问题而不写字段，也可以只更新用户补充、修正或委托的一项。
+进阶任务启动后，模型会看到目标、约束、成功判据、字段值、缺口和当前引导步骤。模型可以只回答用户的问题而不写字段，也可以只更新用户补充、修正或委托的一项。
 
 这些变化通过独立的 `pling_update_task` 动作写入：
 
@@ -21403,20 +22033,11 @@ catalog.deactivate();
 
 该动作只在任务 active 且未进入终态时可用；只接受声明过的字段，拒绝 `agentWritable: false` 的页面专属字段；它只更新 `TaskRun.values`，不会直接执行业务写入。页面可以订阅运行快照，把变化同步回原表单。真正的写入仍使用任务声明的动作、执行器、审批、审计和回读验证。
 
-`ActiveGuidedTask` 包含：
+目标任务没有字段，所以 `pling_update_task` 不可用。模型应直接调用页面动作。
 
-| 属性 | 说明 |
-| --- | --- |
-| `id` | 任务 id |
-| `definition` | 可执行定义 |
-| `guide` | 展示定义，可能没有 |
-| `controller` | 任务控制器，可能没有 |
-| `state` | 当前渲染状态 |
-| `startedBy` | `page` 或 `agent`，用于诊断和后续策略 |
+## 模型动作
 
-`activate()` 的 `values` 只能包含 `definition.fields` 声明过的字段。未知字段会抛 `INVALID_ARGS`，不会留下半激活状态。
-
-### 模型动作：pling_start_task
+### pling_start_task
 
 任务目录第一次注册任务时，会向当前 registry 绑定一个窄动作：
 
@@ -21427,326 +22048,60 @@ catalog.deactivate();
   confirm: false,
   params: {
     task: "string",   // enum 来自当前可用任务 id
-    values: "object", // properties 按当前任务字段生成
+    values: "object", // 只有进阶任务有字段属性
   },
 }
 ```
 
-`values` 不是任意对象。任务目录会把当前可用任务的字段合并成一个显式的 `properties` schema：字段类型、说明、可选性、枚举候选和 lookup 动作都会写进去，并设置 `additionalProperties: false`。多个任务使用同名字段时，说明会列出它们分别属于哪些任务。
+动作只接受当前可用的任务 id。`values` 只允许任务声明过的字段。未知 id 或未知字段返回 `INVALID_ARGS`。
 
-JSON Schema 不能根据 `task` 的值动态切换形状，所以这份 schema 描述的是“当前页可能出现的字段集合”。真正启动时，`activate()` 还会按所选任务再次校验字段白名单，模型不能把另一项任务的字段混进来。
+传入值只是预填一次任务运行，不会跳过动作自己的权限、确认和审计。
+
+### pling_complete_task
+
+目标激活后可用。它只关闭 goal-only 目标，不写业务数据。进阶任务使用自己的完成状态，不暴露这条动作。
 
 ```json
 {
-  "task": "course.create",
-  "values": {
-    "name": "晨间瑜伽",
-    "teacherId": "teacher_18",
-    "cards": ["monthly"]
-  }
+  "task": "course.create"
 }
 ```
 
-模型只能选择当前可用任务。不存在或当前不可用的 id 返回 `INVALID_ARGS`；未知字段同样拒绝。动作本身只读，不会直接写业务数据。启动后，真正的业务写入仍然经过任务步骤对应的动作、执行器、确认和审计。
+调用前必须确认页面已经满足成功条件。仅仅因为用户说了“谢谢”，或因为助手讲完了下一步，不应该调用它。
 
-只应由引导路径调用的写动作，可以在登记时设 `modelVisible: false`。它不会进入模型的工具清单或动作快照，但注册表仍保留这个动作，页面按钮与任务步骤照常可以调用。
+### pling_cancel_task
 
-```ts
-useAgentTool({
-  id: "create_course",
-  desc: "创建课程",
-  kind: "write",
-  modelVisible: false,
-  params: [{ name: "name", label: "课程名称" }],
-  run: ({ name }) => api.createCourse(String(name)),
-});
-```
+取消当前任务。已经写进页面的值不回滚。目标被移除；进阶控制器的运行被取消。
 
-上例是 Vue 3 / React 的函数动作写法；Vue 2 与原生 JS 把同一组字段传给 `pling.action()`。
+### 其它页面动作
 
-这只是一条“别把入口摆给模型”的可见性边界，不是权限系统。真正的越权拦截仍由执行器的风险规则、作用域、业务 API 和审计完成；`modelVisible: false` 也不能阻止页面代码或任务步骤调用它。
+`pling_focus_field`、`pling_review_task`、`pling_propose_save` 只在 active guide 声明对应命令时可用。它们共同遵守一条规则：只改变界面或发出页面命令，不执行业务写入。
 
-动作只在目录里至少有一个任务时出现。页面完全没有引导任务时，快照里不会多出一个永远不可用的工具。多个 `createPling` 实例共享 registry 时，后续目录会自动使用 `pling_start_task_2` 等 id，避免冲突；系统提示里会写实际 id。
+## 渲染
 
-## TaskGuideDefinition
+Vue 3、React、Vue 2.7 和原生 JS 共用同一份任务状态机和 DOM 渲染器。适配器只负责挂载和暴露方法，不复制执行逻辑。
 
-`TaskDefinition` 描述必须发生什么，`TaskGuideDefinition` 描述这件事怎样讲给人听。两者用同一个 `taskId` 关联，但不能互相代替：前者可以独立执行，后者不拥有执行权限。
-
-| 属性 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `taskId` | `string` | 是 | 必须与任务定义 id 一致 |
-| `title` | `string` | 是 | 引导卡标题 |
-| `welcome` | `string` | 否 | 步骤开始前的简短说明 |
-| `footer` | `string` | 否 | 卡片底部的小字提示 |
-| `cancel` | `TaskGuideAction` | 否 | 标题栏的离开任务操作；渲染器只发出命令，由页面决定是否结束运行 |
-| `stepSubtitle` | `string` | 否 | 支持 `{step}` 与 `{total}` 的步骤副标题 |
-| `avatar` | `string` | 否 | 内置渲染器使用的短头像文字 |
-| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | 否 | 模型可以触发的页面控制命令。声明 `review` 才启用 `pling_review_task`，声明 `proposeSave` 才启用 `pling_propose_save`，声明 `cancel` 才启用 `pling_cancel_task`；省略时对应工具不可用。`focusField(field)` 可以覆盖默认的 `focus-<field>`，但 `pling_focus_field` 仍只作用于引导声明的字段。这些命令都不执行业务写入 |
-| `labels` | `TaskGuideLabels` | 否 | 覆盖运行中、已完成、当前、未开始与错误文案 |
-| `fields` | `TaskGuideFields` | 否 | 提供后改为紧凑的水平字段轨道；完整步骤卡不再渲染 |
-| `steps` | `readonly TaskGuideStep[]` | 是 | 面向人的有序步骤 |
-| `done` | `TaskGuideDone` | 否 | 完成文案、摘要与后续命令 |
-
-每个 `TaskGuideStep` 可以显示只读摘要、指向页面上的原控件、等待用户亲自完成，或发出一个业务命令。按钮只携带 `command` 字符串，由页面的 `onCommand` 决定它表示什么；引导层不会因为多了一个按钮就多出一条执行路径。
-
-```ts
-const guide: TaskGuideDefinition = {
-  taskId: "course.create",
-  title: "新建课程",
-  welcome: "我会陪你确认课程信息，并填入右侧表单。",
-  stepSubtitle: "第 {step} 步，共 {total} 步",
-  steps: [
-    {
-      id: "name",
-      label: "课程名称",
-      title: "先填写课程名称",
-      description: "我已经定位到右侧的名称输入框。",
-      handoff: {
-        title: "由你确认名称",
-        description: "填写后回到对话，我会继续检查。",
-      },
-      primary: { label: "我已填好", command: "name.done" },
-    },
-  ],
-  done: {
-    title: "课程已创建",
-    description: "课程列表的第一条就是新课程。",
-  },
-};
-```
-
-步骤里的只读摘要由 `TaskGuideRow` 组成。它最重要的字段不是 `value`，而是 `status`：页面已经存在的值、尚未写入的建议值、仍然缺失的值，必须让用户一眼分清。
-
-### 紧凑字段轨道
-
-当任务要在聊天面板顶部常驻、又不能挤占对话空间时，传 `fields`。渲染器只保留标题、阶段状态和一行可横向滚动的字段节点：已填写的节点显示勾，必填与可选各自标注。点击节点默认发出 `focus-<field>`，由页面把对应控件滚进视野。字段的推荐值、解释和下一步提示放在对话里，不塞进固定区。
-
-```ts
-const guide: TaskGuideDefinition = {
-  taskId: "course.create",
-  title: "创建课程",
-  stepSubtitle: "课程管理 · 第 {step} 步，共 {total} 步",
-  fields: () => [
-    { field: "name", label: "课程名称", required: true, filled: Boolean(draft.name) },
-    { field: "difficulty", label: "难度", filled: Boolean(draft.difficulty), suggested: true },
-    { field: "cover", label: "课程封面", required: true, filled: draft.cover },
-  ],
-  steps: [/* 业务阶段，仅用于标题里的第几步 */],
-};
-```
-
-| 属性 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `field` | `string` | 是 | 页面字段名；默认命令为 `focus-<field>` |
-| `label` | `string` | 是 | 节点上的短标签 |
-| `required` | `boolean` | 否 | 是否必填；渲染为“必填”或“可选” |
-| `filled` | `boolean` | 否 | 页面当前是否已有值；有值时显示勾 |
-| `suggested` | `boolean` | 否 | 有推荐值但尚未写入页面，节点使用虚线强调 |
-| `command` | `string` | 否 | 覆盖默认定位命令；仍然只通过 `onCommand` 交给页面 |
-
-字段轨道只表达进度和定位，不包含输入框。推荐值、追问与失败解释仍应由对话或页面完成；这样固定区不会随字段数量变高，也不会出现两套表单。
-
-| 属性 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `label` | `string` | 是 | 字段名或业务事实 |
-| `value` | `string \| number \| boolean \| null \| undefined` | 是 | 展示值；渲染器只格式化，不修改页面 |
-| `format` | `"text" \| "stars" \| "check" \| "number"` | 否 | 显示格式；`stars` 用于 1–5 星，`check` 只接受布尔语义的值 |
-| `status` | `"current" \| "suggested" \| "missing"` | 否 | 值来自页面、建议，还是尚未填写 |
-| `badge` | `string` | 否 | 业务自有短标记，例如“已填入”“建议”“待填写” |
-| `note` | `string` | 否 | 来源或帮助文字；建议值应在这里写明“尚未写入页面” |
-| `action` | `TaskGuideAction` | 否 | 行级命令，例如“采用”“定位”“去选择”，仍走 `onCommand` |
-
-```ts
-const rows: TaskGuideRow[] = [
-  {
-    label: "课程名称",
-    value: "瑜伽基础",
-    status: "suggested",
-    badge: "建议",
-    note: "来自示例模板，尚未写入页面",
-    action: { label: "采用", command: "apply-name" },
-  },
-  {
-    label: "授课老师",
-    value: "周敏",
-    status: "current",
-    badge: "已填入",
-    action: { label: "定位", command: "focus-teacher" },
-  },
-];
-```
-
-Vue 3 的业务页面通常只注册这个定义。`AgentInline` 和 `AgentDock` 会自动读取 active 任务并交给内置 `AgentTaskGuide` 渲染。需要普通 DOM 时，`@plingjs/vanilla` 的 `createTaskGuide()` 使用同一份 `TaskGuideDefinition`；`AgentTaskGuide` 则是对它的 Vue 生命周期封装，供有意替换默认展示的产品使用。
-
-## 紧凑操作行（GuideActionItem）
-
-`TaskGuideRow` 适合“一个字段一行”的摘要；当引导把下一步收敛成几个动作时，用更轻的 `GuideActionItem`。它不渲染字段表格，只渲染一行按钮，任何适配器都可以挂载同一份 DOM。
-
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `id` | `string` | 是 | 测试与宿主记录的稳定 id，不发给模型 |
-| `label` | `string` | 是 | 按钮上的短动作，例如“自动填写”“定位 · 课程名称” |
-| `command` | `string` | 是 | 点击时发回宿主的业务命令；渲染器不理解它 |
-| `kind` | `"primary" \| "secondary" \| "suggestion" \| "skip"` | 否 | 视觉强调；只有 `suggestion` 会渲染 `preview` |
-| `preview` | `string` | 否 | 长推荐的单行省略预览，约 `300px` 封顶 |
-| `ariaLabel` | `string` | 否 | 可见标签省略字段名或预览被截断时的完整无障碍名称 |
-| `disabled` | `boolean` | 否 | 写入进行中时禁用；禁用按钮不会发出命令 |
-
-```ts
-const items: GuideActionItem[] = [
-  {
-    id: "use-note",
-    label: "自动填写",
-    preview: "请提前 10 分钟到店；开课前 2 小时内不可取消。",
-    ariaLabel: "自动填写约课须知：请提前 10 分钟到店；开课前 2 小时内不可取消。",
-    command: "apply-note",
-    kind: "suggestion",
-  },
-  { id: "skip-note", label: "跳过", command: "skip-note", kind: "skip" },
-];
-```
-
-普通 DOM 用 `createGuideActions({ items, hint, ariaLabel, locale, onCommand })`，Vue 与 React 用 `AgentGuideActions`。组件只负责挂载和同步，命令仍由宿主的 `onCommand` 处理。
-
-这里刻意不把长推荐拼进 `label`：一旦按钮宽度由推荐文案决定，操作行就会换行、挤压对话，用户也分不清“这是建议”还是“页面已经写入”。完整值放在聊天正文、`title` 和 `aria-label`；按钮只回答“点它会做什么”。
-
-渲染器位于 `@plingjs/dom`，不依赖任何 UI 框架。Vue 与 React 包只提供生命周期外壳，因此三端的折行、省略、焦点与禁用态只有一份实现。它不会写字段、不会调用业务函数，也不会生成第二条执行路径。
-
-## TaskRunSnapshot
-
-| 属性 | 类型 | 说明 |
+| 适配器 | 对话承载 | 任务视图 |
 | --- | --- | --- |
-| `taskId` | `string` | 定义 id |
-| `title` | `string` | 面向人的任务标题 |
-| `mode` | `steps` / `agent` | 确定性步骤或交给助手 |
-| `status` | `TaskRunStatus` | 当前运行状态 |
-| `fields` | `readonly TaskField[]` | 供界面渲染的字段定义 |
-| `values` | `TaskValues` | 当前字段值 |
-| `binding` | `TaskBinding` | 提供过页面事实时存在 |
-| `steps` | `readonly TaskStepSnapshot[]` | 有序进度与结果 |
-| `prompt` | `string` | Agent 模式在字段齐全后生成 |
-| `waitingFor` | `confirmation` / `handoff` | 当前在等待什么 |
-| `confirmation` | `{ required; confirmed }` | 定义要求确认时存在 |
-| `error` | `{ code, message }` | 运行或必需步骤失败时存在 |
-| `startedAt` | `number` | 注入时钟的毫秒时间戳 |
-| `finishedAt` | `number` | 完成、失败或取消后存在 |
+| Vue 3 | `AgentInline` / `AgentDock` 自动渲染 active guide；`#task` 可覆盖 | 默认内置引导，低层可用 `AgentTaskCard` |
+| React | `AgentChat` 或 `AgentDock` 的 `task` 属性 | `AgentTaskCard` |
+| Vue 2.7 | `pling.dock({ task })` | `createTaskCard()` |
+| 原生 JS | `pling.dock({ task })` | `createTaskCard()` |
 
-步骤状态是 `pending`、`running`、`ok`、`skipped` 或 `failed`。可选步骤跳过后，错误仍保留在该步骤快照中，整个运行继续。
-
-## TaskRunContext
-
-执行桥收到 `{ taskId, values, binding, signal, report }`。`values` 与 `binding` 是副本。运行被取消或替换时，`signal` 中止。
-
-`report("running")`、`report("waiting", "confirmation" | "handoff")` 与 `report("verifying")` 让长执行桥描述子状态，不必另建一套快照存储。已过期的运行会忽略这些上报。
-
-## 查找动作
-
-`registerTaskLookupActions` 会把每个 lookup 字段注册成窄范围只读动作：
-
-```ts
-const off = registerTaskLookupActions(pling, controller.list(), { maxResults: 8 });
-```
-
-生成的动作接收 `{ query }`，返回 `{ query, minChars?, choices }`，最多 50 个候选。它不写入、不绕过作用域，也不跳过最终写操作自己的执行器。界面与模型共用同一个 `field.lookup`，所以重名选项在两边看到的是同一批候选。
-
-多个任务共用一份搜索实现时，用 `searchAction` 指定同一个 id。省略时动作 id 是 `search_<fieldName>`；重复 id 会保留第一份实现并发出告警。
-
-## Agent 模式中的提示词模板
-
-Agent 模式用于无法安全固定路径的任务。它只生成提示词，不调用模型。
-
-```ts
-controller.register({
-  id: "student.summary",
-  title: "说明学员会员情况",
-  fields: [{ name: "name", label: "学员姓名" }],
-  prompt: "请总结 {{name}} 的会员情况，并列出即将到期的会员卡。",
-});
-
-controller.start("student.summary", { name: "李娜" });
-const snapshot = await controller.run();
-// snapshot.prompt 可直接交给 pling.ask()。
-```
-
-宿主把 `snapshot.prompt` 交给现有助手入口。任务控制器不持有会话，也不持有模型连接。
-
-## 渲染一次运行
-
-Vue 3 的 `<AgentInline>` 会订阅 `pling.task`，自动把 active guide 渲染在对话里。页面只需注册任务，不必再手写聊天壳或手动挂载 `AgentTaskGuide`。只有需要完全不同的任务展示时，才通过 `#task` 插槽覆盖默认引导。
-
-`@plingjs/vanilla` 仍然提供两种底层外观。`createTaskPanel()` 是完整任务工作区；`createTaskCard()` 是适合放进对话的紧凑任务卡。两者共享字段、查找、执行、确认与失败处理，差别只在展示。
-
-```ts
-import { createTaskCard } from "@plingjs/vanilla";
-
-const card = createTaskCard(controller, {
-  locale: "zh-CN",
-  onPrompt: (prompt) => pling.ask(prompt),
-});
-
-pling.dock({
-  layout: "sidebar",
-  sidebarMode: "fused",
-  task: card.element,
-});
-```
-
-Agent 模式任务会发出 `pling-task-prompt`，运行结束后发出 `pling-task-complete`。`open(taskId, values?, binding?)`、`close()`、`refresh()`、`setCatalog()` 与 `destroy()` 管理任务卡生命周期。
-
-常用任务不必一直占着聊天空间。构造时传 `catalog: false`，由页面按钮或表格行动作调用 `card.open(...)`。`setCatalog(false)` 只在没有活动运行时隐藏任务目录，不会关掉进行中的任务，也不会丢掉已填写内容。
-
-`requiresRecord` 任务在通用列表中显示为不可直接启动。表格行或详情页带着绑定打开它，所以面板可以直接显示已选记录，不再向用户要 id。
-
-### 各框架组件
-
-| 适配器 | 对话承载 | 任务视图 | 打开绑定任务 |
-| --- | --- | --- | --- |
-| Vue 3 | `AgentInline` / `AgentDock` 自动渲染 active guide；`#task` 可覆盖 | 默认内置引导，低层可用 `AgentTaskCard` | 注册任务后由页面或 `pling_start_task` 激活；低层任务卡可通过 ref 调用 `open(taskId, values?, binding?)` |
-| React | `AgentChat` 的 `task` 属性或 `AgentDock` 的 `task` 属性 | `AgentTaskCard` | 通过 `AgentTaskCardHandle` 调用 `open(taskId, values?, binding?)` |
-| Vue 2.7 | `pling.dock({ task })` | `createTaskCard()` | 调用 `card.open(taskId, values?, binding?)` |
-| 原生 JS | `pling.dock({ task })` | `createTaskCard()` | 调用 `card.open(taskId, values?, binding?)` |
-
-`AgentDock` 还暴露 `open()` 与 `close()`，所以表格行可以先展开助手，再激活对应任务。普通 Vue 3 页面不需要写 `#task`：内置助手会渲染任务目录里的 active guide。
+普通业务页面不需要写 `#task`。内置助手会订阅任务目录并渲染 active guide。
 
 ```vue
-<template>
-  <AgentDock ref="dock" layout="sidebar" sidebar-mode="fused" :default-open="true" />
-</template>
+<AgentInline
+  title="页灵助手"
+  :debug="{ maxCalls: 8 }"
+  collapsible
+  speakers
+  composer="multiline"
+  task-placement="inline"
+/>
 ```
 
-只有产品确实要换掉任务展示时，才使用 `#task` 插槽；这不是普通业务页面的必需步骤。
-
-```tsx
-const dock = useRef<AgentDockHandle>(null);
-const card = useRef<AgentTaskCardHandle>(null);
-
-<AgentDock
-  ref={dock}
-  layout="sidebar"
-  sidebarMode="fused"
-  defaultOpen
-  task={<AgentTaskCard ref={card} controller={tasks} onPrompt={pling.ask} />}
-/>;
-```
-
-需要独立任务工作区时仍可使用 `createTaskPanel()`。`GuidedTaskPanelOptions.variant` 接受 `"panel"` 或 `"card"`；`createTaskCard()` 是后者的简写。
-
-## 结构化快捷任务
-
-`quick` 仍接受普通字符串。结构化写法把按钮标签和提示词分开，短按钮不必被迫配一句含糊的指令。
-
-```ts
-const quick: QuickTaskItem[] = [
-  "显示本周未付款订单",
-  {
-    label: "整理今日待办",
-    prompt: "检查今天的待办，归档已完成项，保留未完成项。",
-    description: "归档已完成项，其余保持不动。",
-  },
-];
-```
-
-应用明确知道某项目前不可用时，可以用 `disabled: true` 保留入口但禁止触发。
+目标卡只显示目标、取消和完成，不包含表单控件。唯一的输入框是底部聊天框。要填表，仍然在页面上填。
 
 ## Surface 任务
 
@@ -21754,11 +22109,13 @@ const quick: QuickTaskItem[] = [
 
 ```ts
 const tasks: SurfaceTask[] = [{
-  id: "order.approve",
-  title: "审批订单",
-  steps: [{ action: "approve@order", label: "批准当前订单" }],
-  risk: "destructive",
-  playbook: ["先读取订单", "确认状态后再审批"],
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程并回读课程库",
+  constraints: ["页面动作是唯一入口", "封面由用户上传"],
+  successCriteria: ["新课程出现在课程库第一位"],
+  risk: "write",
+  playbook: ["先调用 new_course 打开真实表单", "只在保存回读通过后完成目标"],
 }];
 ```
 
@@ -21771,16 +22128,18 @@ Surface 任务解释能力之间怎样配合。它不授予能力、不扩大会
 | `TASK_FIELDS_REQUIRED` | 缺少必填值 | 补全字段后重新运行 |
 | `TASK_ACTION_FAILED` | 执行桥返回业务失败 | 阅读信息、修正原因、重试 |
 | `TASK_STEP_FAILED` | 执行桥抛出异常或拒绝 | 重试或修改任务输入 |
-| 可选字段上的 `TASK_FIELDS_REQUIRED` | 不适用；可选字段不会阻断 | 保持为空即可 |
+| `ACTION_UNAVAILABLE` | 当前任务或动作不可用 | 检查 active 状态、目标和作用域 |
+| `INVALID_ARGS` | 未知任务、未知字段或值不合法 | 修正调用参数 |
 
 未知任务 id、未知字段名、重复定义、缺少绑定记录，以及执行开始后修改字段会同步抛错。这些属于编程或宿主错误，不应作为面向用户的失败状态。
 
 ## 当前边界
 
-- 任务模型不提供通用 Planner，也不自动生成步骤。
+- 目标不提供 Planner，也不自动生成步骤。
+- 目标不执行任何业务动作；它只管理生命周期。
 - 一个控制器同时只有一个活动运行；并行业务任务需要独立控制器。
 - 步骤结果会交给宿主，但后续步骤只接收字段值与绑定，不自动串联前一步结果。
-- 四个适配器共用同一份 DOM 渲染器。框架组件只负责挂载与暴露方法，不复制任务状态机。
+- 四个适配器共用同一份 DOM 渲染器。
 - 对话任务卡负责入口、决定、进度与接力；页面原有表单和控件仍是业务输入的事实来源。
 - Surface 任务只是描述。Agent 需要更多上下文时仍要调用 `describe`，并遵守会话作用域。
 
@@ -21788,13 +22147,16 @@ Surface 任务解释能力之间怎样配合。它不授予能力、不扩大会
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.8` |
+| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.9` |
 | 引入版本 | `0.1.0-alpha.6` |
+| `goal()` 引入版本 | `0.1.0-alpha.9`（待发布） |
 | 运行环境 | 支持 ES2022 模块的浏览器；任务控制器在 Node.js 20 或更高版本可用 |
 | Peer 依赖 | 无 |
 | 稳定性 | 实验性；快照可能增加字段，但不会改变已有字段的含义 |
 
 任务控制器不依赖 DOM。`createTaskPanel` 与 `createTaskCard` 是 `@plingjs/vanilla` 中的参考渲染器；各适配器渲染同一份 `TaskRunSnapshot`，而不是另写一套执行逻辑。
+
+`goal()` 是推荐入口。`define()` 保留给需要字段校验、查找、固定步骤或无界面运行的场景。
 
 ---
 
@@ -22500,11 +22862,11 @@ Canonical: https://plingjs.dev/zh/examples/
 
 公开示例的模型请求都经过服务端网关。浏览器只拿到同源地址和模型名，供应商凭据留在服务端。
 
-教程中的每一章也有对应的完整页面。需要先看运行结果、再读代码时，可以打开<a href="/demos/tutorials/" target="_blank" rel="noopener noreferrer">全部章节示例</a>；每个教程页顶部同样提供该章的在线预览与本地命令。
+教程中的每一章也有对应的完整页面。需要先看运行结果、再读代码时，可以打开<a href="https://demo.plingjs.com/demos/tutorials/" target="_blank" rel="noopener noreferrer">全部章节示例</a>；每个教程页顶部同样提供该章的在线预览与本地命令。
 
-## 六个经典案例
+## 经典案例与对照示例
 
-这六个案例分别覆盖最小接入、真实业务工作台、Vue 3 单页内跨路由操作、整页导航后的任务连续性、向页面之外的 Agent 开放能力，以及用引导任务完成一次真实创建流程。
+前六个案例分别覆盖最小接入、真实业务工作台、Vue 3 单页内跨路由操作、整页导航后的任务连续性、向页面之外的 Agent 开放能力，以及用引导任务完成一次真实创建流程。第七个案例用 `v-scope`、`v-record`、`v-tool` 重做同一条创建流程，方便并排比较取舍。
 
 <DemoGallery />
 
@@ -22550,14 +22912,15 @@ Canonical: https://plingjs.dev/zh/recipes/
 
 示例展示完整应用，任务方案处理可复用的界面边界。两者现在都以可运行页面为准：每篇方案都有自己的页面、源码、启动路径和验证步骤，不再把多个问题引向同一个演示。
 
-## 六个经典案例
+## 经典案例与对照示例
 
 - [案例01：待办事项](/zh/examples/quickstart)覆盖新增、完成、编辑、筛选与清理。
 - [案例02：订单工作台](/zh/examples/orders)覆盖业务队列、记录、行级动作与确认。
 - [案例03：单页多路由工作台](/zh/examples/vue3-spa-routing)在客户端路由切换后继续任务。
 - [案例04：多页工作台](/zh/examples/multi-page-continuity)跨完整 document 导航继续任务。
 - [案例05：暴露能力给外部](/zh/examples/external-agent-surface)把具名能力暴露给页面之外的 Agent。
-- [案例06：引导任务创建课程](/zh/examples/course-workspace-vue3)在一个真实页面里完成“创建课程”，长推荐不撑宽按钮，助手只追问真正的缺口。
+- [案例06：持久目标创建课程](/zh/examples/course-workspace-vue3)在同一张课程页面上加一个目标。助手自己打开真实弹窗、操作真实控件、请用户上传封面，保存并回读课程库。
+- [案例07：只用指令创建课程](/zh/examples/course-create-directives-vue3)用 `v-scope`、`v-record`、`v-tool` 完成同样的创建流程，不引入任务层。适合一张稳定的单页表单。
 
 每个案例页都提供可操作预览、带标记的源码与接入说明。模型请求通过服务端网关发出，浏览器不持有供应商密钥。
 
@@ -22814,7 +23177,7 @@ Pling 的软件包使用语义化版本，Surface 能力协议使用独立版本
 - 跨域 iframe 运行时不作为内存对象共享，必须使用显式传输。
 - 参考委托与连续性包不提供生产数据库、Redis、SSO 或完整审计归档。
 - `*/testing` 入口中的内存适配器只用于测试与本地参考。
-- `surface.plingjs.dev` 是官方演示端点，不是多租户客户网关。
+- `surface.plingjs.com` 是官方演示端点，不是多租户客户网关。
 - 当前没有公开的第三方 Surface 一致性套件或认证标识。
 
 ## 发布记录
@@ -22957,20 +23320,20 @@ Canonical: https://plingjs.dev/zh/reference/api/
 
 参数表是这里的重点。遇到某个选项时，先查它在当前框架页中的类型、必填性、默认值与适用场景；需要字段级语义或错误码时，再进入对应参考页。
 
-共 **5** 个 API 页面，覆盖 **10** 类能力；当前版本 `0.1.0-alpha.8`，稳定性为 **preview**。
+共 **5** 个 API 页面，覆盖 **10** 类能力；当前版本 `0.1.0-alpha.9`，稳定性为 **preview**。
 
 ## 按框架查阅
 
 | 框架 | 包 | 条目 | 页面 |
 | --- | --- | --- | --- |
-| **Vue 3 API** | `@plingjs/vue` | 80 | [打开](/zh/reference/api/vue-3) |
-| **React API** | `@plingjs/react` | 76 | [打开](/zh/reference/api/react) |
-| **Vue 2.7 API** | `@plingjs/vue2` | 59 | [打开](/zh/reference/api/vue-2) |
-| **原生 JS API** | `@plingjs/vanilla` | 79 | [打开](/zh/reference/api/vanilla) |
+| **Vue 3 API** | `@plingjs/vue` | 81 | [打开](/zh/reference/api/vue-3) |
+| **React API** | `@plingjs/react` | 77 | [打开](/zh/reference/api/react) |
+| **Vue 2.7 API** | `@plingjs/vue2` | 60 | [打开](/zh/reference/api/vue-2) |
+| **原生 JS API** | `@plingjs/vanilla` | 80 | [打开](/zh/reference/api/vanilla) |
 
 ## 共享包 API
 
-运行时、页面连续性、测试与诊断 API 共用一套实现，共 **70** 个条目。
+运行时、页面连续性、测试与诊断 API 共用一套实现，共 **71** 个条目。
 
 [打开共享包 API](/zh/reference/api/shared)
 
@@ -22978,10 +23341,10 @@ Canonical: https://plingjs.dev/zh/reference/api/
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
+| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -23018,9 +23381,9 @@ Vue 3 的完整 API：应用初始化、指令、组合式函数、组件，以�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.8` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.9` |
 
-当前包版本为 `0.1.0-alpha.8`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -24457,6 +24820,8 @@ createPling({
 | `placeholder` | `string` | 否 | — | 输入框占位文案。 |
 | `emptyHint` | `string` | 否 | — | 首次对话前显示的空状态提示。 |
 | `quick` | `readonly string[]` | 否 | `[]` | 推荐指令；每次运行结束后仍可继续使用。 |
+| `speakers` | `boolean` | 否 | `true` | 在每条聊天消息上方显示说话人与时间。 |
+| `taskPlacement` | `"inline" \| "pinned" \| "none"` | 否 | `"pinned"` | 把当前任务固定在滚动消息区上方、放进消息流，或隐藏起来交给宿主自行呈现。 |
 | `defaultOpen` | `boolean` | 否 | `false` | 界面是否默认展开。 |
 | `config` | `AgentConfigOverrides` | 否 | — | 只覆盖当前界面的模型与运行时设置。 |
 | `llm` | `Llm` | 否 | — | 当前界面使用的模型函数，覆盖应用级 `agent.llm`。 |
@@ -24465,7 +24830,7 @@ createPling({
 | `registry` | `Registry` | 否 | — | 要操作的注册表。默认使用注入的 Pling 注册表。 |
 | `navigate` | `(href: string) => void` | 否 | — | 任务完成后的导航实现。默认调用 `window.location.replace`。 |
 | `layout` | `"dock" \| "sidebar"` | 否 | `"dock"` | 浮动角落布局或视口侧边栏。 |
-| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"overlay"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。仅对 `layout="sidebar"` 生效。 |
+| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"fused"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。默认 `fused`；需要覆盖页面时显式选择 `overlay`。仅对 `layout="sidebar"` 生效。 |
 | `side` | `"left" \| "right"` | 否 | `"right"` | 侧边栏模式下的贴边方向。 |
 | `launcherPlacement` | `"bottom" \| "center"` | 否 | `"bottom"` | 侧边栏收起后启动按钮的位置。 |
 | `launcherLabel` | `string` | 否 | — | 收起状态启动按钮的自定义文案。 |
@@ -24515,7 +24880,7 @@ createPling({
 | `title` | `string` | 否 | — | 助手标题。 |
 | `placeholder` | `string` | 否 | — | 输入框占位文案。 |
 | `emptyHint` | `string` | 否 | — | 空状态文案。 |
-| `speakers` | `boolean` | 否 | `false` | 在每条聊天消息上方显示说话人与时间。 |
+| `speakers` | `boolean` | 否 | `true` | 在每条聊天消息上方显示说话人与时间。 |
 | `quick` | `readonly string[]` | 否 | `[]` | 推荐指令。 |
 | `config` | `AgentConfigOverrides` | 否 | — | 当前界面的模型覆盖。 |
 | `llm` | `Llm` | 否 | — | 注入的模型函数。 |
@@ -24525,8 +24890,8 @@ createPling({
 | `navigate` | `(href: string) => void` | 否 | — | 任务完成后的导航实现。 |
 | `visible` | `boolean` | 否 | `true` | 控制是否可见但不卸载，从而保留对话状态。 |
 | `variant` | `"dock" \| "inline"` | 否 | `"inline"` | 使用紧凑浮窗宽度或常规内联布局。 |
-| `composer` | `"compact" \| "multiline"` | 否 | `"compact"` | 输入区密度。`multiline` 为工作台提供两行起步、自动增高的文本域；`compact` 保持单行输入。 |
-| `taskPlacement` | `"inline" \| "pinned"` | 否 | `"inline"` | 把当前引导放在消息流中，或固定在滚动消息区的上方。 |
+| `composer` | `"compact" \| "multiline"` | 否 | `"multiline"` | 输入区密度。默认 `multiline`，即两行起步、自动增高的文本域；空间紧张时可用 `compact` 保持单行输入。 |
+| `taskPlacement` | `"inline" \| "pinned" \| "none"` | 否 | `"pinned"` | 把当前引导固定在滚动消息区上方、放进消息流，或隐藏起来交给宿主自行呈现。 |
 | `guidePlacement` | `"top" \| "end"` | 否 | `"top"` | 把 `#guide` 插槽渲染在对话上方，或作为会话中的最新消息。需要持续更新的下一步提示时用 `end`。 |
 | `manageSurface` | `boolean` | 否 | `true` | 把组件注册到页面任务路由器。浮窗外壳自己负责路由，因此传 `false`。 |
 | `surfaceId` | `string` | 否 | `"inline"` | 启用 `manageSurface` 时用于任务路由的名称。 |
@@ -24584,12 +24949,12 @@ createPling({
 | `pendingHandoff` | `PendingHandoff \| null` | 否 | — | 当前人工接力请求。 |
 | `placeholder` | `string` | 否 | — | 输入框占位文案。 |
 | `emptyHint` | `string` | 否 | — | 空状态文案。 |
-| `speakers` | `boolean` | 否 | `false` | 在每条聊天消息上方显示说话人与时间。 |
+| `speakers` | `boolean` | 否 | `true` | 在每条聊天消息上方显示说话人与时间。 |
 | `tools` | `boolean` | 否 | `false` | 在对话中显示原始工具调用行。 |
 | `reveal` | `(text: string) => string` | 否 | — | 仅用于渲染的文本转换，常用于还原敏感值代号。 |
 | `resume` | `{ goal?: string; interrupted?: boolean } \| null` | 否 | `null` | 显示“继续上次任务”提示。 |
-| `multiline` | `boolean` | 否 | `false` | 渲染两行起步、自动增高的文本域。Enter 发送，Shift+Enter 换行。 |
-| `taskPlacement` | `"inline" \| "pinned"` | 否 | `"inline"` | 把任务插槽放在消息流中，或固定在滚动消息区的上方。 |
+| `multiline` | `boolean` | 否 | `true` | 渲染两行起步、自动增高的文本域。Enter 发送，Shift+Enter 换行。 |
+| `taskPlacement` | `"inline" \| "pinned" \| "none"` | 否 | `"pinned"` | 把任务插槽固定在滚动消息区上方、放进消息流，或隐藏起来交给宿主自行呈现。 |
 | `hasTask` | `boolean` | 否 | `true` | 任务插槽当前是否有内容。没有活动引导时设为 `false`，避免固定任务区留下空白。 |
 | `guidePlacement` | `"top" \| "end"` | 否 | `"top"` | 把引导插槽渲染在对话上方，或放在最新消息之后。 |
 | `@send` | `(text: string) => void` | 否 | — | 用户提交消息。 |
@@ -25118,13 +25483,14 @@ console.log(report.coveragePercent, report.targets);
 
 ## 引导任务
 
-收集用户决策、按固定顺序调用已有动作，并用同一份运行快照渲染的任务层。任务目录判断当前上下文可用的任务，引导定义决定如何向用户解释当前任务；两者都不复制执行或权限逻辑。
+目标与进阶任务。目标只声明结果、边界和成功条件，字段与执行都留在真实页面。只有页面动作无法表达需求时，进阶任务才增加字段 schema、查找和固定步骤。
 
 | API | 类型 | 参考 |
 | --- | --- | --- |
 | [createTaskController](#api-createtaskcontroller) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [createTaskCatalog](#api-createtaskcatalog) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [TaskCatalog](#api-taskcatalog) | 接口 | [参考](/zh/reference/guided-task-api) |
+| [TaskGoalInput](#api-taskgoalinput) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskRegistration](#api-guidedtaskregistration) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskActivationOptions](#api-guidedtaskactivationoptions) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [ActiveGuidedTask](#api-activeguidedtask) | 接口 | [参考](/zh/reference/guided-task-api) |
@@ -25236,7 +25602,19 @@ createTaskCatalog(options?: TaskCatalogOptions): TaskCatalog
 | `options.getPage` | `() => PageView \| undefined` | 否 | — | 页面身份覆盖。默认读取 `registry.getPage()`。 |
 | `options.actionId` | `string` | 否 | `"pling_start_task"` | 首选的模型动作 id。共享注册表时，第一个目录使用该 id，后续目录自动改用 `pling_start_task_2` 等后缀。 |
 
-**示例 1 · 为当前路由登记一个任务**
+**示例 1 · 登记一个能在弹窗关闭后继续存在的目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: ["页面动作是唯一入口；封面由用户上传。"],
+  successCriteria: ["新课程出现在课程库第一位"],
+});
+```
+
+**示例 2 · 为当前路由登记一个进阶任务**
 
 ```ts
 import { createTaskCatalog, createTaskController } from "@plingjs/agent";
@@ -25267,7 +25645,7 @@ const off = catalog.define({
 
 ### `TaskCatalog`
 
-当前页面的任务目录：登记定义、查询此刻可用的任务、至多激活一个引导、转发引导命令，并通知渲染方。
+当前页面的任务目录：登记目标或进阶任务、查询此刻可用的任务、至多激活一个引导、完成目标、转发引导命令，并通知渲染方。
 
 **导入**
 
@@ -25280,6 +25658,12 @@ const off = catalog.define({
 interface TaskCatalog {
   readonly actionId: string;
   readonly updateActionId: string;
+  readonly focusActionId: string;
+  readonly reviewActionId: string;
+  readonly proposeSaveActionId: string;
+  readonly cancelActionId: string;
+  readonly completeActionId: string;
+  goal(input: TaskGoalInput): () => void;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -25288,6 +25672,7 @@ interface TaskCatalog {
   activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;
   deactivate(): void;
   command(command: TaskGuideCommand): boolean;
+  complete(): boolean;
   views(): readonly GuidedTaskView[];
   refresh(): void;
   subscribe(listener: () => void): () => void;
@@ -25305,7 +25690,10 @@ interface TaskCatalog {
 | `reviewActionId` | `readonly string` | 否 | — | 打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。 |
 | `proposeSaveActionId` | `readonly string` | 否 | — | 打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。 |
 | `cancelActionId` | `readonly string` | 否 | — | 结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。 |
-| `define(registration)` | `() => void` | 否 | — | 登记任务并返回注销函数。 |
+| `completeActionId` | `readonly string` | 否 | — | 把 goal-only 目标标记为完成的实际模型动作 id。它不写业务数据。 |
+| `goal(input)` | `() => void` | 否 | — | 登记最小目标任务路径并返回注销函数。它不接受字段、步骤、控制器、表单工具或业务回调。 |
+| `complete()` | `boolean` | 否 | — | 把当前 goal-only 目标标记为完成。进阶任务使用自己的完成状态，此时返回 `false`。 |
+| `define(registration)` | `() => void` | 否 | — | 登记进阶任务并返回注销函数。 |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | 否 | — | 返回一个登记项，即使它当前因路由或作用域不匹配而不可用。 |
 | `list()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回该目录登记的全部任务。 |
 | `available()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回当前页面路由与作用域都匹配的登记项。 |
@@ -25330,6 +25718,95 @@ const task = catalog.activate("course.create", {
   values: { name: "瑜伽基础" },
 });
 console.log(task.startedBy); // "page"
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/guided-task-api)
+
+
+<a id="api-taskgoalinput"></a>
+
+### `TaskGoalInput`
+
+最小任务声明：id、标题、结果、边界、成功条件、示例，以及可选的路由/作用域连续性。它没有字段、步骤、控制器或业务回调。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// Vue 3
+interface TaskGoalInput {
+  id: string;
+  title: string;
+  goal: string;
+  description?: string;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
+  examples?: readonly string[];
+  risk?: Kind;
+  route?: GuidedTaskRoute;
+  scope?: string | readonly string[];
+  keepActive?: boolean;
+  labels?: TaskGuideLabels;
+  cancelLabel?: string;
+  stepSubtitle?: string;
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | 是 | — | 稳定目标 id，在同一目录内唯一。 |
+| `title` | `string` | 是 | — | 面向人的目标名称。 |
+| `goal` | `string` | 是 | — | 要达成的结果。不能为空。 |
+| `description` | `string` | 否 | — | 目标卡或任务列表里的补充说明。默认取 `goal`。 |
+| `constraints` | `readonly string[]` | 否 | — | 模型必须守住的边界，例如“页面动作是唯一入口”。 |
+| `successCriteria` | `readonly string[]` | 否 | — | 完成前必须成立的可观察条件。 |
+| `examples` | `readonly string[]` | 否 | — | 用户可能说出的示例句子。 |
+| `risk` | `"read" \| "write" \| "danger"` | 否 | `"write"` | 目标级风险提示。动作仍执行自己的风险规则。 |
+| `route` | `GuidedTaskRoute` | 否 | — | 限制目标启动位置的精确路径、路由名、列表或判定函数。 |
+| `scope` | `string \| readonly string[]` | 否 | — | 列出的区域必须全部活跃，目标才可用。 |
+| `keepActive` | `boolean` | 否 | `true` | 显式启动的目标在路由或作用域暂时不匹配时继续保持活动。 |
+| `labels` | `TaskGuideLabels` | 否 | — | 覆盖运行中、已完成等标签。 |
+| `cancelLabel` | `string` | 否 | `"Cancel task"` | 取消按钮文案。 |
+| `stepSubtitle` | `string` | 否 | — | 紧凑目标卡的副标题。 |
+
+**示例 1 · 登记一个没有字段 schema 的目标**
+
+```ts
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口。",
+    "封面必须由用户亲自上传。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "保存动作已回读课程库并确认了这条新记录",
+  ],
+  examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+});
+
+onBeforeUnmount(disposeGoal);
+```
+
+**示例 2 · 只在一条路由上提供目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程。",
+  route: "/courses",
+  scope: "course-catalogue",
+});
 ```
 
 **精确契约**
@@ -25472,6 +25949,7 @@ interface ActiveGuidedTask {
   controller?: TaskController;
   state: TaskGuideState;
   startedBy: "page" | "agent";
+  goal?: boolean;
 }
 ```
 
@@ -25485,6 +25963,7 @@ interface ActiveGuidedTask {
 | `controller` | `TaskController` | 否 | — | 持有快照的控制器；未提供时不存在。 |
 | `state` | `TaskGuideState` | 否 | — | 读取时由登记项返回的实时状态。 |
 | `startedBy` | `"page" \| "agent"` | 否 | — | 本次运行由页面上下文还是模型开启。 |
+| `goal` | `boolean` | 否 | — | 由 `goal()` 创建的紧凑目标为 `true`。目标没有控制器，也没有字段 schema。 |
 
 **示例 1 · 渲染当前 active 的引导**
 
@@ -27116,10 +27595,10 @@ interface GuideActionItem {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
+| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -27145,11 +27624,11 @@ React Hooks 的完整 API：Provider、声明 Hook、组件，以及它们使用
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.8` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.9` |
 
 本页的 Hooks API 要求 React 16.8+。React 16.3–16.7 使用 `@plingjs/react/legacy`，这是一套 class/render-prop 入口，详见 [React 适配器参考](/zh/reference/react-adapter#react-163-167-legacy-entry)。
 
-当前包版本为 `0.1.0-alpha.8`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -28591,7 +29070,7 @@ const ui = {
 | `onOpenChange` | `(open: boolean) => void` | 否 | — | 浮窗展开或收起时调用。 |
 | `navigate` | `(href: string) => void` | 否 | `window.location.replace` | 任务完成后的导航实现。 |
 | `layout` | `"dock" \| "sidebar" \| "inline"` | 否 | `"dock"` | 浮动浮窗、视口侧边栏或内联网格界面。 |
-| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"overlay"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。仅对 `layout="sidebar"` 生效。 |
+| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"fused"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。默认 `fused`；需要覆盖页面时显式选择 `overlay`。仅对 `layout="sidebar"` 生效。 |
 | `side` | `"left" \| "right"` | 否 | `"right"` | 侧边栏模式下的贴边方向。 |
 | `launcherPlacement` | `"bottom" \| "center"` | 否 | `"bottom"` | 侧边栏收起后启动按钮的位置。 |
 | `launcherLabel` | `string` | 否 | — | 收起状态启动按钮的自定义文案。 |
@@ -28697,9 +29176,14 @@ const ui = {
 | `pendingHandoff` | `PendingHandoff \| null` | 否 | — | 当前人工接力请求。 |
 | `placeholder` | `string` | 否 | — | 输入框占位文案。 |
 | `emptyHint` | `string` | 否 | — | 空状态文案。 |
+| `speakers` | `boolean` | 否 | `true` | 在每条聊天消息上方显示说话人与时间。 |
+| `showHeader` | `boolean` | 否 | `true` | 保留独立对话的标题与运行状态栏。工作台外壳自行管理导航时可隐藏。 |
+| `multiline` | `boolean` | 否 | `true` | 渲染两行起步、自动增高的文本域。只有在宿主空间非常紧张时才设为 `false`。 |
+| `taskPlacement` | `"inline" \| "pinned"` | 否 | `"pinned"` | 把任务内容固定在滚动消息区上方；需要让历史保持单一顺序时可改为消息流内。 |
+| `quick` | `readonly QuickTaskItem[]` | 否 | `[]` | 只在对话为空时显示的推荐指令。字符串会被自动规范化。 |
 | `ui` | `PlingUiController` | 否 | — | 语言与主题控制器。默认使用英文独立控制器。 |
 | `className` | `string` | 否 | — | 外层对话界面的附加 class。 |
-| `task` | `ReactNode` | 否 | — | 渲染在对话上方的自定义任务内容。存在内容时不再显示空状态。 |
+| `task` | `ReactNode` | 否 | — | 默认渲染在对话上方的自定义任务内容。设为 `taskPlacement="inline"` 时会进入消息流，并替代空状态。 |
 | `tools` | `boolean` | 否 | `false` | 在对话中显示原始工具调用行。 |
 | `reveal` | `(text: string) => string` | 否 | — | 仅用于渲染的文本转换。 |
 | `resume` | `{ goal?: string; interrupted?: boolean } \| null` | 否 | `null` | 显示“继续上次任务”提示。 |
@@ -29014,13 +29498,14 @@ const report = pling.inspectCoverage(document.getElementById("root"));
 
 ## 引导任务
 
-收集用户决策、按固定顺序调用已有动作，并用同一份运行快照渲染的任务层。任务目录判断当前上下文可用的任务，引导定义决定如何向用户解释当前任务；两者都不复制执行或权限逻辑。
+目标与进阶任务。目标只声明结果、边界和成功条件，字段与执行都留在真实页面。只有页面动作无法表达需求时，进阶任务才增加字段 schema、查找和固定步骤。
 
 | API | 类型 | 参考 |
 | --- | --- | --- |
 | [createTaskController](#api-createtaskcontroller) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [createTaskCatalog](#api-createtaskcatalog) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [TaskCatalog](#api-taskcatalog) | 接口 | [参考](/zh/reference/guided-task-api) |
+| [TaskGoalInput](#api-taskgoalinput) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskRegistration](#api-guidedtaskregistration) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskActivationOptions](#api-guidedtaskactivationoptions) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [ActiveGuidedTask](#api-activeguidedtask) | 接口 | [参考](/zh/reference/guided-task-api) |
@@ -29132,7 +29617,19 @@ createTaskCatalog(options?: TaskCatalogOptions): TaskCatalog
 | `options.getPage` | `() => PageView \| undefined` | 否 | — | 页面身份覆盖。默认读取 `registry.getPage()`。 |
 | `options.actionId` | `string` | 否 | `"pling_start_task"` | 首选的模型动作 id。共享注册表时，第一个目录使用该 id，后续目录自动改用 `pling_start_task_2` 等后缀。 |
 
-**示例 1 · 为当前路由登记一个任务**
+**示例 1 · 登记一个能在弹窗关闭后继续存在的目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: ["页面动作是唯一入口；封面由用户上传。"],
+  successCriteria: ["新课程出现在课程库第一位"],
+});
+```
+
+**示例 2 · 为当前路由登记一个进阶任务**
 
 ```ts
 import { createTaskCatalog, createTaskController } from "@plingjs/agent";
@@ -29163,7 +29660,7 @@ const off = catalog.define({
 
 ### `TaskCatalog`
 
-当前页面的任务目录：登记定义、查询此刻可用的任务、至多激活一个引导、转发引导命令，并通知渲染方。
+当前页面的任务目录：登记目标或进阶任务、查询此刻可用的任务、至多激活一个引导、完成目标、转发引导命令，并通知渲染方。
 
 **导入**
 
@@ -29176,6 +29673,12 @@ const off = catalog.define({
 interface TaskCatalog {
   readonly actionId: string;
   readonly updateActionId: string;
+  readonly focusActionId: string;
+  readonly reviewActionId: string;
+  readonly proposeSaveActionId: string;
+  readonly cancelActionId: string;
+  readonly completeActionId: string;
+  goal(input: TaskGoalInput): () => void;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -29184,6 +29687,7 @@ interface TaskCatalog {
   activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;
   deactivate(): void;
   command(command: TaskGuideCommand): boolean;
+  complete(): boolean;
   views(): readonly GuidedTaskView[];
   refresh(): void;
   subscribe(listener: () => void): () => void;
@@ -29201,7 +29705,10 @@ interface TaskCatalog {
 | `reviewActionId` | `readonly string` | 否 | — | 打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。 |
 | `proposeSaveActionId` | `readonly string` | 否 | — | 打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。 |
 | `cancelActionId` | `readonly string` | 否 | — | 结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。 |
-| `define(registration)` | `() => void` | 否 | — | 登记任务并返回注销函数。 |
+| `completeActionId` | `readonly string` | 否 | — | 把 goal-only 目标标记为完成的实际模型动作 id。它不写业务数据。 |
+| `goal(input)` | `() => void` | 否 | — | 登记最小目标任务路径并返回注销函数。它不接受字段、步骤、控制器、表单工具或业务回调。 |
+| `complete()` | `boolean` | 否 | — | 把当前 goal-only 目标标记为完成。进阶任务使用自己的完成状态，此时返回 `false`。 |
+| `define(registration)` | `() => void` | 否 | — | 登记进阶任务并返回注销函数。 |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | 否 | — | 返回一个登记项，即使它当前因路由或作用域不匹配而不可用。 |
 | `list()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回该目录登记的全部任务。 |
 | `available()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回当前页面路由与作用域都匹配的登记项。 |
@@ -29226,6 +29733,95 @@ const task = catalog.activate("course.create", {
   values: { name: "瑜伽基础" },
 });
 console.log(task.startedBy); // "page"
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/guided-task-api)
+
+
+<a id="api-taskgoalinput"></a>
+
+### `TaskGoalInput`
+
+最小任务声明：id、标题、结果、边界、成功条件、示例，以及可选的路由/作用域连续性。它没有字段、步骤、控制器或业务回调。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// React
+interface TaskGoalInput {
+  id: string;
+  title: string;
+  goal: string;
+  description?: string;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
+  examples?: readonly string[];
+  risk?: Kind;
+  route?: GuidedTaskRoute;
+  scope?: string | readonly string[];
+  keepActive?: boolean;
+  labels?: TaskGuideLabels;
+  cancelLabel?: string;
+  stepSubtitle?: string;
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | 是 | — | 稳定目标 id，在同一目录内唯一。 |
+| `title` | `string` | 是 | — | 面向人的目标名称。 |
+| `goal` | `string` | 是 | — | 要达成的结果。不能为空。 |
+| `description` | `string` | 否 | — | 目标卡或任务列表里的补充说明。默认取 `goal`。 |
+| `constraints` | `readonly string[]` | 否 | — | 模型必须守住的边界，例如“页面动作是唯一入口”。 |
+| `successCriteria` | `readonly string[]` | 否 | — | 完成前必须成立的可观察条件。 |
+| `examples` | `readonly string[]` | 否 | — | 用户可能说出的示例句子。 |
+| `risk` | `"read" \| "write" \| "danger"` | 否 | `"write"` | 目标级风险提示。动作仍执行自己的风险规则。 |
+| `route` | `GuidedTaskRoute` | 否 | — | 限制目标启动位置的精确路径、路由名、列表或判定函数。 |
+| `scope` | `string \| readonly string[]` | 否 | — | 列出的区域必须全部活跃，目标才可用。 |
+| `keepActive` | `boolean` | 否 | `true` | 显式启动的目标在路由或作用域暂时不匹配时继续保持活动。 |
+| `labels` | `TaskGuideLabels` | 否 | — | 覆盖运行中、已完成等标签。 |
+| `cancelLabel` | `string` | 否 | `"Cancel task"` | 取消按钮文案。 |
+| `stepSubtitle` | `string` | 否 | — | 紧凑目标卡的副标题。 |
+
+**示例 1 · 登记一个没有字段 schema 的目标**
+
+```ts
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口。",
+    "封面必须由用户亲自上传。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "保存动作已回读课程库并确认了这条新记录",
+  ],
+  examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+});
+
+onBeforeUnmount(disposeGoal);
+```
+
+**示例 2 · 只在一条路由上提供目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程。",
+  route: "/courses",
+  scope: "course-catalogue",
+});
 ```
 
 **精确契约**
@@ -29368,6 +29964,7 @@ interface ActiveGuidedTask {
   controller?: TaskController;
   state: TaskGuideState;
   startedBy: "page" | "agent";
+  goal?: boolean;
 }
 ```
 
@@ -29381,6 +29978,7 @@ interface ActiveGuidedTask {
 | `controller` | `TaskController` | 否 | — | 持有快照的控制器；未提供时不存在。 |
 | `state` | `TaskGuideState` | 否 | — | 读取时由登记项返回的实时状态。 |
 | `startedBy` | `"page" \| "agent"` | 否 | — | 本次运行由页面上下文还是模型开启。 |
+| `goal` | `boolean` | 否 | — | 由 `goal()` 创建的紧凑目标为 `true`。目标没有控制器，也没有字段 schema。 |
 
 **示例 1 · 渲染当前 active 的引导**
 
@@ -31001,10 +31599,10 @@ card.current?.open("lesson.note", {}, {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
+| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -31030,9 +31628,9 @@ Vue 2.7 适配器沿用 DOM 运行时，提供指令与共享的 DOM 问答入�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.8` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.9` |
 
-当前包版本为 `0.1.0-alpha.8`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -32196,7 +32794,7 @@ pling.dock(options?: VanillaDockOptions): VanillaDock
 | `navigate` | `(href: string) => void` | 否 | `window.location.replace` | 任务完成后的导航实现。 |
 | `surfaceId` | `string` | 否 | `"dock"` | 注册到任务路由的界面 id，使 `pling.ask({ surface })` 能定位这个浮窗。 |
 | `layout` | `"dock" \| "sidebar" \| "inline"` | 否 | `"dock"` | 浮动角落、贴边侧边栏，或固定在页面中的常驻面板。 |
-| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"overlay"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。仅对 `layout="sidebar"` 生效。 |
+| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"fused"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。默认 `fused`；需要覆盖页面时显式选择 `overlay`。仅对 `layout="sidebar"` 生效。 |
 | `side` | `"left" \| "right"` | 否 | `"right"` | 侧边栏模式下的贴边方向。 |
 | `launcherPlacement` | `"bottom" \| "center"` | 否 | `"bottom"` | 侧边栏收起后启动按钮的位置。 |
 | `launcherLabel` | `string` | 否 | — | 收起状态启动按钮的自定义文案。 |
@@ -32234,13 +32832,14 @@ dock.destroy();
 
 ## 引导任务
 
-收集用户决策、按固定顺序调用已有动作，并用同一份运行快照渲染的任务层。任务目录判断当前上下文可用的任务，引导定义决定如何向用户解释当前任务；两者都不复制执行或权限逻辑。
+目标与进阶任务。目标只声明结果、边界和成功条件，字段与执行都留在真实页面。只有页面动作无法表达需求时，进阶任务才增加字段 schema、查找和固定步骤。
 
 | API | 类型 | 参考 |
 | --- | --- | --- |
 | [createTaskController](#api-createtaskcontroller) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [createTaskCatalog](#api-createtaskcatalog) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [TaskCatalog](#api-taskcatalog) | 接口 | [参考](/zh/reference/guided-task-api) |
+| [TaskGoalInput](#api-taskgoalinput) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskRegistration](#api-guidedtaskregistration) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskActivationOptions](#api-guidedtaskactivationoptions) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [ActiveGuidedTask](#api-activeguidedtask) | 接口 | [参考](/zh/reference/guided-task-api) |
@@ -32349,7 +32948,19 @@ createTaskCatalog(options?: TaskCatalogOptions): TaskCatalog
 | `options.getPage` | `() => PageView \| undefined` | 否 | — | 页面身份覆盖。默认读取 `registry.getPage()`。 |
 | `options.actionId` | `string` | 否 | `"pling_start_task"` | 首选的模型动作 id。共享注册表时，第一个目录使用该 id，后续目录自动改用 `pling_start_task_2` 等后缀。 |
 
-**示例 1 · 为当前路由登记一个任务**
+**示例 1 · 登记一个能在弹窗关闭后继续存在的目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: ["页面动作是唯一入口；封面由用户上传。"],
+  successCriteria: ["新课程出现在课程库第一位"],
+});
+```
+
+**示例 2 · 为当前路由登记一个进阶任务**
 
 ```ts
 import { createTaskCatalog, createTaskController } from "@plingjs/agent";
@@ -32380,7 +32991,7 @@ const off = catalog.define({
 
 ### `TaskCatalog`
 
-当前页面的任务目录：登记定义、查询此刻可用的任务、至多激活一个引导、转发引导命令，并通知渲染方。
+当前页面的任务目录：登记目标或进阶任务、查询此刻可用的任务、至多激活一个引导、完成目标、转发引导命令，并通知渲染方。
 
 **导入**
 
@@ -32393,6 +33004,12 @@ const off = catalog.define({
 interface TaskCatalog {
   readonly actionId: string;
   readonly updateActionId: string;
+  readonly focusActionId: string;
+  readonly reviewActionId: string;
+  readonly proposeSaveActionId: string;
+  readonly cancelActionId: string;
+  readonly completeActionId: string;
+  goal(input: TaskGoalInput): () => void;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -32401,6 +33018,7 @@ interface TaskCatalog {
   activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;
   deactivate(): void;
   command(command: TaskGuideCommand): boolean;
+  complete(): boolean;
   views(): readonly GuidedTaskView[];
   refresh(): void;
   subscribe(listener: () => void): () => void;
@@ -32418,7 +33036,10 @@ interface TaskCatalog {
 | `reviewActionId` | `readonly string` | 否 | — | 打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。 |
 | `proposeSaveActionId` | `readonly string` | 否 | — | 打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。 |
 | `cancelActionId` | `readonly string` | 否 | — | 结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。 |
-| `define(registration)` | `() => void` | 否 | — | 登记任务并返回注销函数。 |
+| `completeActionId` | `readonly string` | 否 | — | 把 goal-only 目标标记为完成的实际模型动作 id。它不写业务数据。 |
+| `goal(input)` | `() => void` | 否 | — | 登记最小目标任务路径并返回注销函数。它不接受字段、步骤、控制器、表单工具或业务回调。 |
+| `complete()` | `boolean` | 否 | — | 把当前 goal-only 目标标记为完成。进阶任务使用自己的完成状态，此时返回 `false`。 |
+| `define(registration)` | `() => void` | 否 | — | 登记进阶任务并返回注销函数。 |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | 否 | — | 返回一个登记项，即使它当前因路由或作用域不匹配而不可用。 |
 | `list()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回该目录登记的全部任务。 |
 | `available()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回当前页面路由与作用域都匹配的登记项。 |
@@ -32443,6 +33064,95 @@ const task = catalog.activate("course.create", {
   values: { name: "瑜伽基础" },
 });
 console.log(task.startedBy); // "page"
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/guided-task-api)
+
+
+<a id="api-taskgoalinput"></a>
+
+### `TaskGoalInput`
+
+最小任务声明：id、标题、结果、边界、成功条件、示例，以及可选的路由/作用域连续性。它没有字段、步骤、控制器或业务回调。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// Vue 2.7
+interface TaskGoalInput {
+  id: string;
+  title: string;
+  goal: string;
+  description?: string;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
+  examples?: readonly string[];
+  risk?: Kind;
+  route?: GuidedTaskRoute;
+  scope?: string | readonly string[];
+  keepActive?: boolean;
+  labels?: TaskGuideLabels;
+  cancelLabel?: string;
+  stepSubtitle?: string;
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | 是 | — | 稳定目标 id，在同一目录内唯一。 |
+| `title` | `string` | 是 | — | 面向人的目标名称。 |
+| `goal` | `string` | 是 | — | 要达成的结果。不能为空。 |
+| `description` | `string` | 否 | — | 目标卡或任务列表里的补充说明。默认取 `goal`。 |
+| `constraints` | `readonly string[]` | 否 | — | 模型必须守住的边界，例如“页面动作是唯一入口”。 |
+| `successCriteria` | `readonly string[]` | 否 | — | 完成前必须成立的可观察条件。 |
+| `examples` | `readonly string[]` | 否 | — | 用户可能说出的示例句子。 |
+| `risk` | `"read" \| "write" \| "danger"` | 否 | `"write"` | 目标级风险提示。动作仍执行自己的风险规则。 |
+| `route` | `GuidedTaskRoute` | 否 | — | 限制目标启动位置的精确路径、路由名、列表或判定函数。 |
+| `scope` | `string \| readonly string[]` | 否 | — | 列出的区域必须全部活跃，目标才可用。 |
+| `keepActive` | `boolean` | 否 | `true` | 显式启动的目标在路由或作用域暂时不匹配时继续保持活动。 |
+| `labels` | `TaskGuideLabels` | 否 | — | 覆盖运行中、已完成等标签。 |
+| `cancelLabel` | `string` | 否 | `"Cancel task"` | 取消按钮文案。 |
+| `stepSubtitle` | `string` | 否 | — | 紧凑目标卡的副标题。 |
+
+**示例 1 · 登记一个没有字段 schema 的目标**
+
+```ts
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口。",
+    "封面必须由用户亲自上传。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "保存动作已回读课程库并确认了这条新记录",
+  ],
+  examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+});
+
+onBeforeUnmount(disposeGoal);
+```
+
+**示例 2 · 只在一条路由上提供目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程。",
+  route: "/courses",
+  scope: "course-catalogue",
+});
 ```
 
 **精确契约**
@@ -32585,6 +33295,7 @@ interface ActiveGuidedTask {
   controller?: TaskController;
   state: TaskGuideState;
   startedBy: "page" | "agent";
+  goal?: boolean;
 }
 ```
 
@@ -32598,6 +33309,7 @@ interface ActiveGuidedTask {
 | `controller` | `TaskController` | 否 | — | 持有快照的控制器；未提供时不存在。 |
 | `state` | `TaskGuideState` | 否 | — | 读取时由登记项返回的实时状态。 |
 | `startedBy` | `"page" \| "agent"` | 否 | — | 本次运行由页面上下文还是模型开启。 |
+| `goal` | `boolean` | 否 | — | 由 `goal()` 创建的紧凑目标为 `true`。目标没有控制器，也没有字段 schema。 |
 
 **示例 1 · 渲染当前 active 的引导**
 
@@ -34082,10 +34794,10 @@ interface GuideActionItem {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
+| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -34111,9 +34823,9 @@ Canonical: https://plingjs.dev/zh/reference/api/vanilla
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.8` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.9` |
 
-当前包版本为 `0.1.0-alpha.8`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -35398,7 +36110,7 @@ pling.dock(options?: VanillaDockOptions): VanillaDock
 | `navigate` | `(href: string) => void` | 否 | `window.location.replace` | 任务完成后的导航实现。 |
 | `surfaceId` | `string` | 否 | `"dock"` | 注册到任务路由的界面 id，使 `pling.ask({ surface })` 能定位这个浮窗。 |
 | `layout` | `"dock" \| "sidebar" \| "inline"` | 否 | `"dock"` | 浮动角落、贴边侧边栏，或固定在页面中的常驻面板。 |
-| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"overlay"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。仅对 `layout="sidebar"` 生效。 |
+| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"fused"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。默认 `fused`；需要覆盖页面时显式选择 `overlay`。仅对 `layout="sidebar"` 生效。 |
 | `side` | `"left" \| "right"` | 否 | `"right"` | 侧边栏模式下的贴边方向。 |
 | `launcherPlacement` | `"bottom" \| "center"` | 否 | `"bottom"` | 侧边栏收起后启动按钮的位置。 |
 | `launcherLabel` | `string` | 否 | — | 收起状态启动按钮的自定义文案。 |
@@ -35899,13 +36611,14 @@ console.log(report.coveragePercent, report.targets);
 
 ## 引导任务
 
-收集用户决策、按固定顺序调用已有动作，并用同一份运行快照渲染的任务层。任务目录判断当前上下文可用的任务，引导定义决定如何向用户解释当前任务；两者都不复制执行或权限逻辑。
+目标与进阶任务。目标只声明结果、边界和成功条件，字段与执行都留在真实页面。只有页面动作无法表达需求时，进阶任务才增加字段 schema、查找和固定步骤。
 
 | API | 类型 | 参考 |
 | --- | --- | --- |
 | [createTaskController](#api-createtaskcontroller) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [createTaskCatalog](#api-createtaskcatalog) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [TaskCatalog](#api-taskcatalog) | 接口 | [参考](/zh/reference/guided-task-api) |
+| [TaskGoalInput](#api-taskgoalinput) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskRegistration](#api-guidedtaskregistration) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskActivationOptions](#api-guidedtaskactivationoptions) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [ActiveGuidedTask](#api-activeguidedtask) | 接口 | [参考](/zh/reference/guided-task-api) |
@@ -36023,7 +36736,19 @@ createTaskCatalog(options?: TaskCatalogOptions): TaskCatalog
 | `options.getPage` | `() => PageView \| undefined` | 否 | — | 页面身份覆盖。默认读取 `registry.getPage()`。 |
 | `options.actionId` | `string` | 否 | `"pling_start_task"` | 首选的模型动作 id。共享注册表时，第一个目录使用该 id，后续目录自动改用 `pling_start_task_2` 等后缀。 |
 
-**示例 1 · 为当前路由登记一个任务**
+**示例 1 · 登记一个能在弹窗关闭后继续存在的目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: ["页面动作是唯一入口；封面由用户上传。"],
+  successCriteria: ["新课程出现在课程库第一位"],
+});
+```
+
+**示例 2 · 为当前路由登记一个进阶任务**
 
 ```ts
 import { createTaskCatalog, createTaskController } from "@plingjs/agent";
@@ -36054,7 +36779,7 @@ const off = catalog.define({
 
 ### `TaskCatalog`
 
-当前页面的任务目录：登记定义、查询此刻可用的任务、至多激活一个引导、转发引导命令，并通知渲染方。
+当前页面的任务目录：登记目标或进阶任务、查询此刻可用的任务、至多激活一个引导、完成目标、转发引导命令，并通知渲染方。
 
 **导入**
 
@@ -36067,6 +36792,12 @@ const off = catalog.define({
 interface TaskCatalog {
   readonly actionId: string;
   readonly updateActionId: string;
+  readonly focusActionId: string;
+  readonly reviewActionId: string;
+  readonly proposeSaveActionId: string;
+  readonly cancelActionId: string;
+  readonly completeActionId: string;
+  goal(input: TaskGoalInput): () => void;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -36075,6 +36806,7 @@ interface TaskCatalog {
   activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;
   deactivate(): void;
   command(command: TaskGuideCommand): boolean;
+  complete(): boolean;
   views(): readonly GuidedTaskView[];
   refresh(): void;
   subscribe(listener: () => void): () => void;
@@ -36092,7 +36824,10 @@ interface TaskCatalog {
 | `reviewActionId` | `readonly string` | 否 | — | 打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。 |
 | `proposeSaveActionId` | `readonly string` | 否 | — | 打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。 |
 | `cancelActionId` | `readonly string` | 否 | — | 结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。 |
-| `define(registration)` | `() => void` | 否 | — | 登记任务并返回注销函数。 |
+| `completeActionId` | `readonly string` | 否 | — | 把 goal-only 目标标记为完成的实际模型动作 id。它不写业务数据。 |
+| `goal(input)` | `() => void` | 否 | — | 登记最小目标任务路径并返回注销函数。它不接受字段、步骤、控制器、表单工具或业务回调。 |
+| `complete()` | `boolean` | 否 | — | 把当前 goal-only 目标标记为完成。进阶任务使用自己的完成状态，此时返回 `false`。 |
+| `define(registration)` | `() => void` | 否 | — | 登记进阶任务并返回注销函数。 |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | 否 | — | 返回一个登记项，即使它当前因路由或作用域不匹配而不可用。 |
 | `list()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回该目录登记的全部任务。 |
 | `available()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回当前页面路由与作用域都匹配的登记项。 |
@@ -36117,6 +36852,95 @@ const task = catalog.activate("course.create", {
   values: { name: "瑜伽基础" },
 });
 console.log(task.startedBy); // "page"
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/guided-task-api)
+
+
+<a id="api-taskgoalinput"></a>
+
+### `TaskGoalInput`
+
+最小任务声明：id、标题、结果、边界、成功条件、示例，以及可选的路由/作用域连续性。它没有字段、步骤、控制器或业务回调。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// Vanilla JS
+interface TaskGoalInput {
+  id: string;
+  title: string;
+  goal: string;
+  description?: string;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
+  examples?: readonly string[];
+  risk?: Kind;
+  route?: GuidedTaskRoute;
+  scope?: string | readonly string[];
+  keepActive?: boolean;
+  labels?: TaskGuideLabels;
+  cancelLabel?: string;
+  stepSubtitle?: string;
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | 是 | — | 稳定目标 id，在同一目录内唯一。 |
+| `title` | `string` | 是 | — | 面向人的目标名称。 |
+| `goal` | `string` | 是 | — | 要达成的结果。不能为空。 |
+| `description` | `string` | 否 | — | 目标卡或任务列表里的补充说明。默认取 `goal`。 |
+| `constraints` | `readonly string[]` | 否 | — | 模型必须守住的边界，例如“页面动作是唯一入口”。 |
+| `successCriteria` | `readonly string[]` | 否 | — | 完成前必须成立的可观察条件。 |
+| `examples` | `readonly string[]` | 否 | — | 用户可能说出的示例句子。 |
+| `risk` | `"read" \| "write" \| "danger"` | 否 | `"write"` | 目标级风险提示。动作仍执行自己的风险规则。 |
+| `route` | `GuidedTaskRoute` | 否 | — | 限制目标启动位置的精确路径、路由名、列表或判定函数。 |
+| `scope` | `string \| readonly string[]` | 否 | — | 列出的区域必须全部活跃，目标才可用。 |
+| `keepActive` | `boolean` | 否 | `true` | 显式启动的目标在路由或作用域暂时不匹配时继续保持活动。 |
+| `labels` | `TaskGuideLabels` | 否 | — | 覆盖运行中、已完成等标签。 |
+| `cancelLabel` | `string` | 否 | `"Cancel task"` | 取消按钮文案。 |
+| `stepSubtitle` | `string` | 否 | — | 紧凑目标卡的副标题。 |
+
+**示例 1 · 登记一个没有字段 schema 的目标**
+
+```ts
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口。",
+    "封面必须由用户亲自上传。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "保存动作已回读课程库并确认了这条新记录",
+  ],
+  examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+});
+
+onBeforeUnmount(disposeGoal);
+```
+
+**示例 2 · 只在一条路由上提供目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程。",
+  route: "/courses",
+  scope: "course-catalogue",
+});
 ```
 
 **精确契约**
@@ -36259,6 +37083,7 @@ interface ActiveGuidedTask {
   controller?: TaskController;
   state: TaskGuideState;
   startedBy: "page" | "agent";
+  goal?: boolean;
 }
 ```
 
@@ -36272,6 +37097,7 @@ interface ActiveGuidedTask {
 | `controller` | `TaskController` | 否 | — | 持有快照的控制器；未提供时不存在。 |
 | `state` | `TaskGuideState` | 否 | — | 读取时由登记项返回的实时状态。 |
 | `startedBy` | `"page" \| "agent"` | 否 | — | 本次运行由页面上下文还是模型开启。 |
+| `goal` | `boolean` | 否 | — | 由 `goal()` 创建的紧凑目标为 `true`。目标没有控制器，也没有字段 schema。 |
 
 **示例 1 · 渲染当前 active 的引导**
 
@@ -38193,10 +39019,10 @@ panel.destroy();
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
+| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -38222,9 +39048,9 @@ Canonical: https://plingjs.dev/zh/reference/api/shared
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.8` |
+| `@plingjs/core` | — | `0.1.0-alpha.9` |
 
-当前包版本为 `0.1.0-alpha.8`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -39432,13 +40258,14 @@ const report = inspectCoverage(document.querySelector("#app"));
 
 ## 引导任务
 
-收集用户决策、按固定顺序调用已有动作，并用同一份运行快照渲染的任务层。任务目录判断当前上下文可用的任务，引导定义决定如何向用户解释当前任务；两者都不复制执行或权限逻辑。
+目标与进阶任务。目标只声明结果、边界和成功条件，字段与执行都留在真实页面。只有页面动作无法表达需求时，进阶任务才增加字段 schema、查找和固定步骤。
 
 | API | 类型 | 参考 |
 | --- | --- | --- |
 | [createTaskController](#api-createtaskcontroller) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [createTaskCatalog](#api-createtaskcatalog) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [TaskCatalog](#api-taskcatalog) | 接口 | [参考](/zh/reference/guided-task-api) |
+| [TaskGoalInput](#api-taskgoalinput) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskRegistration](#api-guidedtaskregistration) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskActivationOptions](#api-guidedtaskactivationoptions) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [ActiveGuidedTask](#api-activeguidedtask) | 接口 | [参考](/zh/reference/guided-task-api) |
@@ -39547,7 +40374,19 @@ createTaskCatalog(options?: TaskCatalogOptions): TaskCatalog
 | `options.getPage` | `() => PageView \| undefined` | 否 | — | 页面身份覆盖。默认读取 `registry.getPage()`。 |
 | `options.actionId` | `string` | 否 | `"pling_start_task"` | 首选的模型动作 id。共享注册表时，第一个目录使用该 id，后续目录自动改用 `pling_start_task_2` 等后缀。 |
 
-**示例 1 · 为当前路由登记一个任务**
+**示例 1 · 登记一个能在弹窗关闭后继续存在的目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: ["页面动作是唯一入口；封面由用户上传。"],
+  successCriteria: ["新课程出现在课程库第一位"],
+});
+```
+
+**示例 2 · 为当前路由登记一个进阶任务**
 
 ```ts
 import { createTaskCatalog, createTaskController } from "@plingjs/agent";
@@ -39578,7 +40417,7 @@ const off = catalog.define({
 
 ### `TaskCatalog`
 
-当前页面的任务目录：登记定义、查询此刻可用的任务、至多激活一个引导、转发引导命令，并通知渲染方。
+当前页面的任务目录：登记目标或进阶任务、查询此刻可用的任务、至多激活一个引导、完成目标、转发引导命令，并通知渲染方。
 
 **导入**
 
@@ -39591,6 +40430,12 @@ const off = catalog.define({
 interface TaskCatalog {
   readonly actionId: string;
   readonly updateActionId: string;
+  readonly focusActionId: string;
+  readonly reviewActionId: string;
+  readonly proposeSaveActionId: string;
+  readonly cancelActionId: string;
+  readonly completeActionId: string;
+  goal(input: TaskGoalInput): () => void;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -39599,6 +40444,7 @@ interface TaskCatalog {
   activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;
   deactivate(): void;
   command(command: TaskGuideCommand): boolean;
+  complete(): boolean;
   views(): readonly GuidedTaskView[];
   refresh(): void;
   subscribe(listener: () => void): () => void;
@@ -39616,7 +40462,10 @@ interface TaskCatalog {
 | `reviewActionId` | `readonly string` | 否 | — | 打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。 |
 | `proposeSaveActionId` | `readonly string` | 否 | — | 打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。 |
 | `cancelActionId` | `readonly string` | 否 | — | 结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。 |
-| `define(registration)` | `() => void` | 否 | — | 登记任务并返回注销函数。 |
+| `completeActionId` | `readonly string` | 否 | — | 把 goal-only 目标标记为完成的实际模型动作 id。它不写业务数据。 |
+| `goal(input)` | `() => void` | 否 | — | 登记最小目标任务路径并返回注销函数。它不接受字段、步骤、控制器、表单工具或业务回调。 |
+| `complete()` | `boolean` | 否 | — | 把当前 goal-only 目标标记为完成。进阶任务使用自己的完成状态，此时返回 `false`。 |
+| `define(registration)` | `() => void` | 否 | — | 登记进阶任务并返回注销函数。 |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | 否 | — | 返回一个登记项，即使它当前因路由或作用域不匹配而不可用。 |
 | `list()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回该目录登记的全部任务。 |
 | `available()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回当前页面路由与作用域都匹配的登记项。 |
@@ -39641,6 +40490,95 @@ const task = catalog.activate("course.create", {
   values: { name: "瑜伽基础" },
 });
 console.log(task.startedBy); // "page"
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/guided-task-api)
+
+
+<a id="api-taskgoalinput"></a>
+
+### `TaskGoalInput`
+
+最小任务声明：id、标题、结果、边界、成功条件、示例，以及可选的路由/作用域连续性。它没有字段、步骤、控制器或业务回调。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// 共享包
+interface TaskGoalInput {
+  id: string;
+  title: string;
+  goal: string;
+  description?: string;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
+  examples?: readonly string[];
+  risk?: Kind;
+  route?: GuidedTaskRoute;
+  scope?: string | readonly string[];
+  keepActive?: boolean;
+  labels?: TaskGuideLabels;
+  cancelLabel?: string;
+  stepSubtitle?: string;
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | 是 | — | 稳定目标 id，在同一目录内唯一。 |
+| `title` | `string` | 是 | — | 面向人的目标名称。 |
+| `goal` | `string` | 是 | — | 要达成的结果。不能为空。 |
+| `description` | `string` | 否 | — | 目标卡或任务列表里的补充说明。默认取 `goal`。 |
+| `constraints` | `readonly string[]` | 否 | — | 模型必须守住的边界，例如“页面动作是唯一入口”。 |
+| `successCriteria` | `readonly string[]` | 否 | — | 完成前必须成立的可观察条件。 |
+| `examples` | `readonly string[]` | 否 | — | 用户可能说出的示例句子。 |
+| `risk` | `"read" \| "write" \| "danger"` | 否 | `"write"` | 目标级风险提示。动作仍执行自己的风险规则。 |
+| `route` | `GuidedTaskRoute` | 否 | — | 限制目标启动位置的精确路径、路由名、列表或判定函数。 |
+| `scope` | `string \| readonly string[]` | 否 | — | 列出的区域必须全部活跃，目标才可用。 |
+| `keepActive` | `boolean` | 否 | `true` | 显式启动的目标在路由或作用域暂时不匹配时继续保持活动。 |
+| `labels` | `TaskGuideLabels` | 否 | — | 覆盖运行中、已完成等标签。 |
+| `cancelLabel` | `string` | 否 | `"Cancel task"` | 取消按钮文案。 |
+| `stepSubtitle` | `string` | 否 | — | 紧凑目标卡的副标题。 |
+
+**示例 1 · 登记一个没有字段 schema 的目标**
+
+```ts
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口。",
+    "封面必须由用户亲自上传。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "保存动作已回读课程库并确认了这条新记录",
+  ],
+  examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+});
+
+onBeforeUnmount(disposeGoal);
+```
+
+**示例 2 · 只在一条路由上提供目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程。",
+  route: "/courses",
+  scope: "course-catalogue",
+});
 ```
 
 **精确契约**
@@ -39783,6 +40721,7 @@ interface ActiveGuidedTask {
   controller?: TaskController;
   state: TaskGuideState;
   startedBy: "page" | "agent";
+  goal?: boolean;
 }
 ```
 
@@ -39796,6 +40735,7 @@ interface ActiveGuidedTask {
 | `controller` | `TaskController` | 否 | — | 持有快照的控制器；未提供时不存在。 |
 | `state` | `TaskGuideState` | 否 | — | 读取时由登记项返回的实时状态。 |
 | `startedBy` | `"page" \| "agent"` | 否 | — | 本次运行由页面上下文还是模型开启。 |
+| `goal` | `boolean` | 否 | — | 由 `goal()` 创建的紧凑目标为 `true`。目标没有控制器，也没有字段 schema。 |
 
 **示例 1 · 渲染当前 active 的引导**
 
@@ -41846,10 +42786,10 @@ const config = resolveAgentConfig({
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
+| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
 
 | 项目 | 值 |
 | --- | --- |

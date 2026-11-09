@@ -19,6 +19,8 @@ const props = withDefaults(
     busy?: boolean;
     error?: string;
     completed?: boolean;
+    /** Incremented by the host when live page state behind `fields()` changes. */
+    revision?: number;
   }>(),
   {
     snapshot: null,
@@ -26,6 +28,7 @@ const props = withDefaults(
     busy: false,
     error: "",
     completed: false,
+    revision: 0,
   },
 );
 
@@ -86,6 +89,7 @@ watch(() => props.step, applyState);
 watch(() => props.busy, applyState);
 watch(() => props.error, applyState);
 watch(() => props.completed, applyState);
+watch(() => props.revision, () => guide?.refresh());
 
 defineExpose({
   refresh() {

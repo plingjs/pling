@@ -16,11 +16,11 @@ React Hooks 的完整 API：Provider、声明 Hook、组件，以及它们使用
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.8` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.9` |
 
 本页的 Hooks API 要求 React 16.8+。React 16.3–16.7 使用 `@plingjs/react/legacy`，这是一套 class/render-prop 入口，详见 [React 适配器参考](/zh/reference/react-adapter#react-163-167-legacy-entry)。
 
-当前包版本为 `0.1.0-alpha.8`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -1462,7 +1462,7 @@ const ui = {
 | `onOpenChange` | `(open: boolean) => void` | 否 | — | 浮窗展开或收起时调用。 |
 | `navigate` | `(href: string) => void` | 否 | `window.location.replace` | 任务完成后的导航实现。 |
 | `layout` | `"dock" \| "sidebar" \| "inline"` | 否 | `"dock"` | 浮动浮窗、视口侧边栏或内联网格界面。 |
-| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"overlay"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。仅对 `layout="sidebar"` 生效。 |
+| `sidebarMode` | `"overlay" \| "fused"` | 否 | `"fused"` | 侧栏覆盖页面，或作为应用栅格的一列参与布局。默认 `fused`；需要覆盖页面时显式选择 `overlay`。仅对 `layout="sidebar"` 生效。 |
 | `side` | `"left" \| "right"` | 否 | `"right"` | 侧边栏模式下的贴边方向。 |
 | `launcherPlacement` | `"bottom" \| "center"` | 否 | `"bottom"` | 侧边栏收起后启动按钮的位置。 |
 | `launcherLabel` | `string` | 否 | — | 收起状态启动按钮的自定义文案。 |
@@ -1568,9 +1568,14 @@ const ui = {
 | `pendingHandoff` | `PendingHandoff \| null` | 否 | — | 当前人工接力请求。 |
 | `placeholder` | `string` | 否 | — | 输入框占位文案。 |
 | `emptyHint` | `string` | 否 | — | 空状态文案。 |
+| `speakers` | `boolean` | 否 | `true` | 在每条聊天消息上方显示说话人与时间。 |
+| `showHeader` | `boolean` | 否 | `true` | 保留独立对话的标题与运行状态栏。工作台外壳自行管理导航时可隐藏。 |
+| `multiline` | `boolean` | 否 | `true` | 渲染两行起步、自动增高的文本域。只有在宿主空间非常紧张时才设为 `false`。 |
+| `taskPlacement` | `"inline" \| "pinned"` | 否 | `"pinned"` | 把任务内容固定在滚动消息区上方；需要让历史保持单一顺序时可改为消息流内。 |
+| `quick` | `readonly QuickTaskItem[]` | 否 | `[]` | 只在对话为空时显示的推荐指令。字符串会被自动规范化。 |
 | `ui` | `PlingUiController` | 否 | — | 语言与主题控制器。默认使用英文独立控制器。 |
 | `className` | `string` | 否 | — | 外层对话界面的附加 class。 |
-| `task` | `ReactNode` | 否 | — | 渲染在对话上方的自定义任务内容。存在内容时不再显示空状态。 |
+| `task` | `ReactNode` | 否 | — | 默认渲染在对话上方的自定义任务内容。设为 `taskPlacement="inline"` 时会进入消息流，并替代空状态。 |
 | `tools` | `boolean` | 否 | `false` | 在对话中显示原始工具调用行。 |
 | `reveal` | `(text: string) => string` | 否 | — | 仅用于渲染的文本转换。 |
 | `resume` | `{ goal?: string; interrupted?: boolean } \| null` | 否 | `null` | 显示“继续上次任务”提示。 |
@@ -1885,13 +1890,14 @@ const report = pling.inspectCoverage(document.getElementById("root"));
 
 ## 引导任务
 
-收集用户决策、按固定顺序调用已有动作，并用同一份运行快照渲染的任务层。任务目录判断当前上下文可用的任务，引导定义决定如何向用户解释当前任务；两者都不复制执行或权限逻辑。
+目标与进阶任务。目标只声明结果、边界和成功条件，字段与执行都留在真实页面。只有页面动作无法表达需求时，进阶任务才增加字段 schema、查找和固定步骤。
 
 | API | 类型 | 参考 |
 | --- | --- | --- |
 | [createTaskController](#api-createtaskcontroller) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [createTaskCatalog](#api-createtaskcatalog) | 函数 | [参考](/zh/reference/guided-task-api) |
 | [TaskCatalog](#api-taskcatalog) | 接口 | [参考](/zh/reference/guided-task-api) |
+| [TaskGoalInput](#api-taskgoalinput) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskRegistration](#api-guidedtaskregistration) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [GuidedTaskActivationOptions](#api-guidedtaskactivationoptions) | 接口 | [参考](/zh/reference/guided-task-api) |
 | [ActiveGuidedTask](#api-activeguidedtask) | 接口 | [参考](/zh/reference/guided-task-api) |
@@ -2003,7 +2009,19 @@ createTaskCatalog(options?: TaskCatalogOptions): TaskCatalog
 | `options.getPage` | `() => PageView \| undefined` | 否 | — | 页面身份覆盖。默认读取 `registry.getPage()`。 |
 | `options.actionId` | `string` | 否 | `"pling_start_task"` | 首选的模型动作 id。共享注册表时，第一个目录使用该 id，后续目录自动改用 `pling_start_task_2` 等后缀。 |
 
-**示例 1 · 为当前路由登记一个任务**
+**示例 1 · 登记一个能在弹窗关闭后继续存在的目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: ["页面动作是唯一入口；封面由用户上传。"],
+  successCriteria: ["新课程出现在课程库第一位"],
+});
+```
+
+**示例 2 · 为当前路由登记一个进阶任务**
 
 ```ts
 import { createTaskCatalog, createTaskController } from "@plingjs/agent";
@@ -2034,7 +2052,7 @@ const off = catalog.define({
 
 ### `TaskCatalog`
 
-当前页面的任务目录：登记定义、查询此刻可用的任务、至多激活一个引导、转发引导命令，并通知渲染方。
+当前页面的任务目录：登记目标或进阶任务、查询此刻可用的任务、至多激活一个引导、完成目标、转发引导命令，并通知渲染方。
 
 **导入**
 
@@ -2047,6 +2065,12 @@ const off = catalog.define({
 interface TaskCatalog {
   readonly actionId: string;
   readonly updateActionId: string;
+  readonly focusActionId: string;
+  readonly reviewActionId: string;
+  readonly proposeSaveActionId: string;
+  readonly cancelActionId: string;
+  readonly completeActionId: string;
+  goal(input: TaskGoalInput): () => void;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -2055,6 +2079,7 @@ interface TaskCatalog {
   activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;
   deactivate(): void;
   command(command: TaskGuideCommand): boolean;
+  complete(): boolean;
   views(): readonly GuidedTaskView[];
   refresh(): void;
   subscribe(listener: () => void): () => void;
@@ -2072,7 +2097,10 @@ interface TaskCatalog {
 | `reviewActionId` | `readonly string` | 否 | — | 打开页面只读核对的实际模型动作 id。只有 `guide.agent.review` 声明命令时才可用。 |
 | `proposeSaveActionId` | `readonly string` | 否 | — | 打开页面确认步骤的实际模型动作 id。它不执行写入；只有 `guide.agent.proposeSave` 声明命令时才可用。 |
 | `cancelActionId` | `readonly string` | 否 | — | 结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。 |
-| `define(registration)` | `() => void` | 否 | — | 登记任务并返回注销函数。 |
+| `completeActionId` | `readonly string` | 否 | — | 把 goal-only 目标标记为完成的实际模型动作 id。它不写业务数据。 |
+| `goal(input)` | `() => void` | 否 | — | 登记最小目标任务路径并返回注销函数。它不接受字段、步骤、控制器、表单工具或业务回调。 |
+| `complete()` | `boolean` | 否 | — | 把当前 goal-only 目标标记为完成。进阶任务使用自己的完成状态，此时返回 `false`。 |
+| `define(registration)` | `() => void` | 否 | — | 登记进阶任务并返回注销函数。 |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | 否 | — | 返回一个登记项，即使它当前因路由或作用域不匹配而不可用。 |
 | `list()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回该目录登记的全部任务。 |
 | `available()` | `readonly GuidedTaskRegistration[]` | 否 | — | 返回当前页面路由与作用域都匹配的登记项。 |
@@ -2097,6 +2125,95 @@ const task = catalog.activate("course.create", {
   values: { name: "瑜伽基础" },
 });
 console.log(task.startedBy); // "page"
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/guided-task-api)
+
+
+<a id="api-taskgoalinput"></a>
+
+### `TaskGoalInput`
+
+最小任务声明：id、标题、结果、边界、成功条件、示例，以及可选的路由/作用域连续性。它没有字段、步骤、控制器或业务回调。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// React
+interface TaskGoalInput {
+  id: string;
+  title: string;
+  goal: string;
+  description?: string;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
+  examples?: readonly string[];
+  risk?: Kind;
+  route?: GuidedTaskRoute;
+  scope?: string | readonly string[];
+  keepActive?: boolean;
+  labels?: TaskGuideLabels;
+  cancelLabel?: string;
+  stepSubtitle?: string;
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | 是 | — | 稳定目标 id，在同一目录内唯一。 |
+| `title` | `string` | 是 | — | 面向人的目标名称。 |
+| `goal` | `string` | 是 | — | 要达成的结果。不能为空。 |
+| `description` | `string` | 否 | — | 目标卡或任务列表里的补充说明。默认取 `goal`。 |
+| `constraints` | `readonly string[]` | 否 | — | 模型必须守住的边界，例如“页面动作是唯一入口”。 |
+| `successCriteria` | `readonly string[]` | 否 | — | 完成前必须成立的可观察条件。 |
+| `examples` | `readonly string[]` | 否 | — | 用户可能说出的示例句子。 |
+| `risk` | `"read" \| "write" \| "danger"` | 否 | `"write"` | 目标级风险提示。动作仍执行自己的风险规则。 |
+| `route` | `GuidedTaskRoute` | 否 | — | 限制目标启动位置的精确路径、路由名、列表或判定函数。 |
+| `scope` | `string \| readonly string[]` | 否 | — | 列出的区域必须全部活跃，目标才可用。 |
+| `keepActive` | `boolean` | 否 | `true` | 显式启动的目标在路由或作用域暂时不匹配时继续保持活动。 |
+| `labels` | `TaskGuideLabels` | 否 | — | 覆盖运行中、已完成等标签。 |
+| `cancelLabel` | `string` | 否 | `"Cancel task"` | 取消按钮文案。 |
+| `stepSubtitle` | `string` | 否 | — | 紧凑目标卡的副标题。 |
+
+**示例 1 · 登记一个没有字段 schema 的目标**
+
+```ts
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口。",
+    "封面必须由用户亲自上传。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "保存动作已回读课程库并确认了这条新记录",
+  ],
+  examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+});
+
+onBeforeUnmount(disposeGoal);
+```
+
+**示例 2 · 只在一条路由上提供目标**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程。",
+  route: "/courses",
+  scope: "course-catalogue",
+});
 ```
 
 **精确契约**
@@ -2239,6 +2356,7 @@ interface ActiveGuidedTask {
   controller?: TaskController;
   state: TaskGuideState;
   startedBy: "page" | "agent";
+  goal?: boolean;
 }
 ```
 
@@ -2252,6 +2370,7 @@ interface ActiveGuidedTask {
 | `controller` | `TaskController` | 否 | — | 持有快照的控制器；未提供时不存在。 |
 | `state` | `TaskGuideState` | 否 | — | 读取时由登记项返回的实时状态。 |
 | `startedBy` | `"page" \| "agent"` | 否 | — | 本次运行由页面上下文还是模型开启。 |
+| `goal` | `boolean` | 否 | — | 由 `goal()` 创建的紧凑目标为 `true`。目标没有控制器，也没有字段 schema。 |
 
 **示例 1 · 渲染当前 active 的引导**
 
@@ -3872,10 +3991,10 @@ card.current?.open("lesson.note", {}, {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
+| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
 
 | 项目 | 值 |
 | --- | --- |

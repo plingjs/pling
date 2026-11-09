@@ -191,16 +191,53 @@ export interface ExecutorOptions {
    * 不该在两帧里把弹窗开完又关掉 —— 人看不见发生了什么，也就无法验收。
    */
   betweenSteps?: () => Promise<void>;
+  /**
+   * `executor.locate()` 高亮持续多久（毫秒，默认 6000；0 = 保持到下一次动作或页面卸载）。
+   *
+   * 定位是「给你看，不替你点」：它不能沿用普通动作那样执行完立刻收起，
+   * 否则人眼还没找到目标，光圈就消失了。下一次真实动作会立即接管高亮，
+   * 所以这里只需要一个兜底时长。
+   */
+  locateDurationMs?: number;
 }
+
+/** 框架内置的「只指向、不执行」动作 id。 */
+export const LOCATE_ACTION_ID = "pling_locate";
+export const DEFAULT_LOCATE_DURATION_MS = 6000;
 
 export interface Executor {
   execute(id: string, argsJson?: string): Promise<ExecResult>;
+  /**
+   * 把一个已声明动作的目标滚到视野内并高亮，但**绝不执行**它。
+   *
+   * 这是人在问「这个按钮在哪 / 上传入口在哪」时用的只读路径：
+   * 不经过确认闸门、不调用 `run`、不写字段、不打开文件选择器，
+   * 也不会产生页面状态变更。模型与自动化客户端都只拿到目标是否成功显示。
+   */
+  locate(targetId: string): Promise<ExecResult>;
 }
 
 export function createExecutor(options: ExecutorOptions): Executor {
-  const { registry, policy, handoff, observe, evidence = true, settle, betweenSteps } = options;
+  const {
+    registry,
+    policy,
+    handoff,
+    observe,
+    evidence = true,
+    settle,
+    betweenSteps,
+    locateDurationMs = DEFAULT_LOCATE_DURATION_MS,
+  } = options;
   const store = flowRunStore(registry);
   syncResumeBinding(registry, store);
+
+  /** 定位高亮的兜底收起定时器：同一时刻只可能显示一个光环。 */
+  let locateTimer: ReturnType<typeof setTimeout> | undefined;
+  const clearLocateTimer = (): void => {
+    if (locateTimer === undefined) return;
+    clearTimeout(locateTimer);
+    locateTimer = undefined;
+  };
 
   /**
    * 流程内部的上下文（一次复合动作的执行 = 一个）。
@@ -242,6 +279,9 @@ export function createExecutor(options: ExecutorOptions): Executor {
     flow: FlowContext | null,
     expectOverride?: Expectation,
   ): Promise<ExecResult> {
+    // 一次真实动作会接管存在感；旧的定位定时器不能再在它结束之后把新状态关掉。
+    clearLocateTimer();
+
     // 续跑句柄（S6c）：它不是页面上的元素，而是「一条失败流程的剩余部分」。
     // 必须在查绑定之前拦截 —— 否则会被当成普通 flow 动作执行（没有 steps），
     // 也拿不到 `resume` 这种只有执行器知道的上下文。
@@ -786,5 +826,96 @@ export function createExecutor(options: ExecutorOptions): Executor {
     };
   }
 
-  return { execute: (id: string, argsJson?: string) => executeInternal(id, argsJson, null) };
+  /**
+   * 只指向目标，不执行目标。
+   *
+   * 设计上刻意不复用 `executeInternal`：如果借道执行流水线，模型的一个
+   * 「上传在哪」问题就会经过权限 / 可用性 / run 那一整套，稍有不慎就会真的
+   * 打开文件选择器或提交表单。这里只做三件事：确认目标存在、必要时滚到它、
+   * 调适配器的 presence 画出来。
+   */
+  async function locate(targetId: string): Promise<ExecResult> {
+    const id = typeof targetId === "string" ? targetId.trim() : "";
+    if (!id) {
+      return new ActionError(
+        "INVALID_PARAMS",
+        'Missing required parameter actionId. Copy an exact action id from the current action list.',
+      ).toResult();
+    }
+
+    const binding = registry.get(id);
+    if (!binding || binding.descriptor.modelVisible === false) {
+      return new ActionError(
+        "ACTION_NOT_FOUND",
+        `Cannot locate unknown action: ${id}. Use an exact action id from the current action list; do not invent one.`,
+      ).toResult();
+    }
+
+    // 定位是视觉操作：目标在视口外时先滚过去。它不需要过确认闸门，也不会产生副作用。
+    if (binding.isVisible && !binding.isVisible()) {
+      if (!binding.reveal) {
+        return new ActionError(
+          "ACTION_UNAVAILABLE",
+          `The target of ${id} is outside the visible area and has no reveal handler, so it cannot be shown to the user.`,
+        ).toResult();
+      }
+      try {
+        await binding.reveal();
+        await settle?.();
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return new ActionError(
+          "ACTION_UNAVAILABLE",
+          `Could not scroll the target of ${id} into view; reason: ${message}`,
+        ).toResult();
+      }
+      if (binding.isVisible && !binding.isVisible()) {
+        return new ActionError(
+          "ACTION_UNAVAILABLE",
+          `Tried to scroll the target of ${id} into view, but it is still not visible.`,
+        ).toResult();
+      }
+    }
+
+    if (!binding.presence) {
+      return new ActionError(
+        "ACTION_UNAVAILABLE",
+        `Action ${id} has no visual target to highlight. Describe where it is in words, or declare a DOM-backed action for it.`,
+      ).toResult();
+    }
+
+    try {
+      clearLocateTimer();
+      // 与普通 handoff 的「等待」分开：用户明确问「在哪里」时，适配器应给出
+      // 更强的聚焦提示，而不是一个容易被页面主题淹没的细环。
+      binding.presence("locate");
+      if (locateDurationMs > 0) {
+        locateTimer = setTimeout(() => {
+          locateTimer = undefined;
+          binding.presence?.("idle");
+        }, locateDurationMs);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return new ActionError("EXECUTION_FAILED", `Could not highlight the target of ${id}: ${message}`).toResult();
+    }
+
+    return {
+      result: {
+        ok: true,
+        executed: false,
+        action: { id: LOCATE_ACTION_ID, description: "Highlighted the requested target without executing it" },
+        located: {
+          id,
+          ...(binding.descriptor.label ? { label: binding.descriptor.label } : {}),
+          description: binding.descriptor.description,
+        },
+      },
+    };
+  }
+
+  return {
+    execute: (id: string, argsJson?: string) => executeInternal(id, argsJson, null),
+    locate,
+  };
 }

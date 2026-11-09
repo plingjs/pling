@@ -1,5 +1,6 @@
 import {
   foldedParams,
+  LOCATE_ACTION_ID,
   MAX_TOOL_NAME_LENGTH,
   toolNameOf,
   type ActionView,
@@ -38,16 +39,39 @@ export interface ToolProtocol {
   templates: Map<string, FoldedAction>;
 }
 
+/** 所有有动作的页面都内建的一个只读工具：只高亮目标，不执行目标。 */
+export const PLING_LOCATE_TOOL = {
+  type: "function" as const,
+  function: {
+    name: LOCATE_ACTION_ID,
+    description:
+      "Highlight an existing page target without executing it. Use this when the user asks where to click, find, fill, upload, or change something, or before asking the user to complete a human step. Pass an exact action id from the current action list. This tool never clicks, types, uploads, navigates, submits, or changes data.",
+    parameters: {
+      type: "object" as const,
+      properties: {
+        actionId: {
+          type: "string",
+          description: "Exact action id from the current page action list. Do not invent an id.",
+        },
+      },
+      required: ["actionId"],
+    },
+  },
+};
+
 export function buildProtocol(snapshot: Snapshot): ToolProtocol {
   const nameToId = new Map<string, string>();
   const idToName = new Map<string, string>();
   const templates = new Map<string, FoldedAction>();
   const tools: LlmToolSchema[] = [];
+  // The built-in locate tool owns this name. A developer action with the same
+  // spelling is still registered, but gets a suffixed protocol name.
+  const reservedNames = new Set<string>([LOCATE_ACTION_ID]);
 
   const unique = (base: string): string => {
     let name = base;
     let suffix = 2;
-    while (nameToId.has(name) || templates.has(name)) {
+    while (nameToId.has(name) || templates.has(name) || reservedNames.has(name)) {
       const tag = `_${suffix++}`;
       name = `${base.slice(0, MAX_TOOL_NAME_LENGTH - tag.length)}${tag}`;
     }
@@ -83,6 +107,10 @@ export function buildProtocol(snapshot: Snapshot): ToolProtocol {
       function: { name, description: describe(action), parameters: action.params },
     });
   }
+
+  // Only advertise locate when there is at least one actionable target. A page
+  // with records but no actions cannot be pointed at, so the tool would be noise.
+  if (tools.length > 0) tools.push(PLING_LOCATE_TOOL);
 
   return { tools, nameToId, idToName, templates };
 }

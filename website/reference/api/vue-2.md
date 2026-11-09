@@ -16,9 +16,9 @@ This page lists only `@plingjs/vue2` entry points, plus the shared-package types
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.8` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.9` |
 
-The current package version is `0.1.0-alpha.8`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -1182,7 +1182,7 @@ pling.dock(options?: VanillaDockOptions): VanillaDock
 | `navigate` | `(href: string) => void` | No | `window.location.replace` | Post-task navigation implementation. |
 | `surfaceId` | `string` | No | `"dock"` | Surface id registered with the task router so pling.ask({ surface }) can target this dock. |
 | `layout` | `"dock" \| "sidebar" \| "inline"` | No | `"dock"` | Floating corner, viewport-edge sidebar, or a permanently visible panel mounted in the page. |
-| `sidebarMode` | `"overlay" \| "fused"` | No | `"overlay"` | Sidebar layers above the page or participates in the application grid. Applies only when layout is sidebar. |
+| `sidebarMode` | `"overlay" \| "fused"` | No | `"fused"` | Sidebar layers above the page or participates in the application grid. `fused` is the default; choose `overlay` explicitly. Applies only when layout is sidebar. |
 | `side` | `"left" \| "right"` | No | `"right"` | Sidebar edge when layout is sidebar. |
 | `launcherPlacement` | `"bottom" \| "center"` | No | `"bottom"` | Position of the collapsed sidebar launcher. |
 | `launcherLabel` | `string` | No | — | Custom label for the closed launcher. |
@@ -1220,13 +1220,14 @@ dock.destroy();
 
 ## Guided tasks
 
-Tasks that collect user decisions, call existing actions in a fixed order, and render one shared run snapshot. The catalog decides which tasks are available in the current context; the guide decides how the active task is explained without duplicating execution or permissions.
+Goals and advanced tasks. A goal declares an outcome, boundaries and success criteria; fields and execution stay on the real page. Advanced tasks add field schemas, lookups and fixed steps only when page actions cannot express the requirement.
 
 | API | Kind | Reference |
 | --- | --- | --- |
 | [createTaskController](#api-createtaskcontroller) | Function | [Reference](/reference/guided-task-api) |
 | [createTaskCatalog](#api-createtaskcatalog) | Function | [Reference](/reference/guided-task-api) |
 | [TaskCatalog](#api-taskcatalog) | Interface | [Reference](/reference/guided-task-api) |
+| [TaskGoalInput](#api-taskgoalinput) | Interface | [Reference](/reference/guided-task-api) |
 | [GuidedTaskRegistration](#api-guidedtaskregistration) | Interface | [Reference](/reference/guided-task-api) |
 | [GuidedTaskActivationOptions](#api-guidedtaskactivationoptions) | Interface | [Reference](/reference/guided-task-api) |
 | [ActiveGuidedTask](#api-activeguidedtask) | Interface | [Reference](/reference/guided-task-api) |
@@ -1335,7 +1336,19 @@ createTaskCatalog(options?: TaskCatalogOptions): TaskCatalog
 | `options.getPage` | `() => PageView \| undefined` | No | — | Page identity override. Defaults to registry.getPage(). |
 | `options.actionId` | `string` | No | `"pling_start_task"` | Preferred model action id. A shared registry keeps the first catalog on this id and assigns later catalogs suffixes such as pling_start_task_2. |
 
-**Example 1 · Register one task for the current route**
+**Example 1 · Register a goal that survives a closed dialog**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: ["页面动作是唯一入口；封面由用户上传。"],
+  successCriteria: ["新课程出现在课程库第一位"],
+});
+```
+
+**Example 2 · Register one advanced task for the current route**
 
 ```ts
 import { createTaskCatalog, createTaskController } from "@plingjs/agent";
@@ -1366,7 +1379,7 @@ const off = catalog.define({
 
 ### `TaskCatalog`
 
-The current page's task directory: register definitions, query what is available now, activate at most one guide, forward guide commands, and notify renderers.
+The current page's task catalog: register goals or advanced tasks, query what is available now, activate at most one guide, complete a goal, forward guide commands, and notify renderers.
 
 **Imports**
 
@@ -1379,6 +1392,12 @@ The current page's task directory: register definitions, query what is available
 interface TaskCatalog {
   readonly actionId: string;
   readonly updateActionId: string;
+  readonly focusActionId: string;
+  readonly reviewActionId: string;
+  readonly proposeSaveActionId: string;
+  readonly cancelActionId: string;
+  readonly completeActionId: string;
+  goal(input: TaskGoalInput): () => void;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -1387,6 +1406,7 @@ interface TaskCatalog {
   activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;
   deactivate(): void;
   command(command: TaskGuideCommand): boolean;
+  complete(): boolean;
   views(): readonly GuidedTaskView[];
   refresh(): void;
   subscribe(listener: () => void): () => void;
@@ -1404,7 +1424,10 @@ interface TaskCatalog {
 | `reviewActionId` | `readonly string` | No | — | The actual model action id that opens the page's read-only review. It is unavailable unless `guide.agent.review` declares a command. |
 | `proposeSaveActionId` | `readonly string` | No | — | The actual model action id that opens the page's confirmation step. It never writes and is unavailable unless `guide.agent.proposeSave` declares a command. |
 | `cancelActionId` | `readonly string` | No | — | The actual model action id that ends the active guide. It is unavailable unless `guide.agent.cancel` or `guide.cancel` declares a command. |
-| `define(registration)` | `() => void` | No | — | Adds a task registration and returns an unregister function. |
+| `completeActionId` | `readonly string` | No | — | The actual model action id that marks a goal-only task complete. It writes no business data. |
+| `goal(input)` | `() => void` | No | — | Registers the minimal goal path and returns an unregister function. It accepts no fields, steps, controller, form tools or business callbacks. |
+| `complete()` | `boolean` | No | — | Marks the active goal-only task complete. Returns false for advanced tasks, which use their own completion state. |
+| `define(registration)` | `() => void` | No | — | Adds an advanced task registration and returns an unregister function. |
 | `get(id)` | `GuidedTaskRegistration \| undefined` | No | — | Returns one registration even when its route or scope is currently unavailable. |
 | `list()` | `readonly GuidedTaskRegistration[]` | No | — | Returns every registration owned by this catalog. |
 | `available()` | `readonly GuidedTaskRegistration[]` | No | — | Returns the registrations whose route and scopes match the current page. |
@@ -1429,6 +1452,95 @@ const task = catalog.activate("course.create", {
   values: { name: "瑜伽基础" },
 });
 console.log(task.startedBy); // "page"
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/guided-task-api)
+
+
+<a id="api-taskgoalinput"></a>
+
+### `TaskGoalInput`
+
+The minimal task declaration: id, title, outcome, boundaries, success criteria, examples and optional route/scope continuity. It has no fields, steps, controller or business callbacks.
+
+**Imports**
+
+`@plingjs/agent`
+
+**Signature**
+
+```ts
+// Vue 2.7
+interface TaskGoalInput {
+  id: string;
+  title: string;
+  goal: string;
+  description?: string;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
+  examples?: readonly string[];
+  risk?: Kind;
+  route?: GuidedTaskRoute;
+  scope?: string | readonly string[];
+  keepActive?: boolean;
+  labels?: TaskGuideLabels;
+  cancelLabel?: string;
+  stepSubtitle?: string;
+}
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | Yes | — | Stable goal id, unique in the catalog. |
+| `title` | `string` | Yes | — | Human-facing goal name. |
+| `goal` | `string` | Yes | — | The outcome to reach. Must not be empty. |
+| `description` | `string` | No | — | Extra description for the card or task list. Defaults to goal. |
+| `constraints` | `readonly string[]` | No | — | Boundaries the model must keep, such as “page actions are the only entry”. |
+| `successCriteria` | `readonly string[]` | No | — | Observable conditions that must hold before completion. |
+| `examples` | `readonly string[]` | No | — | Sample sentences a person might say. |
+| `risk` | `"read" \| "write" \| "danger"` | No | `"write"` | Goal-level risk hint. Actions still apply their own risk rules. |
+| `route` | `GuidedTaskRoute` | No | — | Exact path, route name, list or predicate that limits where the goal can start. |
+| `scope` | `string \| readonly string[]` | No | — | Every listed region must be active before the goal is available. |
+| `keepActive` | `boolean` | No | `true` | Keep an explicitly started goal when its route or scope temporarily stops matching. |
+| `labels` | `TaskGuideLabels` | No | — | Overrides for running, completed and related labels. |
+| `cancelLabel` | `string` | No | `"Cancel task"` | Cancel button label. |
+| `stepSubtitle` | `string` | No | — | Subtitle for the compact goal card. |
+
+**Example 1 · Register a goal without a field schema**
+
+```ts
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。",
+  constraints: [
+    "页面上的动作是唯一操作入口。",
+    "封面必须由用户亲自上传。",
+  ],
+  successCriteria: [
+    "新课程出现在课程库第一位",
+    "保存动作已回读课程库并确认了这条新记录",
+  ],
+  examples: ["创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写"],
+});
+
+onBeforeUnmount(disposeGoal);
+```
+
+**Example 2 · Keep the goal available only on one route**
+
+```ts
+catalog.goal({
+  id: "course.create",
+  title: "创建课程",
+  goal: "在课程管理里新建一门课程。",
+  route: "/courses",
+  scope: "course-catalogue",
+});
 ```
 
 **Canonical reference**
@@ -1571,6 +1683,7 @@ interface ActiveGuidedTask {
   controller?: TaskController;
   state: TaskGuideState;
   startedBy: "page" | "agent";
+  goal?: boolean;
 }
 ```
 
@@ -1584,6 +1697,7 @@ interface ActiveGuidedTask {
 | `controller` | `TaskController` | No | — | The controller that owns the snapshot, when supplied. |
 | `state` | `TaskGuideState` | No | — | Live state returned by the registration at read time. |
 | `startedBy` | `"page" \| "agent"` | No | — | Whether page context or the model opened this run. |
+| `goal` | `boolean` | No | — | True for a compact goal created by goal(). A goal has no controller and no field schema. |
 
 **Example 1 · Render whichever guide is currently active**
 
@@ -3068,10 +3182,10 @@ interface GuideActionItem {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.8` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.8` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.8` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.8` | — |
+| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
 
 | Item | Value |
 | --- | --- |

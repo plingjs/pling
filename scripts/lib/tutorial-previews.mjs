@@ -11,6 +11,13 @@ export const PUBLIC_PREVIEW_AGENT = {
 };
 
 /**
+ * Chapter previews are served by the mainland demo host. The documentation
+ * site itself stays on Cloudflare, but model-backed fixtures must not send
+ * their requests through the Cloudflare edge.
+ */
+export const PUBLIC_DEMO_ORIGIN = "https://demo.plingjs.com";
+
+/**
  * The preview bundle must carry the same model name the public gateway will
  * actually use. A server-side alias such as `server-model` is intentionally
  * invisible here: the assistant badge shows the model, not the proxy route.
@@ -37,9 +44,11 @@ export function tutorialPreviewPath(id) {
   return `/demos/tutorials/${framework.path}/${id}/`;
 }
 
-export function tutorialPreviewUrl(id, locale = "en") {
+export function tutorialPreviewUrl(id, locale = "en", origin = "") {
   const lang = locale === "zh" ? "zh" : "en";
-  return `${tutorialPreviewPath(id)}?lang=${lang}`;
+  const path = tutorialPreviewPath(id);
+  if (!origin) return `${path}?lang=${lang}`;
+  return `${new URL(path, origin).toString()}?lang=${lang}`;
 }
 
 export function tutorialLocalCommand(id, locale = "en") {
@@ -47,10 +56,10 @@ export function tutorialLocalCommand(id, locale = "en") {
   return `pnpm tutorial:dev ${id} --locale ${lang}`;
 }
 
-export function tutorialRunnerMarkdown(id, locale = "en", dir = "") {
+export function tutorialRunnerMarkdown(id, locale = "en", dir = "", origin = "") {
   const framework = tutorialFramework(id);
   const zh = locale === "zh";
-  const href = tutorialPreviewUrl(id, locale);
+  const href = tutorialPreviewUrl(id, locale, origin);
   const command = tutorialLocalCommand(id, locale);
   const title = zh ? "在浏览器中运行本章示例" : "Open this chapter in the browser";
   const note = zh

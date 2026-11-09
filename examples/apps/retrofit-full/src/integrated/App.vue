@@ -44,7 +44,7 @@ const selected = computed(() => orders.value.find((order) => order.id === select
 
 const gatewayUrl = (
   import.meta.env.VITE_SURFACE_GATEWAY_URL?.trim() ||
-  (["127.0.0.1", "localhost"].includes(location.hostname) ? "http://127.0.0.1:5219" : "https://surface.hunger-valley.com")
+  (["127.0.0.1", "localhost"].includes(location.hostname) ? "http://127.0.0.1:5219" : "https://surface.plingjs.com")
 ).replace(/\/$/, "");
 
 const surfaceGateway = useSurfaceGateway({

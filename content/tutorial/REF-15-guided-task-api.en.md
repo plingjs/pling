@@ -9,116 +9,325 @@ status: drafted
 
 # Guided task API
 
-Guided tasks turn “the user knows the outcome, not the steps” into a bounded run. A definition states the goal, constraints, success criteria, and working-memory fields. Deterministic steps may call existing actions in order, but the conversation is not a field-by-field script. Every interface renders the same task snapshot.
+A guided task is for the case where a person knows the result they want but not the steps in between. The API has two entries:
 
-The API lives in `@plingjs/agent`; the reference DOM panel lives in `@plingjs/vanilla`. Neither package creates a second permission model. The host injects the same executor, Surface, or business service that already governs the page.
+- `pling.task.goal()` declares an outcome, boundaries and success criteria. Fields come from the real page; execution goes through real actions. This is the default.
+- `pling.task.define()` declares fields, steps and a run controller. Use it only when page actions cannot express validation, lookup or a fixed sequence.
+
+Both share the task catalog, permissions, confirmation and audit. A goal does not create a second execution path, and neither does an advanced task.
 
 ```ts
-import {
-  createTaskController,
-  type TaskDefinition,
-  type TaskRunSnapshot,
-} from "@plingjs/agent";
+import type { TaskGoalInput } from "@plingjs/agent";
 ```
 
-## The pieces
+## Choose a path
 
-| Piece | Answers | Does not do |
+| Requirement | Use |
+| --- | --- |
+| One sentence to operate an existing form, then save | `v-scope` + `v-record` + `v-tool`, no task API |
+| The outcome must survive a closed dialog or route change | `pling.task.goal()` |
+| A fixed task entrance, cancel and completion record | `pling.task.goal()` |
+| An external agent needs the playbook and completion boundary | `pling.task.goal()` |
+| Field types, ranges, patterns or business validation | Advanced `define()` + `TaskField` |
+| Asynchronous lookup and candidate confirmation | Advanced `define()` + `lookup` |
+| Several actions in a fixed order | Advanced `define()` + `TaskStep` |
+| A task that runs in a host with no UI | `createTaskController()` |
+
+Most pages stop at the first or second row. Do not start with a field table just because an agent is involved.
+
+## Minimal integration: goal()
+
+```ts
+const disposeGoal = pling.task.goal(courseGoal(props.locale));
+onBeforeUnmount(disposeGoal);
+```
+
+`goal()` returns an unregister function. Call it when the component unmounts to remove the goal and its guide.
+
+`goal()` registers an outcome, not a workflow. It accepts no fields, steps, controller, form tools or business callbacks.
+
+### TaskGoalInput
+
+| Property | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `id` | `string` | Yes | None | Stable goal id, unique in the catalog |
+| `title` | `string` | Yes | None | Human-facing goal name |
+| `goal` | `string` | Yes | None | Outcome to reach. Must not be empty |
+| `description` | `string` | No | `goal` | Extra description in the card or task list |
+| `constraints` | `readonly string[]` | No | None | Boundaries the model must keep, such as “page actions are the only entry” |
+| `successCriteria` | `readonly string[]` | No | None | Observable completion conditions |
+| `examples` | `readonly string[]` | No | None | Sample sentences a person might say |
+| `risk` | `read` / `write` / `danger` | No | `write` | Goal-level risk hint; actions keep their own rules |
+| `route` | `string \| readonly string[] \| (page) => boolean` | No | Every route | Restrict where the goal can be started |
+| `scope` | `string \| readonly string[]` | No | No restriction | Every listed region must be active |
+| `keepActive` | `boolean` | No | `true` | Keep an explicitly started goal across temporary context changes |
+| `labels` | `TaskGuideLabels` | No | Built-in labels | Override running and completed labels |
+| `cancelLabel` | `string` | No | `Cancel task` | Cancel button label |
+| `stepSubtitle` | `string` | No | Built-in | Subtitle for the compact goal card |
+
+Example:
+
+```ts
+const goal: TaskGoalInput = {
+  id: "course.create",
+  title: "Create a course",
+  goal: "Create a course in the course workspace: open the real form yourself, fill what the person supplied, ask them to upload the cover, save, then read the catalogue back and confirm the new course is first.",
+  constraints: [
+    "The page's actions are the only way to operate it; do not invent field names, selectors or a second form.",
+    "Fill only what the person supplied or explicitly delegated; ask when unsure.",
+    "The person must upload the cover; never choose a local file for them.",
+    "Questions, corrections, pauses and abandonment take precedence over filling the form.",
+  ],
+  successCriteria: [
+    "The new course appears first in the catalogue",
+    "Name, teacher, eligible cards and cover match what the person confirmed",
+    "The save action read the catalogue back and confirmed the new record",
+  ],
+  examples: ["Create prenatal yoga with Chen Jing, 2 stars, monthly card, write the intro"],
+  cancelLabel: "Cancel task",
+};
+```
+
+### What it registers
+
+`goal()` internally:
+
+1. creates a `TaskDefinition` with no fields and puts `goal` in `objective`;
+2. creates a compact guide card with title, goal, cancel and completion state;
+3. defaults `keepActive` to `true`;
+4. registers `pling_start_task`, `pling_cancel_task` and `pling_complete_task`;
+5. projects the goal, constraints, success criteria and examples to the model.
+
+It does not:
+
+- open a dialog;
+- read or write a form;
+- call a save handler;
+- relax any action's permissions;
+- create a second page.
+
+### Goal lifecycle
+
+```ts
+const active = pling.task.active();
+active?.goal;                  // true
+active?.startedBy;             // "page" | "agent"
+active?.state.snapshot?.status; // "running" | "done"
+active?.state.completed;       // boolean
+```
+
+There are two ways to start:
+
+- the page calls `pling.task.activate("course.create")`;
+- the model calls `pling_start_task` with `task: "course.create"`.
+
+Starting changes only the catalog state. The goal calls no page function. The real page stays where it is until the model calls an action such as `new_course`.
+
+A goal has two states:
+
+| State | Meaning |
+| --- | --- |
+| `running` | Started, not completed or cancelled |
+| `done` | The page met the success criteria and the model called complete |
+
+Cancellation removes the goal from active state; it does not keep a `cancelled` snapshot. Values already written to the page are not rolled back.
+
+### Complete and cancel
+
+While a goal is active, the model sees `pling_complete_task`:
+
+```json
+{
+  "task": "course.create"
+}
+```
+
+This action only closes the goal. It does not save, submit or change business data. The model calls it only after the page satisfies the success criteria. The usual order is:
+
+1. call the page's save action;
+2. its `expect` reads the result back;
+3. the read-back passes;
+4. call `pling_complete_task`.
+
+If save has not happened, the model must not complete the goal. A completed card means the lifecycle ended, not that another write happened.
+
+A person can cancel from the goal card, or the model can call `pling_cancel_task`. Cancellation only ends the goal. Draft values stay on the page.
+
+### What the model sees
+
+With a goal active, the system prompt contains:
+
+```text
+Active task: course.create — Create a course
+Objective: Create a course in the course workspace……
+Constraints: The page's actions are the only way to operate it……
+Success criteria: The new course appears first in the catalogue | ……
+Started by: agent
+Mode: goal only. The page's real actions are the only way to operate the page.
+```
+
+It also states:
+
+- the task has no field schema;
+- do not call `pling_update_task`;
+- do not invent field names or a second form;
+- use the page's real actions;
+- call `pling_complete_task` after the page meets the success criteria.
+
+With no fields, `pling_update_task` is unavailable. The model does not receive an empty field table or a request to fill fields one by one.
+
+## TaskCatalog
+
+`createTaskCatalog()` manages which tasks exist on the current page. It does not execute tasks; it handles availability, activation, command forwarding and model projection.
+
+```ts
+import { createTaskCatalog } from "@plingjs/agent";
+
+const catalog = createTaskCatalog({
+  registry: pling.registry,
+  isScopeActive: (id) => pling.registry.isScopeActive(id),
+});
+```
+
+Vue 3, React, Vue 2.7 and vanilla adapters expose the same catalog through `pling.task`. Pages normally call `pling.task.goal()`, `pling.task.define()` and `pling.task.active()`.
+
+### Properties
+
+| Property | Type | Description |
 | --- | --- | --- |
-| `TaskDefinition` | Goal, constraints, success criteria, working memory, and optional deterministic steps | Execute or approve anything |
-| `TaskRunSnapshot` | What should the user see right now | Own a model session |
-| `TaskInvoke` | Which existing executor receives the call | Add a new transport or permission rule |
-| `GuidedTaskPanel` | How a run is rendered in plain DOM as either a full panel or a conversation card | Replace framework components or execution |
+| `actionId` | `readonly string` | Actual bound `pling_start_task` id |
+| `updateActionId` | `readonly string` | Actual bound `pling_update_task` id |
+| `focusActionId` | `readonly string` | Action id that points at a declared guide field |
+| `reviewActionId` | `readonly string` | Action id that opens the page's read-only review |
+| `proposeSaveActionId` | `readonly string` | Action id that opens the page's confirmation step |
+| `cancelActionId` | `readonly string` | Action id that ends the active guide |
+| `completeActionId` | `readonly string` | Action id that completes a goal-only task |
 
-A definition with `steps` is deterministic. A definition without steps is in agent mode and must provide `prompt` or `prompt(values)`.
+Read these properties when several runtimes share one registry. The first catalog uses `pling_start_task`; a second catalog uses `pling_start_task_2` automatically.
+
+### Methods
+
+| Method | Signature | Behavior |
+| --- | --- | --- |
+| `goal(input)` | `(input: TaskGoalInput) => () => void` | Register a minimal goal; return unregister |
+| `define(registration)` | `(registration: GuidedTaskRegistration) => () => void` | Register an advanced task; return unregister |
+| `get(id)` | `(id: string) => GuidedTaskRegistration \| undefined` | Read one registration even when unavailable |
+| `list()` | `() => readonly GuidedTaskRegistration[]` | List every task in registration order |
+| `available()` | `() => readonly GuidedTaskRegistration[]` | List tasks matching the current route and scopes |
+| `active()` | `() => ActiveGuidedTask \| null` | Return the task currently shown |
+| `activate(id, options?)` | `(id: string, options?: GuidedTaskActivationOptions) => ActiveGuidedTask` | Start or resume a task explicitly |
+| `deactivate()` | `() => void` | End the active task |
+| `command(command)` | `(command: TaskGuideCommand) => boolean` | Forward a guide command to `onCommand` |
+| `complete()` | `() => boolean` | Complete the active goal-only task; returns `false` for advanced tasks |
+| `views()` | `() => readonly GuidedTaskView[]` | Compact read-only descriptions of available tasks |
+| `refresh()` | `() => void` | Notify subscribers that live state changed |
+| `subscribe(listener)` | `(listener: () => void) => () => void` | Subscribe to availability, activation and snapshots |
+| `destroy()` | `() => void` | Unregister actions, clear subscriptions and release controllers |
+
+`activate()` options:
+
+| Property | Type | Default | Description |
+| --- | --- | --- | --- |
+| `values` | `TaskValues` | `{}` | Values already supplied; only declared fields are accepted |
+| `startedBy` | `"page" \| "agent"` | `"page"` | Record whether the page or the model opened it |
+
+A goal has no fields, so `values` is usually unnecessary. Advanced tasks validate field names and values.
+
+### ActiveGuidedTask
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `id` | `string` | Task id |
+| `definition` | `TaskDefinition` | Definition used for this run |
+| `guide` | `TaskGuideDefinition` | Active guide, if any |
+| `controller` | `TaskController` | Run controller; absent for a goal |
+| `state` | `TaskGuideState` | Live render state |
+| `startedBy` | `"page" \| "agent"` | Who opened it |
+| `goal` | `boolean` | Whether it came from `goal()` |
+
+## Advanced: define(registration)
+
+Use `define()` only when page actions cannot express the requirement.
+
+```ts
+pling.task.define({
+  definition: courseDefinition,
+  guide: courseGuide,
+  controller,
+  route: "/courses/new",
+  scope: "create-course-form",
+  autoStart: true,
+  state: () => ({ snapshot: controller.snapshot(), step: currentStep.value }),
+  onCommand: (command) => runCourseCommand(command),
+});
+```
+
+| Property | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | `string` | No | Registration id; defaults to `definition.id` and must match when supplied |
+| `definition` | `TaskDefinition` | Yes | Executable task definition |
+| `guide` | `TaskGuideDefinition` | No | Human-facing guide; a task may run without one |
+| `controller` | `TaskController` | No | Run controller; without it the task does not start a run |
+| `route` | `GuidedTaskRoute` | No | Exact path, route name, list or predicate |
+| `scope` | `string \| readonly string[]` | No | Every listed scope must be active |
+| `autoStart` | `boolean` | No | Activate when context matches; default `false` |
+| `keepActive` | `boolean` | No | Keep an explicit run across temporary context changes; default `false` |
+| `initialValues` | `TaskValues \| () => TaskValues` | No | Values loaded before an automatic or explicit run |
+| `binding` | `TaskBinding \| () => TaskBinding` | No | Page facts such as the selected record |
+| `state` | `() => TaskGuideState` | No | Live render state |
+| `onActivate` | `(task) => void \| Promise<void>` | No | Called after activation |
+| `onDeactivate` | `(task) => void` | No | Called when the task stops being active |
+| `onCommand` | `(command, task) => void \| Promise<void>` | No | Receives guide button commands |
+
+`define()` returns an unregister function. It removes the controller registration, clears active state and refreshes subscribers.
+
+Only one guide is active at a time. Automatic tasks are chosen in registration order; an explicit activation overrides the current automatic task. After `deactivate()`, the current context does not auto-start again immediately.
 
 ## TaskDefinition
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
-| `id` | `string` | Yes | Stable task id, unique in one controller |
+| `id` | `string` | Yes | Stable task id |
 | `title` | `string` | Yes | Human-facing task name |
 | `description` | `string` | No | What the task does and when to choose it |
-| `objective` | `string` | No | The outcome the task is trying to achieve |
-| `constraints` | `readonly string[]` | No | Boundaries the assistant must respect while helping |
-| `successCriteria` | `readonly string[]` | No | Observable conditions that mean the task is complete |
-| `requiresRecord` | `boolean` | No | Start only after the page supplies a selected record |
-| `examples` | `readonly string[]` | No | Example requests shown on a task card |
-| `fields` | `readonly TaskField[]` | No | Current working memory and decisions that may need a person |
-| `risk` | `read` / `write` / `danger` | No | Presentation hint; the action still enforces its own risk |
-| `steps` | `readonly TaskStep[]` | No | Deterministic business action calls; presence selects step mode |
-| `prompt` | `string \| (values) => string` | Agent mode | Template used to hand the task to the assistant |
+| `objective` | `string` | No | Outcome the task should reach |
+| `constraints` | `readonly string[]` | No | Boundaries the assistant must keep |
+| `successCriteria` | `readonly string[]` | No | Observable completion conditions |
+| `requiresRecord` | `boolean` | No | Requires a selected record before start |
+| `examples` | `readonly string[]` | No | Sample utterances |
+| `fields` | `readonly TaskField[]` | No | Working memory and decisions |
+| `risk` | `read` / `write` / `danger` | No | Display risk hint |
+| `steps` | `readonly TaskStep[]` | No | Deterministic business action calls |
+| `prompt` | `string \| (values) => string` | Agent mode | Prompt template used when handing the task to the assistant |
 | `confirm` | `boolean \| "always"` | No | Task-level confirmation preference |
 
-`examples` fills the form. It must not execute a write. That distinction keeps a suggestion from becoming an accidental command.
-
-## Binding the current record
-
-Many business tasks start from a row or a detail page. By the time the user clicks “Add note”, the page already knows which lesson, order, or member is selected. Asking for that id in the form is both awkward and error-prone.
-
-`TaskBinding` carries page facts; it is not another values object.
-
-```ts
-interface TaskRecordBinding {
-  id: string;
-  label?: string;
-}
-
-interface TaskBinding {
-  record?: TaskRecordBinding;
-}
-```
-
-The task definition opts into this contract with `requiresRecord: true`. The step then reads `binding.record?.id` instead of exposing it as a field.
-
-```ts
-const addNote: TaskDefinition = {
-  id: "lesson.note",
-  title: "Write a lesson note",
-  requiresRecord: true,
-  fields: [{ name: "note", label: "Note", type: "textarea" }],
-  steps: [{
-    label: "Save the note",
-    action: "update_lesson_note",
-    args: (values, binding) => ({
-      lessonId: binding.record?.id,
-      note: values.note,
-    }),
-  }],
-};
-
-panel.open("lesson.note", {}, {
-  record: { id: "lesson_42", label: "Yoga basics · 2026-03-16 10:00" },
-});
-```
-
-`start()` throws when `requiresRecord` is true and no non-empty record id is present. Generic task lists should show such tasks as entry points, not as buttons that can start without context.
+A definition with `steps` is deterministic. Without steps it runs in agent mode and must provide `prompt` or `prompt(values)`.
 
 ## TaskField
 
-Fields are user decisions, not database columns. Omit server facts such as the current shop, tenant, or operator.
+A field is a decision a person must make, not a database column. Facts such as the current shop, tenant or operator do not belong in fields.
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
 | `name` | `string` | Yes | Key used in values and step argument functions |
-| `label` | `string` | Yes | Human-facing field label |
-| `type` | `text` / `textarea` / `number` / `boolean` / `date` / `select` / `lookup` | No | Input control; defaults to text |
-| `optional` | `boolean` | No | Allows an empty value; required by default |
-| `placeholder` | `string` | No | Input placeholder or select prompt |
-| `help` | `string` | No | Short explanation next to the field |
-| `defaultValue` | `TaskValue` | No | Initial value when the run starts |
-| `values` | `readonly TaskChoice[]` | No | Small closed choice set |
-| `recommended` | `TaskValue` | No | Suggestion used only when the person explicitly delegates this choice |
-| `lookup` | `TaskLookup` | No | Async search for a large collection |
-| `min` / `max` | `number` | No | Numeric bounds. Enforced before a model-proposed value reaches the task snapshot. |
-| `minLength` / `maxLength` | `number` | No | Text-length bounds, counted on the trimmed string. |
-| `pattern` | `string` | No | Regular-expression source without delimiters, tested against a text value. Use anchors when the whole value must match, for example `^[1-9]\d*$`. |
-| `validate` | `(value, values) => string \| null \| undefined` | No | Business-level check run before the value is written. Return a short human-readable reason to reject it, or nothing when valid. It validates a value; it must not classify intent or trigger side effects. |
-| `searchAction` | `string` | No | Action id exposed for this lookup; defaults to `search_<name>` |
-| `minChars` | `number` | No | Minimum query length; defaults to 1 and is never lower |
-| `agentWritable` | `boolean` | No | Set to `false` for page-owned values such as an upload or one-time code; defaults to `true` |
+| `label` | `string` | Yes | Human-facing field name |
+| `type` | `text` / `textarea` / `number` / `boolean` / `date` / `select` / `lookup` | No | Input control; default `text` |
+| `optional` | `boolean` | No | Allow empty; default required |
+| `placeholder` | `string` | No | Input or selection hint |
+| `help` | `string` | No | Short field note |
+| `defaultValue` | `TaskValue` | No | Initial run value |
+| `values` | `readonly TaskChoice[]` | No | Small closed option set |
+| `recommended` | `TaskValue` | No | Suggestion used only under explicit delegation |
+| `lookup` | `TaskLookup` | No | Asynchronous search for large sets |
+| `min` / `max` | `number` | No | Numeric bounds |
+| `minLength` / `maxLength` | `number` | No | Text length bounds after trimming |
+| `pattern` | `string` | No | Regular-expression source without delimiters |
+| `validate` | `(value, values) => string \| null \| undefined` | No | Business validation before writing |
+| `searchAction` | `string` | No | Action id exposed for lookup; defaults to `search_<name>` |
+| `minChars` | `number` | No | Minimum query length; default 1 |
+| `agentWritable` | `boolean` | No | Set `false` for uploads, one-time codes and other page-only values; default `true` |
 
-Each `TaskChoice` has a stable `value`, a human `label`, and an optional `description` that distinguishes duplicates.
+Each `TaskChoice` has a stable `value`, a human `label`, and an optional `description` for duplicate names.
 
 ```ts
 const studentField: TaskField = {
@@ -136,7 +345,9 @@ const studentField: TaskField = {
 };
 ```
 
-These checks run before `pling_update_task` writes anything, so the page does not need a parallel natural-language parser. If one submitted value has the wrong type, exceeds a bound, fails a length or pattern check, or returns a reason from `validate`, the whole update is rejected and no half-applied form is left behind. `validate` sees the candidate values for this submission, but it still cannot bypass the field allowlist, `agentWritable`, permissions, confirmation, or the business executor.
+These checks run before `pling_update_task` writes. If any field has a wrong type, out-of-range value, wrong length, pattern mismatch or `validate` reason, the whole update is rejected.
+
+`validate` receives the candidate values after this submission. It cannot bypass the field allowlist, `agentWritable`, permissions, confirmation or the business executor.
 
 ## TaskStep
 
@@ -144,41 +355,65 @@ A step calls one existing action. It does not declare a second executor.
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
-| `id` | `string` | No | Stable step id; defaults to its 1-based index |
+| `id` | `string` | No | Stable step id; defaults to a one-based index |
 | `label` | `string` | Yes | Human-facing step name |
-| `summary` | `string` | No | Why the step exists or what it checks |
+| `summary` | `string` | No | Why this step runs or what it checks |
 | `action` | `string` | Yes | Registered action or governed business operation |
-| `args` | `object \| (values, binding) => object` | No | Static arguments, collected values, and bound page facts |
-| `optional` | `boolean` | No | A failure becomes skipped and later steps continue |
-| `handoff` | `boolean \| string` | No | The user must complete this step in the page |
+| `args` | `object \| (values, binding) => object` | No | Static args, field values and bound page facts |
+| `optional` | `boolean` | No | Record failure as skipped and continue |
+| `handoff` | `boolean \| string` | No | The person must complete this step on the page |
 
-`args` receives copies of values and the binding. A step cannot mutate the controller's stored state by editing the arguments object.
+`args` receives copies of values and binding. Changing the argument object does not mutate controller state.
 
 ```ts
 const approve: TaskStep = {
-  label: "Sign the approval in the page",
+  label: "Sign the approval on the page",
   action: "sign_approval",
-  handoff: "The approval must be signed by the current user.",
+  handoff: "This approval must be signed by the current user.",
 };
 ```
 
-`handoff` pauses the run with `waitingFor: "handoff"`. When the host resumes, it must verify the page itself; a boolean from the task layer is not evidence that the user completed the work.
+`handoff` pauses the run at `waitingFor: "handoff"`. The host must verify the page when resuming. A boolean from the task layer cannot prove the person completed the operation.
 
-## Run lifecycle
+## TaskBinding
 
-| Status | Meaning | Typical next step |
-| --- | --- | --- |
-| `collecting` | Required values are missing | Fill fields |
-| `ready` | Values are complete; nothing has run | `plan()` or `run()` |
-| `planned` | The plan is fixed and visible | Confirm, or run |
-| `running` | A step is in progress | Wait, or report progress |
-| `waiting` | Paused for confirmation or handoff | `confirm()`, or complete the page step |
-| `verifying` | The action returned and the host is checking the result | Observe the evidence, then continue |
-| `done` | All required steps completed | Show the result |
-| `failed` | A required step failed | Correct the cause or retry |
-| `cancelled` | The run was cancelled or replaced | Start again if needed |
+Many tasks start from a table row or detail page. When a person clicks “write a note”, the page already knows which lesson is selected.
 
-`planned`, `running`, and `verifying` are not three names for the same moment. `planned` means the route is frozen before execution. `running` means an invocation is in flight. `verifying` means the invocation returned and the page is being read for evidence. Collapsing them would make a progress UI lie about whether work has happened.
+```ts
+interface TaskRecordBinding {
+  id: string;
+  label?: string;
+}
+
+interface TaskBinding {
+  record?: TaskRecordBinding;
+}
+```
+
+A definition declares `requiresRecord: true`. Steps read `binding.record?.id` directly instead of exposing it as a field.
+
+```ts
+const addNote: TaskDefinition = {
+  id: "lesson.note",
+  title: "Write a lesson note",
+  requiresRecord: true,
+  fields: [{ name: "note", label: "Note", type: "textarea" }],
+  steps: [{
+    label: "Save the note",
+    action: "update_lesson_note",
+    args: (values, binding) => ({
+      lessonId: binding.record?.id,
+      note: values.note,
+    }),
+  }],
+};
+
+controller.start("lesson.note", {}, {
+  record: { id: "lesson_42", label: "Yoga basics · 2026-03-16 10:00" },
+});
+```
+
+When `requiresRecord` is true and there is no non-empty record id, `start()` throws. A general task list should show the task as an entrance, not allow it to start without context.
 
 ## createTaskController
 
@@ -189,9 +424,9 @@ createTaskController(options: {
 }): TaskController;
 ```
 
-`invoke` is the only bridge. It should call the existing executor, a governed Surface, or an application service.
+`invoke` is the only execution bridge. It should call the existing executor, a governed Surface, or a business service.
 
-The bridge may return `void`, `{ ok: true }`, or an existing `ExecResult`. A returned `error` or `result.ok === false` fails the step. Unknown return shapes are treated as successful results and stored in the step snapshot.
+It may return `void`, `{ ok: true }`, or an existing `ExecResult`. An `error`, or `result.ok === false`, fails the step. An unrecognized return shape counts as success and is stored in the step snapshot.
 
 ```ts
 const controller = createTaskController({
@@ -202,26 +437,26 @@ const controller = createTaskController({
 });
 ```
 
-## TaskController methods
+### TaskController methods
 
 | Method | Signature | Behavior |
 | --- | --- | --- |
-| `register` | `(definition) => () => void` | Adds a definition; duplicate ids throw |
-| `get` | `(id) => TaskDefinition \| undefined` | Reads one registered definition |
-| `list` | `() => readonly TaskDefinition[]` | Lists tasks in registration order |
-| `start` | `(id, values?, binding?) => TaskRunSnapshot` | Starts a run and records page facts |
-| `setValue` | `(name, value) => TaskRunSnapshot` | Updates a field while collecting or ready |
-| `plan` | `() => TaskRunSnapshot` | Freezes values into planned state without invoking the bridge |
-| `confirm` | `() => TaskRunSnapshot` | Completes a pending task-level confirmation |
-| `run` | `() => Promise<TaskRunSnapshot>` | Executes steps or returns the agent prompt |
-| `cancel` | `() => TaskRunSnapshot` | Aborts the active step and marks the run cancelled |
-| `reset` | `() => void` | Clears the active run without deleting definitions |
-| `snapshot` | `() => TaskRunSnapshot \| null` | Reads the current run |
-| `subscribe` | `(listener) => () => void` | Receives a snapshot after every state transition |
+| `register` | `(definition) => () => void` | Add a definition; duplicate ids throw |
+| `get` | `(id) => TaskDefinition \| undefined` | Read a registered definition |
+| `list` | `() => readonly TaskDefinition[]` | List tasks in registration order |
+| `start` | `(id, values?, binding?) => TaskRunSnapshot` | Start a run with page facts |
+| `setValue` | `(name, value) => TaskRunSnapshot` | Update a field while collecting or ready |
+| `plan` | `() => TaskRunSnapshot` | Freeze values as `planned` without calling the bridge |
+| `confirm` | `() => TaskRunSnapshot` | Complete a pending task-level confirmation |
+| `run` | `() => Promise<TaskRunSnapshot>` | Execute steps or return the agent prompt |
+| `cancel` | `() => TaskRunSnapshot` | Abort the current step and mark cancelled |
+| `reset` | `() => void` | Clear the current run without removing definitions |
+| `snapshot` | `() => TaskRunSnapshot \| null` | Read the current run |
+| `subscribe` | `(listener) => () => void` | Receive a snapshot after every change |
 
-Starting another task cancels the previous run. Field values cannot be changed after execution starts. Calling `plan()` or `run()` with a missing required field returns a `collecting` snapshot with `TASK_FIELDS_REQUIRED`; it does not invoke the bridge.
+Starting another task cancels the previous run. Fields cannot change after execution starts. Calling `plan()` or `run()` without required values returns a `collecting` snapshot with `TASK_FIELDS_REQUIRED` and never calls the bridge.
 
-When a definition sets `confirm`, the first `run()` stops at `planned` and then at `waiting`. The host calls `confirm()` after a person approves, then calls `run()` again.
+When a definition sets `confirm`, the first `run()` stops at `planned`, then at `waiting`. After a person confirms, the host calls `confirm()` and `run()` again.
 
 ```ts
 controller.register({ ...approveOrder, confirm: "always" });
@@ -235,83 +470,58 @@ if (run.status === "waiting" && run.waitingFor === "confirmation") {
 }
 ```
 
-Task-level confirmation is not a second permission system. It answers “should this exact plan proceed?”. The underlying action still has its own risk, approval, scope, and audit rules. A task cannot approve an action that the executor would reject.
+Task-level confirmation is not a second permission system. It answers “should this specific plan continue?”. The underlying action still applies its own risk, approval, scope and audit rules.
 
-## Task catalog (TaskCatalog)
+### Run states
 
-`createTaskCatalog()` manages **which tasks are available on the current page**. It does not execute a task. It owns availability, activation, command routing, and the task list projected to the model.
+| State | Meaning | Next step |
+| --- | --- | --- |
+| `collecting` | Required values are missing | Fill fields |
+| `ready` | Values are complete, not executed | `plan()` or `run()` |
+| `planned` | Plan is fixed and visible | Confirm or start |
+| `running` | A step is executing | Wait or report progress |
+| `waiting` | Waiting for confirmation or a human handoff | `confirm()` or complete on the page |
+| `verifying` | Action returned; the host is checking the result | Review evidence and continue |
+| `done` | Every required step finished | Show the result |
+| `failed` | A required step failed | Fix the cause or retry |
+| `cancelled` | Run cancelled or replaced | Start again when ready |
 
-```ts
-import { createTaskCatalog } from "@plingjs/agent";
+`planned`, `running` and `verifying` are not three names for one moment. `planned` means the route was frozen before execution; `running` means a call is in progress; `verifying` means the call returned and the page is being read for evidence.
 
-const catalog = createTaskCatalog({
-  registry: pling.registry,
-  isScopeActive: (id) => pling.registry.isScopeActive(id),
-});
-```
+## TaskGuideDefinition
 
-Vue 3 exposes the same catalog as `pling.task`, combined with the task controller. A page therefore usually calls `pling.task.define()`, `pling.task.active()`, and `pling.task.command()` directly.
-
-The catalog exposes `actionId` and `updateActionId`. The first is the actual bound id for `pling_start_task`; the second is the actual bound id for `pling_update_task`. Read both properties instead of assuming the default ids when multiple runtimes share one registry.
-
-When the active guide declares page-control commands, the catalog also exposes `focusActionId`, `reviewActionId`, `proposeSaveActionId`, and `cancelActionId`. They map to four narrow actions and never create a second execution path:
-
-| Property | Model action | Effect | Available when |
-| --- | --- | --- | --- |
-| `focusActionId` | `pling_focus_field` | Scrolls a declared guide field into view and highlights it; never writes | The active guide has fields |
-| `reviewActionId` | `pling_review_task` | Opens the page's read-only review; does not save | `guide.agent.review` declares a command |
-| `proposeSaveActionId` | `pling_propose_save` | Opens the page's confirmation surface only; does not perform the business write | `guide.agent.proposeSave` declares a command |
-| `cancelActionId` | `pling_cancel_task` | Ends the guide without rolling back values already written to the page | `guide.agent.cancel` or `guide.cancel` declares a command |
-
-When a command is missing, the model does not see the tool; a call returns `ACTION_UNAVAILABLE` instead of invoking an empty page action. The real save still goes through the page button, executor, confirmation, and read-back.
-
-### define(registration)
+`goal()` generates a compact guide. Advanced tasks can declare their own:
 
 | Property | Type | Required | Description |
 | --- | --- | --- | --- |
-| `id` | `string` | No | Registration id; defaults to `definition.id`. A mismatch throws. |
-| `definition` | `TaskDefinition` | Yes | Executable task definition. |
-| `guide` | `TaskGuideDefinition` | No | Human-facing presentation. A task without a guide can still run headlessly. |
-| `controller` | `TaskController` | No | Run controller. A run starts only when a controller is present. |
-| `route` | `string \| readonly string[] \| (page) => boolean` | No | Matches page path or route name. Omit for no route restriction. |
-| `scope` | `string \| readonly string[]` | No | Every listed scope must be active. Omit for no scope restriction. |
-| `autoStart` | `boolean` | No | Open the guide when context matches. Defaults to `false`. |
-| `initialValues` | `TaskValues \| () => TaskValues` | No | Initial values for automatic or explicit runs. |
-| `binding` | `TaskBinding \| () => TaskBinding` | No | Page facts such as the selected record. |
-| `state` | `() => TaskGuideState` | No | Live rendering state. If `snapshot` is omitted, the controller snapshot is used. |
-| `onActivate` | `(task) => void \| Promise<void>` | No | Called after the task becomes active; useful for opening a dialog or syncing a form. |
-| `onDeactivate` | `(task) => void` | No | Called when the task stops being active. |
-| `onCommand` | `(command, task) => void \| Promise<void>` | No | Receives business command names from guide buttons. |
+| `taskId` | `string` | Yes | Must match the task definition id |
+| `title` | `string` | Yes | Guide card title |
+| `compact` | `boolean` | No | Show only goal, cancel and completion |
+| `welcome` | `string` | No | Intro before the step rail |
+| `footer` | `string` | No | Small note under the guide body |
+| `cancel` | `TaskGuideAction` | No | Header action to leave the task |
+| `stepSubtitle` | `string` | No | Subtitle template supporting `{step}` and `{total}` |
+| `avatar` | `string` | No | Short avatar text or initials |
+| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | Page commands the model may trigger |
+| `labels` | `TaskGuideLabels` | No | Override running, completed, current, done, pending, skipped and error labels |
+| `fields` | `readonly TaskGuideField[] \| (snapshot) => readonly TaskGuideField[]` | No | Read-only field rail projection |
+| `steps` | `readonly TaskGuideStep[]` | Yes | Human-facing steps; a goal card passes an empty array |
+| `done` | `{ title?, description? }` | No | Completion card copy |
 
-`define()` returns an unregister function. It removes the controller registration, clears active state when needed, and notifies subscribers.
+Commands in `guide.agent` only open page-owned UI and never write:
 
-When a registration supplies a `controller`, the catalog subscribes to its run state. New snapshots from `setValue()`, `run()`, `cancel()`, and related transitions also notify catalog subscribers. Vue 3's built-in `AgentInline` / `AgentDock` therefore do not need a page-level `refresh()` call; steps, busy state, errors, and completion update with the run.
+- `focusField` enables `pling_focus_field`, scroll and highlight only;
+- `review` enables `pling_review_task`, opens a read-only review;
+- `proposeSave` enables `pling_propose_save`, opens the confirmation surface;
+- `cancel` enables `pling_cancel_task`, ends the task.
 
-Only one guide is active at a time. Automatic tasks follow registration order; an explicit activation replaces the current automatic task. When context stops matching, an explicit activation is cleared. After `deactivate()`, the same context does not immediately auto-start again; it can return after the route or the available task set changes.
+When a command is omitted, the model does not see the tool. Calling it returns `ACTION_UNAVAILABLE` instead of running an empty action.
 
-### Activation and state
+## Updating working memory
 
-```ts
-const task = catalog.activate("course.create", {
-  values: { name: "Yoga foundations" },
-  startedBy: "agent",
-});
+With an advanced task active, the model receives the objective, constraints, success criteria, field values, gaps and current guide step. It may answer without writing a field, or update only the one value the person supplied, corrected or delegated.
 
-catalog.active();    // ActiveGuidedTask | null
-catalog.available(); // registrations valid in the current context
-catalog.command({ action, step: null, stepIndex: 0, done: false });
-catalog.deactivate();
-```
-
-`ActiveGuidedTask` contains `id`, `definition`, optional `guide`, optional `controller`, current `state`, and `startedBy` (`page` or `agent`).
-
-`activate()` rejects values that are not declared fields on that task. The error is `INVALID_ARGS`, and no partially active task is left behind.
-
-### Working memory updates
-
-Starting a task exposes its objective, constraints, success criteria, field values, gaps, and current guide step to the model. This state is rebuilt on every turn. The model may answer a question without writing a field, or update only the field the user supplied, corrected, or delegated.
-
-Those changes go through the separate `pling_update_task` action:
+These changes go through a separate `pling_update_task` action:
 
 ```json
 {
@@ -321,22 +531,15 @@ Those changes go through the separate `pling_update_task` action:
 }
 ```
 
-The action is available only while a task is active and not terminal. It accepts only declared fields, rejects page-only fields (`agentWritable: false`), and updates `TaskRun.values` without executing the business write. The page can subscribe to the run snapshot and mirror the values into the original form. A real write still uses the task's declared action, executor, approval, audit, and read-back verification.
+The action is available only while an advanced task is active and not terminal. It accepts only declared fields, rejects fields with `agentWritable: false`, and only updates `TaskRun.values`; it never writes business data. The page may subscribe to the snapshot and sync values into its real form. Actual writes still use the task's actions, executor, approval, audit and read-back.
 
-`ActiveGuidedTask` contains:
+A goal has no fields, so `pling_update_task` is unavailable. The model calls page actions directly.
 
-| Property | Description |
-| --- | --- |
-| `id` | Task id |
-| `definition` | Executable definition |
-| `guide` | Presentation definition, when supplied |
-| `controller` | Task controller, when supplied |
-| `state` | Current render state |
-| `startedBy` | `page` or `agent`, used for diagnostics and later policy |
+## Model actions
 
-### Model action: pling_start_task
+### pling_start_task
 
-The first task registration binds one narrow action to the current registry:
+When a catalog registers its first task, it binds a narrow action into the current registry:
 
 ```ts
 {
@@ -344,372 +547,113 @@ The first task registration binds one narrow action to the current registry:
   kind: "read",
   confirm: false,
   params: {
-    task: "string",   // enum from the currently available task ids
-    values: "object", // properties generated from the current task fields
+    task: "string",   // enum from currently available task ids
+    values: "object", // only advanced tasks have field properties
   },
 }
 ```
 
-`values` is not an arbitrary object. The task catalog merges the fields of the currently available tasks into an explicit `properties` schema. Each property carries its type, description, optionality, enum choices, and lookup instructions, and `additionalProperties` is `false`. When tasks share a field name, its description lists every task that uses it.
+The action accepts only currently available task ids. `values` may contain only fields declared by that task. An unknown id or field returns `INVALID_ARGS`.
 
-JSON Schema cannot change shape based on the value of `task`, so this schema describes the field set that may appear on the current page. On activation, `activate()` validates the chosen task's field allowlist again; the model cannot mix in fields from another task.
+Passing values only prefills a run. It does not skip the action's own permissions, confirmation or audit.
+
+### pling_complete_task
+
+Available while a goal is active. It only closes a goal-only task and writes no business data. Advanced tasks use their own completion state and do not expose this action.
 
 ```json
 {
-  "task": "course.create",
-  "values": {
-    "name": "Morning yoga",
-    "teacherId": "teacher_18",
-    "cards": ["monthly"]
-  }
+  "task": "course.create"
 }
 ```
 
-The model may select only an available task. An unknown or unavailable id returns `INVALID_ARGS`; an unknown field is rejected the same way. Starting a task is read-only and never writes business data. The actual write still goes through the task step action, executor, approval, and audit path.
+Call it only after the page satisfies the success criteria. Do not call it because the person said thanks or because the assistant finished explaining the next step.
 
-For a write action that should be reached only through the guide, set `modelVisible: false` when registering it. It is omitted from the model's tool list and action snapshot, while the registry keeps the action so page controls and task steps can still call it.
+### pling_cancel_task
 
-```ts
-useAgentTool({
-  id: "create_course",
-  desc: "Create a course",
-  kind: "write",
-  modelVisible: false,
-  params: [{ name: "name", label: "Course name" }],
-  run: ({ name }) => api.createCourse(String(name)),
-});
-```
+Ends the current task. Values already written to the page are not rolled back. A goal is removed; an advanced controller run is cancelled.
 
-The example uses the Vue 3 / React function-action shape; Vue 2 and vanilla JS pass the same fields to `pling.action()`.
+### Other page commands
 
-This controls visibility to the model; it is not a permission system. Risk rules, scope, business API checks, and audit still stop unauthorized work. Nor does `modelVisible: false` prevent page code or a task step from invoking the action.
+`pling_focus_field`, `pling_review_task` and `pling_propose_save` are available only when the active guide declares the matching command. All follow one rule: they move the person's attention or open page-owned UI; they never execute a business write.
 
-The action exists only while the catalog has at least one task. A page with no guided tasks does not gain an always-unavailable tool. If several `createPling` instances share a registry, later catalogs use ids such as `pling_start_task_2`; the system prompt names the actual id.
+## Rendering
 
-## TaskGuideDefinition
+Vue 3, React, Vue 2.7 and vanilla JS share one task state machine and one DOM renderer. Adapters mount the component and expose methods; they do not copy execution logic.
 
-`TaskDefinition` says what must happen. `TaskGuideDefinition` says how to explain it to a person. They share a `taskId`, but neither replaces the other: the definition can run without a guide, and the guide never owns an extra execution path.
-
-| Property | Type | Required | Description |
-| --- | --- | --- | --- |
-| `taskId` | `string` | Yes | Must match the task definition id |
-| `title` | `string` | Yes | Guide card heading |
-| `welcome` | `string` | No | Short introduction before the step rail |
-| `footer` | `string` | No | Small note under the card |
-| `cancel` | `TaskGuideAction` | No | Header action for leaving the task; the renderer emits the command and the page decides whether to end the run |
-| `stepSubtitle` | `string` | No | Step subtitle supporting `{step}` and `{total}` |
-| `avatar` | `string` | No | Short avatar text for the built-in renderer |
-| `agent` | `{ focusField?, review?, proposeSave?, cancel? }` | No | Page-control commands the model may trigger. Declaring `review` enables `pling_review_task`, `proposeSave` enables `pling_propose_save`, and `cancel` enables `pling_cancel_task`; omitting a command makes its tool unavailable. `focusField(field)` overrides the default `focus-<field>` while `pling_focus_field` remains limited to declared guide fields. None of these commands performs a business write |
-| `labels` | `TaskGuideLabels` | No | Overrides the running, completed, current, pending, and error labels |
-| `fields` | `TaskGuideFields` | No | Switches to a compact horizontal field rail; the full step card is not rendered |
-| `steps` | `readonly TaskGuideStep[]` | Yes | Ordered human-facing steps |
-| `done` | `TaskGuideDone` | No | Completion copy, summary, and follow-up commands |
-
-Each `TaskGuideStep` can show read-only rows, point at the original page control, wait for the person to act, or emit a business command. A button carries only a `command` string; the page's `onCommand` decides what it means. Adding a guide button never adds a second way to execute business work.
-
-```ts
-const guide: TaskGuideDefinition = {
-  taskId: "course.create",
-  title: "Create a course",
-  welcome: "I will check the details and put them into the form on the right.",
-  stepSubtitle: "Step {step} of {total}",
-  steps: [
-    {
-      id: "name",
-      label: "Course name",
-      title: "Start with the course name",
-      description: "I have pointed at the name field on the right.",
-      handoff: {
-        title: "Confirm the name",
-        description: "Fill it in, then return to the conversation and I will continue.",
-      },
-      primary: { label: "I have filled it in", command: "name.done" },
-    },
-  ],
-  done: {
-    title: "Course created",
-    description: "The first row in the course list is the new course.",
-  },
-};
-```
-
-The read-only summary inside a step is made of `TaskGuideRow` values. Its most important field is `status`: an existing page value, a suggestion that has not been written, and a missing value must not look the same.
-
-### Compact field rail
-
-Use `fields` when a task must stay pinned above the conversation without taking over the panel. The renderer keeps only the title, the stage status, and one horizontally scrollable field rail. Filled nodes show a check; required and optional fields are labelled. Clicking a node emits `focus-<field>` by default so the page can bring that control into view. Suggestions, explanations, and the next-step prompt belong in the conversation, not in the fixed area.
-
-```ts
-const guide: TaskGuideDefinition = {
-  taskId: "course.create",
-  title: "Create a course",
-  stepSubtitle: "Course management · step {step} of {total}",
-  fields: () => [
-    { field: "name", label: "Name", required: true, filled: Boolean(draft.name) },
-    { field: "difficulty", label: "Level", filled: Boolean(draft.difficulty), suggested: true },
-    { field: "cover", label: "Cover", required: true, filled: draft.cover },
-  ],
-  steps: [/* business stages, used only for the step count */],
-};
-```
-
-| Property | Type | Required | Description |
-| --- | --- | --- | --- |
-| `field` | `string` | Yes | Page field name; the default command is `focus-<field>` |
-| `label` | `string` | Yes | Short label shown under the node |
-| `required` | `boolean` | No | Renders as Required or Optional |
-| `filled` | `boolean` | No | Whether the page already holds a value; filled nodes show a check |
-| `suggested` | `boolean` | No | A recommendation exists but is not in the page; the node uses a dashed accent |
-| `command` | `string` | No | Overrides the default locate command; still routed through `onCommand` |
-
-The rail expresses progress and location, not input. Recommendations, follow-up questions, and failure explanations stay in the conversation or the page. The fixed area therefore does not grow with the number of fields, and there is never a second form.
-
-| Property | Type | Required | Description |
-| --- | --- | --- | --- |
-| `label` | `string` | Yes | Field name or business fact |
-| `value` | `string \| number \| boolean \| null \| undefined` | Yes | Display value; the renderer formats it and never edits the page |
-| `format` | `"text" \| "stars" \| "check" \| "number"` | No | Display format; `stars` renders a 1–5 rating and `check` expects boolean semantics |
-| `status` | `"current" \| "suggested" \| "missing"` | No | Whether the value is in the page, suggested, or missing |
-| `badge` | `string` | No | Short business-owned label such as “In page”, “Suggested”, or “Needs input” |
-| `note` | `string` | No | Provenance or helper text; a suggestion should say that it is not written yet |
-| `action` | `TaskGuideAction` | No | Row command such as “Use”, “Locate”, or “Choose”, still routed through `onCommand` |
-
-```ts
-const rows: TaskGuideRow[] = [
-  {
-    label: "Course name",
-    value: "Yoga foundations",
-    status: "suggested",
-    badge: "Suggested",
-    note: "From the demo template; not written to the page",
-    action: { label: "Use", command: "apply-name" },
-  },
-  {
-    label: "Teacher",
-    value: "Zhou Min",
-    status: "current",
-    badge: "In page",
-    action: { label: "Locate", command: "focus-teacher" },
-  },
-];
-```
-
-A Vue 3 business page normally registers this definition only. `AgentInline` and `AgentDock` read the active task and pass it to the built-in `AgentTaskGuide`. In plain DOM, `createTaskGuide()` from `@plingjs/vanilla` consumes the same `TaskGuideDefinition`; `AgentTaskGuide` is the Vue lifecycle shell for products that deliberately replace the default presentation.
-
-## Compact action row (GuideActionItem)
-
-`TaskGuideRow` is for one-field-per-row summaries. When the guide reduces the next step to a few actions, use the lighter `GuideActionItem`. It renders one action row, not a field table, and every adapter mounts the same DOM.
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `id` | `string` | Yes | Stable id for tests and host bookkeeping; never sent to the model |
-| `label` | `string` | Yes | Short verb, for example “Fill it in” or “Point to · Course name” |
-| `command` | `string` | Yes | Business command emitted on click; the renderer does not interpret it |
-| `kind` | `"primary" \| "secondary" \| "suggestion" \| "skip"` | No | Visual emphasis; only `suggestion` renders `preview` |
-| `preview` | `string` | No | One-line, ellipsised preview of a long recommendation, capped around `300px` |
-| `ariaLabel` | `string` | No | Full accessible name when the visible label omits the field or the preview is truncated |
-| `disabled` | `boolean` | No | Disables the action during a write; disabled buttons never emit a command |
-
-```ts
-const items: GuideActionItem[] = [
-  {
-    id: "use-note",
-    label: "Fill it in",
-    preview: "Please arrive 10 minutes early. Cancellations are not accepted within 2 hours of the class.",
-    ariaLabel: "Fill in booking notes: Please arrive 10 minutes early. Cancellations are not accepted within 2 hours of the class.",
-    command: "apply-note",
-    kind: "suggestion",
-  },
-  { id: "skip-note", label: "Skip", command: "skip-note", kind: "skip" },
-];
-```
-
-In plain DOM, call `createGuideActions({ items, hint, ariaLabel, locale, onCommand })`. Vue and React use `AgentGuideActions`. The component only mounts and syncs the row; the host still handles every command.
-
-The long recommendation deliberately stays out of `label`. When the button width is driven by the value, the row wraps, squeezes the conversation, and blurs the difference between “suggested” and “already written”. The full value lives in the conversation, `title`, and `aria-label`; the button only answers what clicking will do.
-
-The renderer lives in `@plingjs/dom` and depends on no UI framework. The Vue and React packages provide lifecycle shells only, so wrapping, ellipsis, focus, and disabled states have one implementation. It never writes a field, calls a business function, or creates a second execution path.
-
-## TaskRunSnapshot
-
-| Property | Type | Description |
+| Adapter | Conversation host | Task view |
 | --- | --- | --- |
-| `taskId` | `string` | Definition id |
-| `title` | `string` | Human-facing task title |
-| `mode` | `steps` / `agent` | Deterministic steps or assistant handoff |
-| `status` | `TaskRunStatus` | Current run state |
-| `fields` | `readonly TaskField[]` | Field definitions for rendering |
-| `values` | `TaskValues` | Current values |
-| `binding` | `TaskBinding` | Present when page facts were supplied |
-| `steps` | `readonly TaskStepSnapshot[]` | Ordered progress and outcomes |
-| `prompt` | `string` | Present in agent mode after values resolve |
-| `waitingFor` | `confirmation` / `handoff` | Why the run is waiting |
-| `confirmation` | `{ required; confirmed }` | Present when the definition requests confirmation |
-| `error` | `{ code, message }` | Present when the run or a required step fails |
-| `startedAt` | `number` | Millisecond timestamp from the injected clock |
-| `finishedAt` | `number` | Present after completion, failure, or cancellation |
+| Vue 3 | `AgentInline` / `AgentDock` renders the active guide; `#task` can override | Built-in guide, or low-level `AgentTaskCard` |
+| React | `AgentChat` or `AgentDock` `task` prop | `AgentTaskCard` |
+| Vue 2.7 | `pling.dock({ task })` | `createTaskCard()` |
+| Vanilla JS | `pling.dock({ task })` | `createTaskCard()` |
 
-Step status is `pending`, `running`, `ok`, `skipped`, or `failed`. A skipped optional step keeps its error in the step snapshot while the run continues.
-
-## TaskRunContext
-
-The bridge receives `{ taskId, values, binding, signal, report }`. `values` and `binding` are copies. `signal` aborts when the run is cancelled or replaced.
-
-`report("running")`, `report("waiting", "confirmation" | "handoff")`, and `report("verifying")` let a long-running bridge describe a sub-state without inventing a second snapshot store. Stale runs ignore reports.
-
-## Lookup actions
-
-`registerTaskLookupActions` turns each lookup field into a narrow read action:
-
-```ts
-const off = registerTaskLookupActions(pling, controller.list(), { maxResults: 8 });
-```
-
-The generated action takes `{ query }`, returns `{ query, minChars?, choices }`, and is clamped to at most 50 choices. It never writes, bypasses scope, or skips the executor for the eventual write. The UI and the model share the same `field.lookup` function, so a duplicate-name decision is made from the same candidates in both places.
-
-Use `searchAction` when several tasks share one search implementation. Without it, the action id is `search_<fieldName>`; duplicate ids keep the first implementation and emit a warning.
-
-## Prompt templates in agent mode
-
-Agent mode is for tasks whose route cannot be fixed safely. It produces a prompt; it does not call the model.
-
-```ts
-controller.register({
-  id: "student.summary",
-  title: "Explain a student's membership",
-  fields: [{ name: "name", label: "Student name" }],
-  prompt: "Summarize the membership for {{name}} and list any expiring cards.",
-});
-
-controller.start("student.summary", { name: "Li Na" });
-const snapshot = await controller.run();
-// snapshot.prompt is ready for pling.ask().
-```
-
-The host passes `snapshot.prompt` to its existing assistant entrance. The task controller never owns a session or model connection.
-
-## Rendering a run
-
-Vue 3's `<AgentInline>` subscribes to `pling.task` and renders the active guide inside the conversation automatically. The page registers the task; it does not rebuild chat chrome or mount `AgentTaskGuide` by hand. Override the `#task` slot only when a product deliberately needs a different task presentation.
-
-`@plingjs/vanilla` still provides two lower-level shapes. `createTaskPanel()` is the full task workspace. `createTaskCard()` is the compact form that belongs inside a conversation. They differ in presentation, not in fields, lookup, execution, confirmation, or failure handling.
-
-```ts
-import { createTaskCard } from "@plingjs/vanilla";
-
-const card = createTaskCard(controller, {
-  locale: "en-US",
-  onPrompt: (prompt) => pling.ask(prompt),
-});
-
-pling.dock({
-  layout: "sidebar",
-  sidebarMode: "fused",
-  task: card.element,
-});
-```
-
-The card emits `pling-task-prompt` for agent-mode tasks and `pling-task-complete` after a run ends. `open(taskId, values?, binding?)`, `close()`, `refresh()`, `setCatalog()`, and `destroy()` control its lifecycle.
-
-A standard task entry does not have to stay visible after the user has chosen a task. Construct the card with `catalog: false`, add a button or row action on the page, then call `card.open(...)` when needed. `setCatalog(false)` hides the catalogue only when no run is active; it never dismisses an in-progress task or loses its values.
-
-Tasks with `requiresRecord` are disabled in the generic list. A row or detail page opens them with a binding, which is why the card can show the selected record without asking the user for its id.
-
-### Framework components
-
-| Adapter | Conversation surface | Task view | Open a bound task |
-| --- | --- | --- | --- |
-| Vue 3 | `AgentInline` / `AgentDock` render the active guide; `#task` can override | Built-in guide; `AgentTaskCard` remains available at the lower level | Activate through the page or `pling_start_task`; a lower-level card can call `open(taskId, values?, binding?)` |
-| React | `AgentChat` `task` prop or `AgentDock` `task` prop | `AgentTaskCard` | Call `open(taskId, values?, binding?)` on `AgentTaskCardHandle` |
-| Vue 2.7 | `pling.dock({ task })` | `createTaskCard()` | Call `card.open(taskId, values?, binding?)` |
-| Vanilla | `pling.dock({ task })` | `createTaskCard()` | Call `card.open(taskId, values?, binding?)` |
-
-`AgentDock` also exposes `open()` and `close()`, so a row action can reveal the assistant before activating the relevant task. A normal Vue 3 page does not need a `#task` slot: the built-in assistant renders the active guide from the task catalog.
+A normal business page does not need `#task`. The built-in assistant subscribes to the catalog and renders the active guide.
 
 ```vue
-<template>
-  <AgentDock ref="dock" layout="sidebar" sidebar-mode="fused" :default-open="true" />
-</template>
+<AgentInline
+  title="Pling assistant"
+  :debug="{ maxCalls: 8 }"
+  collapsible
+  speakers
+  composer="multiline"
+  task-placement="inline"
+/>
 ```
 
-Use the `#task` slot only when the product deliberately replaces the task presentation. It is not a required step for a normal business page.
-
-```tsx
-const dock = useRef<AgentDockHandle>(null);
-const card = useRef<AgentTaskCardHandle>(null);
-
-<AgentDock
-  ref={dock}
-  layout="sidebar"
-  sidebarMode="fused"
-  defaultOpen
-  task={<AgentTaskCard ref={card} controller={tasks} onPrompt={pling.ask} />}
-/>;
-```
-
-The full `createTaskPanel()` remains available for a dedicated task workspace. `GuidedTaskPanelOptions.variant` accepts `"panel"` or `"card"`; `createTaskCard()` is the shorthand for the latter.
-
-## Structured quick tasks
-
-`quick` still accepts plain strings. The structured form separates the button label from the prompt, so a short button does not force a vague instruction.
-
-```ts
-const quick: QuickTaskItem[] = [
-  "Show this week's unpaid orders",
-  {
-    label: "Tidy today's list",
-    prompt: "Review today's todos, archive completed items, and keep unfinished ones.",
-    description: "Archives completed items and leaves the rest untouched.",
-  },
-];
-```
-
-`disabled: true` keeps an entry visible while the application knows it cannot run yet.
+A goal card shows only the goal, cancel and completion. It contains no form controls. The only input is the chat composer; to fill the form, people use the page.
 
 ## Surface tasks
 
-An external agent can receive the same business tasks as descriptive metadata:
+External agents can receive the same business tasks as descriptive metadata:
 
 ```ts
 const tasks: SurfaceTask[] = [{
-  id: "order.approve",
-  title: "Approve an order",
-  steps: [{ action: "approve@order", label: "Approve this order" }],
-  risk: "destructive",
-  playbook: ["Read the order first", "Confirm the status before approving"],
+  id: "course.create",
+  title: "Create a course",
+  goal: "Create a course in the course workspace and read the catalogue back",
+  constraints: ["Page actions are the only entry", "The person uploads the cover"],
+  successCriteria: ["The new course appears first in the catalogue"],
+  risk: "write",
+  playbook: ["Call new_course to open the real form", "Complete the goal only after save read-back passes"],
 }];
 ```
 
-Surface tasks explain how capabilities fit together. They do not grant a capability, widen a session scope, or bypass approval. `invoke` still goes through the existing exporter, executor, and audit path.
+A Surface task explains how capabilities work together. It does not grant capability, expand session scope or bypass approval. `invoke` still goes through the exposed list, executor and audit path.
 
 ## Error codes
 
 | Code | Meaning | Recovery |
 | --- | --- | --- |
-| `TASK_FIELDS_REQUIRED` | Required values are missing | Complete the fields and run again |
-| `TASK_ACTION_FAILED` | The bridge returned a business failure | Read the message, correct the cause, retry |
-| `TASK_STEP_FAILED` | The bridge threw or rejected | Retry or change the task input |
-| `TASK_FIELDS_REQUIRED` on an optional field | Not applicable; optional fields never block | Leave the field empty |
+| `TASK_FIELDS_REQUIRED` | Required value missing | Fill fields and run again |
+| `TASK_ACTION_FAILED` | Execution bridge returned a business failure | Read the message, fix or retry |
+| `TASK_STEP_FAILED` | Execution bridge threw or rejected | Retry or change task input |
+| `ACTION_UNAVAILABLE` | Current task or action is unavailable | Check active state, goal and scope |
+| `INVALID_ARGS` | Unknown task, unknown field or invalid value | Fix the call arguments |
 
-Unknown task ids, unknown field names, duplicate definitions, a missing bound record, and mutation after execution throw synchronously. Treat those as programming or host errors rather than user-facing failures.
+Unknown task ids, unknown fields, duplicate definitions, a missing bound record, and field changes after execution starts throw synchronously. These are programming or host errors, not user-facing task states.
 
 ## Current limits
 
-- The task model does not provide a general planner or automatic step authoring.
-- A task has one active run at a time; parallel business tasks need separate controllers.
-- Step results are exposed to the host, but later steps receive values and the binding, not an automatic result chain.
-- The DOM renderer is shared by Vue, React, Vue 2.7, and Vanilla. The framework components own only mounting and exposed methods; they do not copy the task state machine.
-- The conversation card is an entry and progress surface. The page's original forms and controls remain the source of business input.
-- Surface tasks are descriptive. An agent that needs more context must still call `describe` and obey the session scope.
+- A goal provides no planner and generates no steps.
+- A goal executes no business action; it only manages lifecycle.
+- One controller has one active run at a time; parallel business tasks need separate controllers.
+- Step results go to the host, but later steps receive only values and binding; they do not automatically chain previous results.
+- The four adapters share one DOM renderer.
+- Task cards own entrances, decisions, progress and handoffs; the page's original form and controls remain the source of business input.
+- Surface tasks are descriptions. An agent still calls `describe` for more context and follows session scope.
 
 ## Version and compatibility
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.8` |
+| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.9` |
 | Introduced | `0.1.0-alpha.6` |
-| Runtime | Browsers with ES2022 modules; Node.js 20 or later for the task controller |
+| `goal()` introduced | `0.1.0-alpha.9` (unreleased) |
+| Runtime | Browsers with ES2022 modules; the task controller runs in Node.js 20 or later |
 | Peer dependencies | None |
-| Stability | Experimental; snapshots may gain fields without changing existing meaning |
+| Stability | Experimental; snapshots may add fields without changing existing meanings |
 
-The task controller has no DOM dependency. `createTaskPanel` and `createTaskCard` are the reference renderers in `@plingjs/vanilla`; adapters render the same `TaskRunSnapshot` rather than reimplement execution.
+The task controller is DOM-free. `createTaskPanel` and `createTaskCard` are reference renderers in `@plingjs/vanilla`; every adapter renders the same `TaskRunSnapshot` instead of writing a second execution engine.
+
+`goal()` is the recommended entry. `define()` remains for field validation, lookup, fixed steps and headless runs.

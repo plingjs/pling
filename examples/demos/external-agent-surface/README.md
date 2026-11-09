@@ -14,7 +14,7 @@ third-party capability boundary.
 The hosted path is the primary one. Open:
 
 ```text
-https://plingjs.dev/demos/external-agent-surface/?mcp=1&lang=zh
+https://demo.plingjs.com/demos/external-agent-surface/?mcp=1&lang=zh
 ```
 
 The page asks the official Surface Gateway for a short-lived page session and
@@ -39,7 +39,7 @@ The rules shown in the page are deliberate:
 export PLING_AGENT_TOKEN='<token shown on the page>'
 codex mcp remove pling-todo 2>/dev/null || true
 codex mcp add pling-todo \
-  --url https://surface.hunger-valley.com/mcp \
+  --url https://surface.plingjs.com/mcp \
   --bearer-token-env-var PLING_AGENT_TOKEN
 codex --no-daemon
 ```

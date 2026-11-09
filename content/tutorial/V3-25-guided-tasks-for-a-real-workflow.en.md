@@ -9,431 +9,772 @@ status: drafted
 
 # Guided tasks for a real workflow
 
-The Todo examples show that a page with clear action declarations can complete a concrete operation. Real back offices are harder: one business task often spans several fields, a few decisions, and one human handoff.
+The Todo chapters show that a page with clear action declarations can complete a concrete operation. A real back office is harder. One business task crosses a dialog, several fields and one human upload. The person may ask questions, change their mind, or close the dialog halfway through.
 
-Creating a course is a good example. An employee knows they need a new course, but may not remember which field comes first, how teachers and eligible cards relate, whether the cover must be chosen by hand, or where to confirm the result. Putting all of that into chat creates a second form. Leaving it only on the page lets people get lost.
+## Starting point: do not duplicate the business form
 
-This chapter narrows the page to one job. The original course form remains the only input surface. The assistant explains the current step, shows read-only summaries, locates real fields, and reads the catalogue back after saving.
+This chapter does one job: create a course. The page is the original course workspace: a catalogue, a **New course** button, and the existing form behind it. We do not add a chat-only form, and page code does not open the dialog, fill fields or save on the agent's behalf.
 
-## Let the model read the whole sentence
+The same page ships in two runnable versions:
 
-Creating a course used to invite a field-by-field interrogation. This example does not put an intent classifier in the page; the assistant reads the active task context and writes the field values from one sentence into working memory:
+- [Case 07: directives only](/examples/course-create-directives-vue3) uses `v-scope`, `v-record` and `v-tool`.
+- [Case 06: a persistent goal](/examples/course-workspace-vue3) adds one goal to the same page.
+
+Both create a course. The difference is not capability. It is whether the page can describe itself, and whether the outcome must survive a page change.
+
+## Two integration paths
+
+| Your page | Recommended path |
+| --- | --- |
+| One stable form, finished after save | Directives only |
+| The dialog closes and the person comes back | Directives plus one goal |
+| The job continues across routes or pages | Directives plus one goal |
+| You need a fixed task entrance, cancel and completion | Directives plus one goal |
+| An external agent needs the same playbook and completion boundary | Directives plus one goal |
+| Fields need validation, lookup, or a fixed action sequence | Advanced `TaskDefinition` and `TaskController` |
+
+Most pages stop at the first row. Add a goal only when a later row applies.
+
+## What the directives already say
+
+Case 07 declares no task. The page exposes itself through three directives.
+
+```vue
+<button
+  type="button"
+  v-tool="{
+    id: 'new_course',
+    kind: 'read',
+    label: page.newCourse,
+    desc: copy.newCourseDesc
+  }"
+  @click="openCreate"
+>
+  {{ page.newCourse }}
+</button>
+```
+
+`new_course` is bound to the real button. The dialog is closed on load. To create a course, the agent calls this action, and the button's own `@click` opens the dialog. There is no `if (agent) openCreate()` branch in page code.
+
+Inside the dialog, `v-scope` names the region:
+
+```vue
+<section
+  class="course-modal"
+  v-scope="{
+    id: 'create-course-form',
+    label: page.form.title,
+    description: copy.formScope,
+    role: 'dialog'
+  }"
+  v-record="draftRecord"
+>
+```
+
+`v-scope` gives the group a stable id. It exposes no data and provides no execution. When the dialog closes, the region and its actions leave the page.
+
+`v-record` publishes the draft as a read-only record:
+
+```ts
+const draftRecord = computed(() => ({
+  data: { ...draft },
+  id: "course-draft",
+  label: copy.value.draftLabel,
+  fields: {
+    name: draft.name,
+    difficulty: draft.difficulty,
+    teacher: teacherName.value || draft.teacherId,
+    cards: draft.cards,
+    intro: draft.intro,
+    cover: draft.cover,
+    required: [page.value.form.name, page.value.form.teacher, page.value.form.cards, page.value.form.cover],
+    missing: requiredMissing.value,
+  },
+}));
+```
+
+The agent can answer “what is missing?” without a second read tool. `missing` is computed by the page and uses the same rule as the page's save validation.
+
+Each real control declares one action:
+
+```vue
+<input
+  v-model="draft.name"
+  v-tool="{
+    id: 'course_name',
+    action: 'fill',
+    label: page.form.name,
+    desc: copy.fieldDesc.name
+  }"
+/>
+```
+
+`action: 'fill'` means the action accepts a text value. A native select uses `action: 'select'`. Difficulty is not a native input; it is a row of custom star buttons, so each star declares a click action:
+
+```vue
+<button
+  v-for="score in 5"
+  :key="score"
+  type="button"
+  v-tool="{
+    id: `course_difficulty_${score}`,
+    kind: 'write',
+    label: `${page.form.difficulty} ${score}`,
+    desc: copy.difficultyDesc(score)
+  }"
+  @click="setDifficulty(score)"
+>
+  ★
+</button>
+```
+
+That is how custom components work. Whether the control is an `input` does not matter. What matters is that it has a real click or input entry. Stars are click actions, upload is a human handoff, and save is the page's own save handler.
+
+Upload must be done by the person:
+
+```vue
+<button
+  class="upload-tile"
+  v-tool="{
+    id: 'course_cover',
+    kind: 'write',
+    label: page.form.cover,
+    desc: copy.coverDesc,
+    handoff: {
+      reason: copy.coverHandoff,
+      expect: { desc: copy.coverExpect, check: () => draft.cover }
+    }
+  }"
+  @click="coverInput?.click()"
+>
+```
+
+`handoff` pauses the executor and waits for the person. The assistant may call `pling_locate` to scroll to and highlight the upload tile, but cannot choose a local file. When the person uploads, `draft.cover` provides the completion evidence.
+
+Save declares a read-back condition:
+
+```ts
+const saveTool = computed(() => ({
+  id: "save_course",
+  kind: "write",
+  label: page.value.form.save,
+  desc: copy.value.saveDesc,
+  run: () => saveCourse(),
+  expect: {
+    desc: copy.value.saveExpect,
+    check: () => courses.value[0]?.id === newCourseId.value,
+  },
+}));
+```
+
+The executor checks `expect` after the action returns. If the new course is not first in the catalogue, the save fails with a reason. The agent receives the page result, not just an HTTP 200.
+
+### From one sentence to several actions
+
+The person says:
 
 ```text
-Pregnancy yoga, Chen, 2 stars, write the intro
+Pregnancy yoga, Chen Jing, 2 stars, monthly card, write the intro
 ```
 
-The model receives the active task's objective, constraints, fields, current values, gaps, and guide stage. It reads the sentence as four values — `name`, `teacherId`, `difficulty`, and `intro` — and calls `pling_update_task` once. The page validates every declared field before the values reach the form. The assistant asks only for what is actually missing, such as “Eligible cards have not been selected.” If the teacher is not in the list, it stops and asks instead of silently choosing a similar name. A cover is an explicit human handoff: the assistant locates the upload field and leaves file selection to the person.
+There is no regular expression and no intent classifier in the page. The agent receives:
 
-Value validation belongs to the page, not to the conversation. A `TaskField` can declare `min` / `max` for numbers, `minLength` / `maxLength` and `pattern` for text, a small closed `values` list, and a business check with `validate(value, values)` over the current working memory. These checks run before a model value is written to the task snapshot: a wrong type, an unknown teacher, an out-of-range difficulty, or a malformed deduction count fails without leaving a half-applied form. The model may retry, rephrase, or ask the person, but it cannot bypass that boundary.
+- the available actions and their descriptions;
+- the draft's current values, required fields and missing labels;
+- each control's label, input type and allowed values;
+- which actions are human handoffs.
+
+It opens the real dialog, then calls `course_name`, `course_teacher`, `course_difficulty_2`, `course_cards` and `course_intro`. “Write the intro” is explicit delegation, so the action description allows the model to draft it from the known course details. If there is no cover, the agent does not pretend an upload happened; it asks the person to choose a file.
+
+If the person asks “what is missing?”, the agent reads `draftRecord`. If they say “change the teacher to Lin”, it changes only the teacher. The conversation follows the current page state, not a fixed field script.
+
+### Business action ids are not framework APIs
+
+`course_name`, `course_intro` and `course_cover` are names chosen by this example. Pling provides the declaration mechanism, not a set of course fields. An order back office declares `order_note`, `refund_reason` or `approve_order` with the same mechanism.
+
+Whatever id you give an action is what the model sees. Keep it stable and specific. Use the description to explain what the control does, when it is available, and what the page looks like after it succeeds.
+
+## When a goal is still useful
+
+Case 07 has one boundary: when the dialog closes, `create-course-form` and its field actions disappear. If the person then asks “what is still missing on that course?”, the agent can see the catalogue but not the draft.
+
+A goal covers that gap. The entire task integration in Case 06 is three lines:
 
 ```ts
-const courseTask = {
-  id: "course.create",
-  fields: [
-    { name: "name", label: "Course name", type: "text", minLength: 1, maxLength: 40 },
-    {
-      name: "teacherId",
-      label: "Teacher",
-      type: "lookup",
-      lookup: teacherLookup,
-      validate: (value) =>
-        teachers.some((teacher) => teacher.id === value) ? null : "Choose a teacher from the search_teachers results.",
-    },
-    { name: "difficulty", label: "Difficulty", type: "number", optional: true, min: 1, max: 5 },
-  ],
-};
+const pling = usePling();
+const disposeGoal = pling.task.goal(courseGoal(props.locale));
+onBeforeUnmount(disposeGoal);
 ```
 
-The model does not turn a question into a field value just because the conversation has not moved on. Asking what a field means, asking to look first, changing one's mind, or pausing all stay in the same conversation; the task state is working memory, not a script. Follow-ups such as “change the difficulty to 4 stars” or “rename the course to Fat burn yoga” are likewise corrections to the current task, and only update the matching field. The assistant asks only when it genuinely cannot tell which field is meant.
-
-## Two ways in, one task
-
-A user can start from either direction:
-
-- Opening the **Create a course** dialog makes the task available from page context;
-- Asking the assistant to “create a yoga course” lets the model choose and open the same registered task.
-
-Both paths use one task definition, one guide definition, and one executor. The page does not maintain separate UI for “context activation” and “assistant activation”.
-
-The page registers the task once:
+`courseGoal()` describes only the outcome and its boundaries:
 
 ```ts
-pling.task.define({
-  definition: createCourseTaskDefinition(taskOptions),
-  guide: guideDefinition,
-  controller,
-  scope: "create-course-form",
-  autoStart: true,
-  initialValues: currentTaskValues,
-  state: () => ({
-    snapshot: taskSnapshot.value,
-    step: 1,
-    busy: busy.value,
-    error: taskError.value,
-    completed: completed.value,
-  }),
-  onActivate: applyTaskRunValues,
-  onCommand,
-});
+export function courseGoal(locale: Locale): TaskGoalInput {
+  return {
+    id: "course.create",
+    title: locale === "zh" ? "创建课程" : "Create a course",
+    goal: "Create a course in the course workspace: open the real form yourself, fill what the person supplied, ask them to upload the cover, save, then read the catalogue back and confirm the new course is first.",
+    constraints: [
+      "The page's actions are the only way to operate it; do not invent field names, selectors or a second form.",
+      "Fill only what the person supplied or explicitly delegated; ask when unsure.",
+      "The person must upload the cover; never choose a local file for them.",
+      "Questions, corrections, pauses and abandonment take precedence over filling the form.",
+    ],
+    successCriteria: [
+      "The new course appears first in the catalogue",
+      "Name, teacher, eligible cards and cover match what the person confirmed",
+      "The save action read the catalogue back and confirmed the new record",
+    ],
+    examples: ["Create prenatal yoga with Chen Jing, 2 stars, monthly card, write the intro"],
+  };
+}
 ```
 
-`scope` means the task is available only while the create-course dialog exists. `autoStart` shows it when the context matches. Closing the dialog removes the scope and hides the guide; reopening it restores the task.
+There is no `fields`, no `steps`, no `controller`, no form callback and no save function. The goal answers four questions:
 
-Assistant-initiated runs need no extra wiring. Once the task is registered, the model sees the tasks available in the current context. It calls `pling_start_task`, the catalog activates the same `course.create` entry, and the built-in assistant panel renders the guide.
+- what outcome should be reached;
+- which boundaries must not be crossed;
+- what counts as done;
+- why the work is still active after the dialog closes or the route changes.
 
-## Why task and guide are separate
+`goal()` defaults to `keepActive: true`. Once a person or the model explicitly starts it, the goal stays active when the dialog closes, its region disappears, or the page briefly leaves the original route. The agent can keep answering, reopen the form, or ask the person to upload the cover first.
 
-`TaskDefinition` answers **what must be achieved, under which constraints, and how completion is observed**: `objective` is the goal, `constraints` are the boundaries the model must respect, `successCriteria` are observable completion conditions, and `fields` are the current working memory. Fixed `steps` are only for business writes that can execute deterministically; they are not a conversation script.
+`route` and `scope` restrict where the goal can be started. They decide whether it is available now, not what may be operated. Every operation still goes through page actions.
+
+### A goal is neither permission nor an executor
+
+- It does not open the dialog. `new_course` does that.
+- It does not fill a field. `course_name` and `course_teacher` do that.
+- It does not save. `save_course` does that.
+- It does not relax permissions. Every action keeps its own risk, confirmation, scope and audit rules.
+
+A goal only manages lifecycle. It keeps an outcome alive across page changes and leaves an explicit completion or cancellation state.
+
+### How a goal ends
+
+While the goal is active, the model also sees `pling_complete_task`. It calls this only when the page satisfies every success criterion. The call writes no business data and does not replace `save_course`; it only marks the goal complete.
+
+The order is:
+
+1. the agent calls `save_course`;
+2. the page's save handler writes the course;
+3. `expect` reads the catalogue and confirms the new course is first;
+4. the agent sees that evidence and calls `pling_complete_task`;
+5. the goal card shows completed.
+
+The person can cancel instead. Cancellation ends the goal without rolling back values already written to the form. The page belongs to the person; the framework does not undo their input.
+
+## From one sentence to a course
+
+Here is the real sequence in Case 06.
+
+### 1. The person asks for a course
+
+```text
+Create a course: pregnancy yoga, Chen Jing, 2 stars, monthly card, write the intro
+```
+
+The agent sees the available `course.create` goal and the page's `new_course` action. It calls `pling_start_task`, then `new_course`.
+
+Starting the goal changes nothing on the page. The dialog stays closed. Only the click handler behind `new_course` opens it.
+
+### 2. The agent opens the real form
+
+After `new_course` runs, `@click="openCreate"` executes:
 
 ```ts
-export const courseTask = {
-  id: "course.create",
-  title: "Create a course",
-  objective: "Help the person create a publishable course instead of walking a fixed field sequence.",
-  constraints: [
-    "The cover must be uploaded by the person; the assistant must not fake it.",
-    "Every write still goes through create_course, the executor and read-back verification.",
-    "Questions, corrections, pauses and abandonment take precedence over collecting the next field.",
-  ],
-  successCriteria: [
-    "The new course appears first in the catalogue",
-    "Name, teacher, eligible cards and cover match what the person confirmed",
-  ],
-  fields: [
-    { name: "name", label: "Course name", type: "text", recommended: "Yoga foundations" },
-    {
-      name: "teacherId",
-      label: "Teacher",
-      type: "lookup",
-      lookup: searchTeachers,
-      searchAction: "search_teachers",
-      recommended: "teacher_zhoumin",
-    },
-    { name: "cards", label: "Eligible cards", type: "select", values: cardChoices },
-    { name: "cover", label: "Course cover", type: "boolean", agentWritable: false },
-  ],
-  steps: [
-    {
-      id: "course.save",
-      label: "Write and read back",
-      action: "create_course",
-      args: (values) => ({
-        name: values.name,
-        teacherId: values.teacherId,
-        cards: values.cards,
-        cover: values.cover,
-      }),
-    },
-  ],
-};
-```
-
-It has no Vue dependency and does not know what the chat looks like. A task may be executable only, or carry a user-facing guide.
-
-`TaskGuideDefinition` answers **what the user sees**: the task title, welcome copy, current field list, and the page commands the model may invoke.
-
-```ts
-export const courseGuide: TaskGuideDefinition = {
-  taskId: "course.create",
-  title: "Create a course",
-  welcome: "Tell me the course details in one sentence, or fill the form directly; I will fill the gaps.",
-  agent: {
-    review: "review-task",
-    proposeSave: "propose-save",
-    cancel: "cancel-task",
-  },
-  fields: () => courseCreateFieldNodes(locale, draft(), teachers, skipped),
-  steps: [
-    {
-      id: "course.fill",
-      label: "Create a course",
-      title: "Create a course",
-      description: "Write the course values into the original form, then let the person confirm the save.",
-    },
-  ],
-};
-```
-
-`steps` describes a coarse business stage for the title and progress copy; it does not decide what to ask next. This example has one stage. The actual “what is still missing” answer comes from `fields()` reading the page. The guide contains no `input`, `textarea`, or `select`; writing values, opening dialogs, and focusing fields still belong to the page.
-
-The split also lets the same task run headlessly or act as a conversation-only playbook. A task can have no guide; a guide can exist without executable steps.
-
-## The assistant chooses, it does not invent tasks
-
-The task catalog is the page's declaration of what is legal right now. The model receives the available tasks together with their goals, constraints, fields, and step summaries. Once a task is active, it also sees the current values, missing required fields, current guide step, and available guide actions. That state is working memory rebuilt on every turn, not a script the model must follow. It can choose one task and pass values the user has already supplied:
-
-```json
-{
-  "task": "course.create",
-  "values": {
-    "name": "Yoga foundations",
-    "teacherId": "teacher_zhoumin"
+function openCreate(): void {
+  if (newCourseId.value) {
+    Object.assign(draft, emptyCourseDraft());
+    newCourseId.value = "";
+    highlightedCourseId.value = "";
   }
+  modalOpen.value = true;
+  saveError.value = "";
 }
 ```
 
-Three boundaries apply:
+This is the page's original **New course** logic. Clearing the previous draft, opening the dialog and resetting the error all belong to the page. The agent only clicked the button.
 
-- The task id must come from the current available list. Inventing an id returns `INVALID_ARGS`.
-- `values` may contain only fields declared by that task. Unknown fields are rejected.
-- Supplied values only prefill a task run. They do not bypass the permission, confirmation, or audit path of `create_course`.
+### 3. The agent fills what the person supplied
 
-So “the assistant creates a task” means **starting a registered task run**. If a later version supports genuinely dynamic workflows, it still needs task templates, validation, and user confirmation before entering the same catalog. The model should never compose arbitrary action sequences into a task definition.
+With the dialog open, the field actions enter the page. The agent calls:
 
-### Once active, the task is not a script
+- `course_name` with “Pregnancy yoga”;
+- `course_teacher` with “Chen Jing”;
+- `course_difficulty_2`;
+- `course_cards` with “Monthly card”;
+- `course_intro` with a draft based on the explicit “write the intro” delegation.
 
-Once a task is active, the model receives structured current state and decides whether this turn should answer, ask, write, pause, or hand control back. It must not put an entire sentence into the course-name field merely because that is the next required field, and it must not keep advancing when the person asks “what can you do?”.
+Each step is the same operation a person can perform. Vue `v-model`, `@change` and page validation work as usual.
 
-The model writes working memory through one narrow action:
+### 4. Only real gaps are asked
 
-```json
-{
-  "task": "course.create",
-  "values": { "cards": "Monthly card" },
-  "clear": []
-}
-```
+The agent reads `draftRecord.fields.missing` and sees that the cover is missing. It says so. When the person asks where to click, it calls `pling_locate` and marks the upload tile.
 
-That action is `pling_update_task`. It only writes the active task, accepts only declared fields, and rejects page-only fields marked `agentWritable: false`. `TaskField.recommended` is a suggestion the model may use when the person explicitly delegates a choice, not an automatic write. The cover remains a page-owned upload. After working memory changes, the Vue page subscribes to `TaskRunSnapshot`, writes the values back into the original form, and highlights the changed fields. The real business write still goes through `create_course`, the executor, confirmation, and read-back verification.
+After the person chooses a file, `handleCoverSelected` sets `draft.cover` to `true`. The `handoff` expectation passes, and the agent continues.
 
-### The page keeps the final step
+### 5. Save and read back
 
-The model can perceive, explain, ask, and correct, but the page keeps three actions it never delegates: locating, reviewing, and saving.
+The agent calls `save_course`. The page checks four required values: name, teacher, eligible cards and cover. It then creates the course and puts the new record first.
 
-- `pling_focus_field` scrolls a declared field into view and highlights it; it never writes a value.
-- `pling_review_task` opens the page's own read-only review.
-- `pling_propose_save` opens the confirmation step; it never performs the business write.
-- `pling_cancel_task` ends the guide, and values already written to the page are not rolled back automatically.
-
-These tools are not hidden framework defaults. A guide must explicitly declare `review` / `proposeSave` / `cancel` under `guide.agent` before the model can see the matching tool. When a command is missing, the tool is not advertised and no no-op action appears. This lets each product own its save path: some show a confirmation, some require a second verification, and some do not allow saving from the task at all.
+`expect` checks:
 
 ```ts
-guide: {
-  taskId: "course.create",
-  agent: {
-    review: "review-task",
-    proposeSave: "propose-save",
-    cancel: "cancel-task",
-  },
-}
+check: () => courses.value[0]?.id === newCourseId.value
 ```
 
-The page handles the `proposeSave` command itself: opening its existing confirmation, re-reading the form, calling `create_course`, and reading the catalogue back. The model may say that it is ready to save and ask the person to confirm, but it must not claim success before that confirmation.
+Only after that passes does the agent call `pling_complete_task`. The goal card moves from running to completed.
 
-## Do not build a second chat UI
+### 6. The dialog closes midway
 
-The older integration asked the page to mount `AgentTaskGuide` inside the transcript and maintain its own header, message list, and styling. That leads to a different assistant appearance in every example and couples business pages to chat chrome.
+If the person closes the dialog, `create-course-form` and its field actions disappear. The goal stays active because `goal()` keeps it by default.
 
-Now the page keeps only the business form and the task registration. The assistant uses the built-in component:
+The person can ask:
+
+```text
+What is still missing on that course?
+```
+
+The agent explains that the goal is still active but the form is closed. It can call `new_course` again, reopen the form, read the draft and continue. The values are still in `draft` because the page component was not unmounted.
+
+### 7. Questions and changes are allowed at any time
+
+The guide is not a “next question” script. The person can say:
+
+- “Why can't you upload the cover?”
+- “Change the teacher to Lin.”
+- “Stop for now.”
+- “Rename the course to Pregnancy Flow Yoga.”
+
+The agent answers or handles that turn first, then decides whether to continue. A single-field change calls one action. Cancellation calls `pling_cancel_task` or the cancel button on the goal card. The goal ends and the page values stay as they are.
+
+## Custom controls
+
+Real back offices do not use only `input` and `select`. Declare the control's real interaction; do not rewrite it into a form for the agent.
+
+| Control | Integration |
+| --- | --- |
+| Native input | `v-tool` with `action: 'fill'` |
+| Native select | `v-tool` with `action: 'select'` |
+| Row of star buttons | One click action per star |
+| Custom date picker | One action to open, one to choose, or one parameterised action |
+| Upload, signature, one-time code | `handoff`, completed by the person |
+| Multi-step dialog | One action per real button, optionally composed with `steps` |
+
+A custom date picker that accepts a value can use a parameterised action:
+
+```ts
+v-tool="{
+  id: 'course_start_date',
+  desc: 'Set the course start date in YYYY-MM-DD format',
+  params: [{ name: 'date', label: 'Start date' }],
+  run: ({ date }) => setStartDate(String(date))
+}"
+```
+
+`run` still calls the page's own `setStartDate`. The agent does not need to know what the date panel looks like; it needs to know what value the action accepts.
+
+Do not simulate uploads, one-time codes or payment confirmations. Use `handoff` to return control to the person, then use `expect` to check the page really changed.
+
+## Why page code has no intent matching
+
+Some integrations write:
+
+```ts
+if (/create course/.test(text)) openCreate();
+```
+
+That regular expression treats “which information does creating a course need?” as a create command. It cannot handle questions, changes or “stop for now”. Once the page owns intent matching, it becomes a second conversation layer and competes with the model.
+
+This example gives understanding to the model and execution to the page. The model sees the goal, action descriptions, records and current page state, so it can distinguish a question, a change, a delegation and a cancellation. The page only owns real control availability and results.
+
+## Follow along with a real page
+
+These steps follow the files. Each one can run and be checked on its own. Finish the first seven steps in Case 07 before deciding whether step eight is needed.
+
+### Prepare: run both cases
+
+From the repository root:
+
+```bash
+pnpm dev:examples
+```
+
+Open:
+
+- `http://127.0.0.1:5191/demos/course-create-directives-vue3/?lang=en`
+- `http://127.0.0.1:5191/demos/course-workspace-vue3/?lang=en`
+
+Open **New course** manually, fill a few fields and close the dialog. The two cases render the same page. Case 06 adds one goal; nothing else differs.
+
+The entry for Case 07 is a thin wrapper:
 
 ```vue
-<aside class="assistant" aria-label="Pling assistant">
-  <AgentInline
-    class="assistant-agent"
-    :title="createCopy.assistantTitle"
-    :placeholder="page.assistant.placeholder"
-    task-placement="none"
-    guide-placement="end"
-    :debug="{ maxCalls: 8 }"
-    model-settings="readonly"
+<!-- examples/demos/course-create-directives-vue3/src/App.vue -->
+<script setup lang="ts">
+import CourseCreatePage from "../../../shared/course-create/CourseCreatePage.vue";
+import type { Locale } from "../../../shared/course-workspace/copy";
+
+defineProps<{ locale: Locale }>();
+</script>
+
+<template>
+  <CourseCreatePage :locale="locale" task-placement="none" />
+</template>
+```
+
+The integration lives in `examples/shared/course-create/CourseCreatePage.vue`. You do not create a second form for the agent or move the business page into the chat panel.
+
+### Step 1: keep the page and confirm the baseline
+
+Start with the original page. The dialog stays closed and the catalogue is visible. Do not add a task yet, and do not call `openCreate()` on mount.
+
+The baseline has three properties:
+
+1. the page starts on the catalogue with a visible **New course** button;
+2. the form appears only after someone clicks that button;
+3. closing the dialog removes the form and its field actions.
+
+These properties determine the integration. The agent has to find the real button and operate the form like a person.
+
+### Step 2: declare the real button with `v-tool`
+
+Add one action to the existing **New course** button:
+
+```vue
+<button
+  class="primary-button"
+  type="button"
+  v-tool="{
+    id: 'new_course',
+    kind: 'read',
+    label: page.newCourse,
+    desc: copy.newCourseDesc
+  }"
+  @click="openCreate"
+>
+  <span>＋</span>{{ page.newCourse }}
+</button>
+```
+
+The declaration tells the agent what the button does. The click still runs the page's own `@click="openCreate"`.
+
+Open the assistant debug panel and confirm that `new_course` appears. Then say:
+
+```text
+Create a course for me
+```
+
+The agent should call `new_course`, and the button should open the dialog. The page must not contain a branch such as `if (agent) openCreate()`.
+
+### Step 3: name the dialog with `v-scope`
+
+Expose the form region only while the dialog exists:
+
+```vue
+<div v-if="modalOpen" class="modal-layer">
+  <section
+    class="course-modal"
+    role="dialog"
+    aria-modal="true"
+    v-scope="{
+      id: 'create-course-form',
+      label: page.form.title,
+      description: copy.formScope,
+      role: 'dialog'
+    }"
+    v-record="draftRecord"
   >
-    <template #guide>
-      <AgentGuideActions :items="guideActions" @command="onGuideCommand" />
-    </template>
-  </AgentInline>
-</aside>
+    <!-- existing form controls -->
+  </section>
+</div>
 ```
 
-`AgentInline` subscribes to the task catalog, but this example turns the built-in card off with `task-placement="none"` and puts the `#guide` slot after the latest message with `guide-placement="end"`. The task layer still matters; the problem is duplication. Creating a course is already a continuous form. A second field rail above the conversation would give the user two parallel paths to the same job. The chat should carry the narrative, and the next action should appear at the end of that narrative. `AgentGuideActions` only emits commands declared by the page; it does not write a field or call a business action.
+`v-scope` names a region. It does not turn the controls into actions or expose their values.
 
-The task definition still owns fields, order, commands, and success evidence. It only gives presentation control back to the page. `task-placement` accepts three values: the default `inline` places the guide in the transcript, `pinned` keeps it under the chat header, and `none` hides it. Use the first two when a persistent step rail genuinely helps. Use `none` when the page and the conversation already have clear, separate jobs.
+Close the dialog and check the assistant context. `create-course-form` should disappear. The agent must not believe that a closed form can still be edited.
 
-A product that truly needs a different task presentation can override the default guide with the `#task` slot. The important rule is not to show a built-in field rail and a second copy of the same guidance in chat at the same time.
+### Step 4: publish the draft with `v-record`
 
-## A long recommendation must not stretch the button
-
-The first “fill it in” control put the recommended value inside the button label. Short course names looked fine. A booking note written as one sentence turned the button into a block wider than the panel, wrapped the action row, and pushed the conversation down. The user saw one large button instead of the next decision.
-
-Truncating the label does not fix that: before clicking, a person still needs to know what will be written. Hiding the text behind an icon or a second menu only replaces uncertainty with discovery work.
-
-The rule is now **short verb + one-line preview**:
-
-- the button keeps the action only, for example “Fill it in” or “Point to · Course name”;
-- the recommendation sits in a grey preview inside the button: one line, roughly `300px` at most, ellipsised;
-- the full value remains in the conversation bubble, in `title` on hover, and in the complete `aria-label` for screen readers;
-- a recommendation means “this is what clicking would write”. Nothing changes in the page form until the user clicks.
+The form needs a readable snapshot of its current values:
 
 ```ts
-const items: GuideActionItem[] = [
-  {
-    id: "use-note",
-    label: "Fill it in",
-    preview: "Please arrive 10 minutes early. Cancellations are not accepted within 2 hours of the class.",
-    ariaLabel: "Fill in booking notes: Please arrive 10 minutes early. Cancellations are not accepted within 2 hours of the class.",
-    command: "apply-note",
-    kind: "suggestion",
+const draftRecord = computed(() => ({
+  data: { ...draft },
+  id: "course-draft",
+  label: copy.value.draftLabel,
+  fields: {
+    name: draft.name,
+    difficulty: draft.difficulty,
+    teacher: teacherName.value || draft.teacherId,
+    cards: draft.cards,
+    intro: draft.intro,
+    cover: draft.cover,
+    required: [
+      page.value.form.name,
+      page.value.form.teacher,
+      page.value.form.cards,
+      page.value.form.cover,
+    ],
+    missing: requiredMissing.value,
   },
-];
+}));
 ```
 
-The renderer does not belong to one adapter. It lives in `@plingjs/dom`; Vue, React, and plain DOM mount it from their own lifecycle shells:
+Expose business fields only. Do not dump the whole store or the form instance.
+
+The page computes `missing` with the same rule used by save. The agent and the person therefore see the same gaps.
+
+Open an empty form and ask what is missing. Fill the name and teacher, then ask again. The answer should come from `draftRecord`, and the list should shrink from four items to two.
+
+### Step 5: add one action per real control
+
+Native inputs use `fill`:
 
 ```vue
-<AgentGuideActions :items="guideActions" @command="onGuideCommand" />
+<input
+  v-model="draft.name"
+  v-tool="{
+    id: 'course_name',
+    action: 'fill',
+    label: page.form.name,
+    desc: copy.fieldDesc.name
+  }"
+/>
 ```
 
-It only emits the `command` the host declared. It does not know what a course is, does not write a field, and cannot open a second execution path. Because there is one renderer, wrapping, ellipsis, focus, and disabled states behave the same in all three adapters instead of drifting across three stylesheets.
+Selects use `select`. Their descriptions list the real options:
 
-The edge cases that matter:
-
-- while a write is running the button is `disabled`, but the label stays “Saving…” so the row does not disappear;
-- optional fields get an explicit “Skip” instead of forcing the user to invent a value;
-- on narrow screens the chip becomes `max-width: 100%`, the preview ellipsises first, and the verb never wraps;
-- English recommendations are usually longer, so the preview stays on one line instead of using `word-break` to grow the button;
-- this rule applies to the action row only. The conversation still shows the full recommendation. They are different layers of information.
-
-## Write into the original form
-
-The first version of the guide showed recommended content as if it were already in the page. The user could not tell whether a value was a suggestion or a real form value. The current version separates the two. The row states below describe the built-in guide contract; this example hides the card, but recommendations and commands follow the same rules:
-
-- the page form remains the only input source;
-- a recommendation carries `suggested` status and says it has not been written;
-- choosing “Use” writes the value into the existing control and changes the state to `current`;
-- if the user edits the form directly, the next guide pass reads the new page value.
-
-The field list is derived from the page's current values. There is no `status` / `badge` row template and no step counter:
-
-```ts
-const guideField = computed(() => {
-  const gaps = courseCreateFieldNodes(locale, draft, teachers, skipped.value);
-  return gaps.find((field) => field.required && !field.filled && !field.skipped)
-    ?? gaps.find((field) => !field.filled && !field.skipped);
-});
+```vue
+<select
+  :value="draft.teacherName"
+  v-tool="{
+    id: 'course_teacher',
+    action: 'select',
+    label: page.form.teacher,
+    desc: copy.teacherDesc(teacherValues)
+  }"
+  @change="setTeacher(($event.target as HTMLSelectElement).value)"
+>
+  <option value="">{{ page.form.teacherPlaceholder }}</option>
+  <option v-for="teacher in teachers" :key="teacher.id" :value="teacher.name">
+    {{ teacher.name }} · {{ teacher.subject }}
+  </option>
+</select>
 ```
 
-The action row uses that gap to offer a short action: locate the current field, use a suggestion, or skip an optional value. A review action appears only when every required field is present. Ten inputs do not become ten steps; field-level differences stay in the field list.
+`teacherValues` comes from page data. When the teacher list changes, the action description changes with it.
 
-If a suggestion is wrong, the user does not have to reject it first. They can type directly into the page. The guide reads the new page value, and a later “Use” action does not overwrite what the user already entered.
+Custom controls follow their real interaction. Difficulty is five stars, so each star is one click action:
 
-The button does not open another input. It writes values into the existing controls, scrolls to the field, and marks it on the form. The user sees “fill here”, not a chat message claiming that a field was located.
+```vue
+<button
+  v-for="score in 5"
+  :key="score"
+  type="button"
+  v-tool="{
+    id: `course_difficulty_${score}`,
+    kind: 'write',
+    label: `${page.form.difficulty} ${score}`,
+    desc: copy.difficultyDesc(score)
+  }"
+  @click="setDifficulty(score)"
+>
+  ★
+</button>
+```
 
-The page handles explicit commands only; it does not parse natural language:
+Upload stays with the person. Use `handoff`:
+
+```vue
+<button
+  class="upload-tile"
+  type="button"
+  v-tool="{
+    id: 'course_cover',
+    kind: 'write',
+    label: page.form.cover,
+    desc: copy.coverDesc,
+    handoff: {
+      reason: copy.coverHandoff,
+      expect: { desc: copy.coverExpect, check: () => draft.cover }
+    }
+  }"
+  @click="coverInput?.click()"
+>
+  <!-- upload tile -->
+</button>
+```
+
+Try one complete request:
+
+```text
+Create prenatal yoga with Chen Jing, 2 stars, monthly card, write the intro
+```
+
+The agent should open the real dialog and call the name, teacher, difficulty, card and introduction actions. It must not write values into a hidden object.
+
+Then ask:
+
+```text
+Where do I upload the cover?
+```
+
+The agent should call `pling_locate`, scroll the upload tile into view and highlight it. The file picker must not open by itself; the person still chooses the file.
+
+### Step 6: verify save by reading the page back
+
+A save is not complete because a function returned without an error. Add `expect`:
 
 ```ts
-function onGuideCommand(command: string): void {
-  if (command === "save-course") void saveCourse();
-  else if (command === "resume-editing") resumeEditing();
-  else if (command === "pick-cover") void pickCover();
-  else if (command === "locate-field") locateField(guideField.value);
-  else if (command === "use-suggestion") useSuggestion(guideField.value);
-  else if (command === "skip-field") skipField(guideField.value);
-  else if (command === "start-review") startReview();
-  else if (command === "focus-save") focusSave();
+const saveTool = computed(() => ({
+  id: "save_course",
+  kind: "write",
+  label: page.value.form.save,
+  desc: copy.value.saveDesc,
+  run: () => saveCourse(),
+  expect: {
+    desc: copy.value.saveExpect,
+    check: () => courses.value[0]?.id === newCourseId.value,
+  },
+}));
+```
+
+`saveCourse()` remains the page's original handler. It validates required fields, creates the course and puts the new record first.
+
+`expect` runs after the action returns. If the new course is not first, the save fails. The agent cannot report success or complete the goal.
+
+Check four things:
+
+1. save without a cover and the page reports the missing cover;
+2. upload the cover and save, and the new course appears first;
+3. inspect the action result and confirm that `expect` passed;
+4. refresh the page and confirm that the record came from the page's save logic, not from the chat transcript.
+
+### Step 7: add a goal only when continuity is required
+
+Enter this step only when the first six steps are insufficient. The usual reasons are a dialog that can close, a person who leaves and returns, or an external agent that needs a fixed completion boundary.
+
+The complete task integration in Case 06 is three lines:
+
+```ts
+const pling = usePling();
+const disposeGoal = pling.task.goal(courseGoal(props.locale));
+onBeforeUnmount(disposeGoal);
+```
+
+`courseGoal()` contains only the outcome, boundaries and success criteria:
+
+```ts
+export function courseGoal(locale: Locale): TaskGoalInput {
+  return {
+    id: "course.create",
+    title: locale === "zh" ? "创建课程" : "Create a course",
+    goal: "Open the real form, fill what the person supplied, ask them to upload the cover, save, then read the catalogue back and confirm the new course is first.",
+    constraints: [
+      "The page's actions are the only way to operate it; do not invent field names, selectors or a second form.",
+      "Fill only what the person supplied or explicitly delegated; ask when unsure.",
+      "The person must upload the cover; never choose a local file for them.",
+      "Questions, corrections, pauses and abandonment take precedence over filling the form.",
+    ],
+    successCriteria: [
+      "The new course appears first in the catalogue",
+      "Name, teacher, eligible cards and cover match what the person confirmed",
+      "The save action read the catalogue back and confirmed the new record",
+    ],
+    examples: ["Create prenatal yoga with Chen Jing, 2 stars, monthly card, write the intro"],
+  };
 }
 ```
 
-Deciding whether the user wants to create a course or first ask a question is the model's job. The page only executes explicit commands such as “locate the course name” or “use this suggestion”. A mid-task question, correction, or pause therefore cannot be mistaken for the next step.
+Do not add `fields`, `steps`, `controller` or a save callback. Fields come from the real page. Save comes from `save_course`. The goal only keeps the job alive across page changes.
 
-When the assistant opens the task with field values, the page also has to sync them back into the original form. This example does that in `onActivate`:
+Check the lifecycle:
 
-```ts
-function applyTaskRunValues(task: ActiveGuidedTask): void {
-  const values = task.state.snapshot?.values;
-  if (!values) return;
-  if (values.name !== undefined) draft.name = String(values.name ?? "");
-  if (values.teacherId !== undefined) {
-    draft.teacherId = String(values.teacherId ?? "");
-    draft.teacherName = teachers.find((teacher) => teacher.id === draft.teacherId)?.name ?? "";
-  }
-  // Apply the remaining fields in the same way.
-}
-```
+1. start the task and let the agent open the dialog;
+2. close the dialog and ask what is still missing;
+3. in Case 06 the goal remains active and the agent can reopen the form;
+4. Case 07 has no goal, so the agent must reason from the current page;
+5. after save and a passed `expect`, the agent calls `pling_complete_task`.
 
-The page remains the source of truth. If the user edits the form by hand, the next step reads the current page value, not the initial example from the task definition.
+### Step 8: use the advanced API only when page actions are insufficient
 
-## Cancel, and survive a context change
+Advanced `TaskDefinition` and `TaskController` solve different problems:
 
-The task menu and the model can both emit a cancel command:
+- field types, ranges, patterns or business validation;
+- asynchronous lookup and candidate confirmation for large sets;
+- several actions in a fixed order over shared values;
+- tasks that run in a host without a UI.
 
-```ts
-const guide: TaskGuideDefinition = {
-  taskId: "course.create",
-  title: "Create a course",
-  cancel: { label: "Cancel task", command: "cancel-task" },
-  agent: { cancel: "cancel-task" },
-  // ...
-};
-```
+They do more, and they add a second field definition. A single-page form does not need them. Make the page actions work first, then decide whether these capabilities are actually missing.
 
-The page calls `pling.task.deactivate()` when it receives `cancel-task`. The guide disappears and the controller run is cancelled, so no panel is left looking active after the run has ended. Cancelling does not roll back values already written into the form, because the page is the source of truth the user is editing.
+## Common mistakes
 
-If a task closes a modal, moves to a detail page, or briefly leaves the scope that opened it, register it with `keepActive`:
+### The page opens the dialog for the agent
 
-```ts
-pling.task.define({
-  definition: courseDefinition,
-  guide: courseGuide,
-  controller,
-  scope: "create-course-form",
-  autoStart: true,
-  keepActive: true,
-  // ...
-});
-```
+If the page sets `modalOpen = true` on load, the agent never has to find and click the real button. A task should also start on the catalogue instead of presenting an already-open form.
 
-`keepActive` applies only to a task explicitly started by a person or the assistant; it does not make an auto-started task stick to every page. It prevents a temporary context mismatch from closing the run. Stage transitions, unsaved-form protection, and branching across pages still belong to the business flow, not to a single boolean.
+### A custom control gets a hidden input
 
-## Make human handoff explicit
+A hidden input looks convenient, but it creates a second interaction. The person clicks a star while the agent writes a hidden field, and the two states drift. Declare the control's real behaviour.
 
-Choosing a cover reads a local file, so the assistant should not pick it. The cover is required, so the guide never invents a boolean value; it points to the real upload control and the action row keeps only “Upload cover”, with no “continue”.
+### Action descriptions omit allowed values
 
-The task enters review only after the page re-reads every value from the file input and the original form. This pause is part of the boundary, not a failure. Without it the flow looks faster, but the user discovers the missing required action at the very end.
+The teacher list comes from page data, but the description does not name the teachers. The model has to guess and fails. Generate the description from page data so both change together.
 
-The review reads the current name, teacher, cards, cover, deduction, and price from the page. Only when those values are valid does the action row offer “Confirm save”; clicking it runs `create_course`.
+### `expect` only checks for an exception
 
-## Verify from the page
+A save function that did not throw has not necessarily changed the business state. Read a page result, such as whether the new record is first. Without that evidence, the agent cannot claim success.
 
-A successful action result is not the same as a completed business operation. After the write, the page checks that the new course is first in the catalogue and that its visible values match the reviewed values.
+### Page code contains regex intent matching
 
-```ts
-const result = await controller.run();
-if (result.status === "done" && courses.value[0]?.id === newCourseId.value) {
-  modalOpen.value = false;
-  reviewOpen.value = false;
-  return true;
-}
-```
+`if (/create course/.test(text)) openCreate()` treats a question as a command. Let the model understand intent. The page provides actions and state.
 
-The completion card reflects that read-back, not a canned success message.
+### The goal repeats the field schema
 
-## Check it in the browser
+A second `fields` array makes the form a second source of truth. A renamed field, a changed option or a new validation rule will drift. A goal manages lifecycle, not a form schema.
 
-Open the [Vue 3 create-course example](/demos/course-workspace-vue3/?lang=en) and verify:
+## Final result
 
-- The first screen contains the course catalogue and the create-course form, not unrelated admin modules.
-- The chat card has no inputs, selects, or textareas.
-- Opening the create-course dialog activates the task; the chat does not show a separate task card or field rail.
-- Entering “Pregnancy yoga, Chen, 2 stars, write the intro” fills four fields at once and asks only for the missing eligible cards.
-- Saying “change the difficulty to 4 stars” updates only that value, without asking for the name or teacher again.
-- An unknown teacher produces a list of available teachers and marks the teacher field on the form; it is not silently replaced.
-- An unclear correction such as “change it for me” asks which field to change.
-- Entering “advanced yoga, 2 stars, any teacher, monthly card” uses the recommended teacher and keeps the course name “advanced yoga”.
-- Saving without a cover stops on the cover step with a clear message.
-- After selecting a cover, saving puts the new course first; the deduction renders as `1`, not `1.0`.
-- Choosing “Do it again” creates a second course while the first one stays in the catalogue, and the transcript still scrolls up and down once it overflows.
-- There are no console errors during chat or page interaction.
+After the first six steps, the page can create a course:
 
-## Add it to another page
+| The person says | The agent does | The page responds |
+| --- | --- | --- |
+| “Create prenatal yoga with Chen Jing, 2 stars, monthly card” | Calls `new_course`, then fills the matching fields | The dialog opens and the real form shows the supplied values |
+| “What is missing?” | Reads `missing` from `draftRecord` | Reports only the real gaps |
+| “Where do I upload the cover?” | Calls `pling_locate` | Scrolls to and highlights the upload tile |
+| The person chooses a cover and says “save” | Calls `save_course` and waits for `expect` | The new course becomes first in the catalogue |
+| The read-back passes | Reports the result | The list matches the page state |
 
-Do not copy the UI. Follow this order:
+After step seven, closing the dialog no longer loses the goal. The agent can reopen the form and continue. It calls `pling_complete_task` only after save and read-back succeed.
 
-1. Describe fields, actions, and read-back evidence with `TaskDefinition`.
-2. Describe user-facing steps, summaries, and command names with `TaskGuideDefinition`.
-3. Register the task with `pling.task.define()` and declare `route`, `scope`, and `autoStart`.
-4. Handle command names in the page: write into existing controls, locate fields, open dialogs, or invoke the task controller.
-5. Read business data back before showing completion.
+## Verify in the browser
 
-When a task should be selected by a person, or only start from a detail page or row, declare `route`, `scope`, or `requiresRecord`. Do not infer availability from ad-hoc page state; the catalog evaluates these declarations.
+Open [Case 06](/demos/course-workspace-vue3/?lang=en) and [Case 07](/demos/course-create-directives-vue3/?lang=en). Check:
 
-React 19, React 16.3, Vue 2.7, and vanilla reuse the same task definition, field derivation, and action row, replacing only the adapter mount. All five versions now provide the same create-course flow, human confirmation, and read-back verification.
+- The dialog is closed on load and the page starts on the catalogue.
+- `Create pregnancy yoga, Chen Jing, 2 stars, monthly card, write the intro` makes the agent click **New course**; the page button opens the dialog.
+- Name, teacher, difficulty, eligible cards and introduction go into the real form with the same styling as manual input.
+- `What is missing?` is answered from the draft record, not guessed.
+- `Where do I upload the cover?` scrolls to and highlights the upload tile. The file picker does not open by itself.
+- After the person chooses a cover and saves, the new course is first in the catalogue.
+- The goal completes only after save; completing writes no business data.
+- Close the dialog and ask what is missing. Case 06 keeps the goal active; Case 07 has no task layer.
+- Cancel removes the goal without rolling back values already in the form.
+- Long chats still scroll and the console stays clean.
+
+## Boundary with the advanced API
+
+`pling.task.goal()` is the default task integration. It has no field table and no step controller. Fields come from the real page; execution comes from real actions.
+
+`pling.task.define()` remains for cases that genuinely need declarations:
+
+- field types, ranges, patterns or business validation;
+- asynchronous lookup and candidate confirmation for large sets;
+- several actions executed in a fixed order over shared values;
+- tasks that run in a host without a UI.
+
+Those APIs solve “page actions cannot express this”, not “agent integration must start with a task”. Most single-page forms do not need them.
+
+See the [guided task API](/reference/guided-task-api) for every parameter, state and method.

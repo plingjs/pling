@@ -1,20 +1,60 @@
 {
   "id": "course-workspace-vue3",
-  "title": "Case 06: Guided task — create a course (Vue 3)",
-  "titleZh": "案例06：引导任务创建课程（Vue 3）",
-  "eyebrow": "Case 06 · Guided workflow",
-  "eyebrowZh": "案例06 · 引导式任务",
-  "summary": "A realistic course page whose only job is creating a course. The assistant understands a whole description through task working memory, asks only for real gaps, points at page fields, and reads the saved record back.",
-  "summaryZh": "一个真实的课程页面，只做“创建课程”这件事。助手基于任务工作记忆理解整段描述，只追问真正的缺口、定位页面字段，并在保存后回读课程列表。",
+  "title": "Case 06: A persistent goal — create a course (Vue 3)",
+  "titleZh": "案例06：持久目标创建课程（Vue 3）",
+  "eyebrow": "Case 06 · Persistent goal",
+  "eyebrowZh": "案例06 · 持久目标",
+  "summary": "The same real course page, plus one goal. The goal has no fields, steps, controller or form tools: it keeps the outcome alive while the agent opens the real create dialog, fills the actual controls, asks for the cover, saves and verifies the catalogue.",
+  "summaryZh": "同一张真实课程页面，只多一个目标。目标不包含字段、步骤、控制器或表单工具：它让结果在弹窗关闭后继续存在；助手自己打开新建弹窗、操作真实控件、请用户上传封面、保存并回读课程库。",
   "url": "/demos/course-workspace-vue3/",
   "open": "src/CourseWorkspace.vue",
   "files": [
     {
       "path": "src/CourseWorkspace.vue",
       "label": "CourseWorkspace.vue",
-      "role": "Original page, task activation, and command handlers",
-      "roleZh": "原页面、任务激活与命令处理",
+      "role": "The complete task integration: one goal registration",
+      "roleZh": "任务接入的全部代码：一次目标注册",
       "lang": "vue"
+    },
+    {
+      "path": "shared/course-create/CourseCreatePage.vue",
+      "scope": "workspace",
+      "label": "CourseCreatePage.vue",
+      "role": "The real page: regions, records and one action per control",
+      "roleZh": "真实页面：区域、记录，以及每个控件一条动作",
+      "lang": "vue"
+    },
+    {
+      "path": "shared/course-create/task.ts",
+      "scope": "workspace",
+      "label": "task.ts",
+      "role": "Goal, constraints, success criteria and examples",
+      "roleZh": "目标、约束、成功条件与示例",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/copy.ts",
+      "scope": "workspace",
+      "label": "copy.ts",
+      "role": "Page action descriptions and assistant copy",
+      "roleZh": "页面动作说明与助手文案",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/model.ts",
+      "scope": "workspace",
+      "label": "model.ts",
+      "role": "Course rules and mock catalogue",
+      "roleZh": "课程规则与模拟数据",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/page.ts",
+      "scope": "workspace",
+      "label": "page.ts",
+      "role": "Page copy and seed values",
+      "roleZh": "页面文案与初始值",
+      "lang": "ts"
     },
     {
       "path": "src/main.ts",
@@ -31,50 +71,10 @@
       "lang": "css"
     },
     {
-      "path": "shared/course-create/task.ts",
-      "scope": "workspace",
-      "label": "task.ts",
-      "role": "Executable task definition",
-      "roleZh": "可执行任务定义",
-      "lang": "ts"
-    },
-    {
-      "path": "shared/course-create/guide.ts",
-      "scope": "workspace",
-      "label": "guide.ts",
-      "role": "Framework-neutral guided-task presentation",
-      "roleZh": "框架无关的引导任务展示定义",
-      "lang": "ts"
-    },
-    {
-      "path": "shared/course-create/model.ts",
-      "scope": "workspace",
-      "label": "model.ts",
-      "role": "Course rules and mock catalogue",
-      "roleZh": "课程规则与模拟数据",
-      "lang": "ts"
-    },
-    {
-      "path": "shared/course-create/copy.ts",
-      "scope": "workspace",
-      "label": "copy.ts",
-      "role": "Task copy",
-      "roleZh": "任务文案",
-      "lang": "ts"
-    },
-    {
-      "path": "shared/course-create/page.ts",
-      "scope": "workspace",
-      "label": "page.ts",
-      "role": "Page copy and seed values",
-      "roleZh": "页面文案与初始值",
-      "lang": "ts"
-    },
-    {
       "path": "README.md",
       "label": "README.md",
-      "role": "Purpose, architecture, and adaptation steps",
-      "roleZh": "用途、架构与接入步骤",
+      "role": "Why the goal exists, what it does not do, and when to choose it",
+      "roleZh": "目标层为什么存在、不做什么，以及何时选它",
       "lang": "markdown"
     },
     {
@@ -86,108 +86,98 @@
     }
   ],
   "focus": {
-    "original-form": {
-      "selector": "[data-field=\"name\"]",
-      "match": "data-field=\"name\""
+    "goal-only": {
+      "selector": "src/CourseWorkspace.vue",
+      "match": "pling.task.goal(courseGoal"
     },
-    "task-contract": {
-      "selector": "shared/course-create/task.ts",
-      "match": "export function createCourseTaskDefinition"
+    "open-create": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: 'new_course'"
     },
-    "presentation-contract": {
-      "selector": "shared/course-create/guide.ts",
-      "match": "export function createCourseGuideDefinition"
+    "form-scope": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: 'create-course-form'"
     },
-    "generic-guide": {
-      "selector": ".pling-guide",
-      "match": "pling.task.define"
+    "draft-record": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "v-record=\"draftRecord\""
     },
-    "command-handler": {
-      "selector": "async function onCommand",
-      "match": "async function onCommand"
+    "field-tool": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: 'course_name'"
     },
-    "assistant-inline": {
-      "selector": ".assistant-agent",
-      "match": "<AgentInline"
+    "cover-handoff": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "handoff: {"
+    },
+    "save-tool": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: \"save_course\""
+    },
+    "read-back": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "check: () => courses.value[0]?.id === newCourseId.value"
     }
   },
   "guide": {
-    "title": "One page, one job, one reusable guide",
-    "titleZh": "一页一件事，一套可复用的引导",
+    "title": "A goal that survives the page",
+    "titleZh": "目标在页面变化后仍然存在",
     "intro": [
-      "A Pling integration needs three things: declare the task fields, give the task a thin guide, and write values back into the existing form while an existing action saves. The assistant reads task working memory; the page only handles explicit UI commands.",
-      "This example deliberately avoids a multi-module admin dashboard. The page is the original course form. The model understands the full sentence, calls narrow task tools, and leaves the final save to the person."
+      "The goal is the only thing this case adds to Case 07. It has no fields, steps, controller, form surface or business callbacks. The agent still sees the real page: the create button, every field, the cover handoff and the save action.",
+      "That small layer answers four questions the DOM cannot: why the work continues after the modal closes, where the task can be started, how it is cancelled, and when the outcome is actually complete."
     ],
     "introZh": [
-      "接入本身只有三件事：声明任务字段、给任务一个很薄的 guide、把值写回现有表单并交给已有动作保存。助手读取任务工作记忆，页面只执行明确的界面命令。",
-      "这个示例刻意不混入多个后台模块。页面就是原来的创建课程表单；模型理解整段描述、调用少量窄工具，最终保存仍由人确认。"
+      "这个案例相对案例07只多了一个目标。它没有字段、步骤、控制器、表单 surface，也没有业务回调。助手看到的仍然是真实页面：新建按钮、每个字段、封面上传和保存动作。",
+      "这一小层回答 DOM 回答不了的四个问题：弹窗关闭后为什么这件事还在继续、任务从哪里开始、怎样取消，以及什么时候才算真正完成。"
     ],
     "steps": [
       {
-        "title": "Minimum: register a task and its fields",
-        "titleZh": "最小接入：注册任务与字段",
-        "body": "The minimum is one TaskDefinition (id, title, fields, save step), a thin guide (one step, declared fields, and the save action), and one registration. route, scope, and autoStart only decide when the task is available.",
-        "bodyZh": "最小接入是一个 TaskDefinition（id、title、fields、保存步骤）、一个很薄的 guide（一个步骤、声明字段、保存动作），再加一次注册。route、scope、autoStart 只决定任务何时可用。",
+        "title": "Register the goal, not the workflow",
+        "titleZh": "注册目标，而不是工作流",
+        "body": "This is the whole task integration. `goal` accepts an outcome, boundaries, success criteria and examples. It deliberately rejects field schemas, step controllers and page callbacks.",
+        "bodyZh": "这就是任务接入的全部代码。`goal` 只接收结果、边界、成功条件和示例，刻意不接受字段 schema、步骤控制器和页面回调。",
         "file": "src/CourseWorkspace.vue",
-        "match": "pling.task.define",
-        "lines": 24
-      },
-      {
-        "title": "Add the goal and its boundaries",
-        "titleZh": "补上目标与边界",
-        "body": "objective, constraints, and successCriteria tell the assistant why the task exists, what it must not cross, and when it is genuinely done. A minimum integration can ship with fields only; these are the upgrades that make behaviour more reliable.",
-        "bodyZh": "objective、constraints、successCriteria 让助手理解为什么做、不能越过什么、何时算真正完成。最小接入可以只写 fields；这些是让行为更稳的增强项。",
-        "file": "shared/course-create/task.ts",
-        "match": "export function createCourseTaskDefinition",
-        "lines": 24
-      },
-      {
-        "title": "Let the model use working memory",
-        "titleZh": "让模型使用任务工作记忆",
-        "body": "The active task projects its objective, constraints, current values and gaps into the model context. A whole sentence can update several declared fields through pling_update_task; questions and corrections stay normal conversation.",
-        "bodyZh": "当前任务会把目标、约束、现有值与缺口投影到模型上下文。整段描述可以通过 pling_update_task 一次更新多个已声明字段；提问与修正仍然是普通对话。",
-        "file": "src/CourseWorkspace.vue",
-        "match": "function applyTaskValues",
-        "lines": 24
-      },
-      {
-        "title": "Expose page-owned controls",
-        "titleZh": "暴露页面自有控制",
-        "body": "The guide names the review, confirmation and cancel commands that the model may invoke. These commands only move attention or open a read-only review; they never execute the business write.",
-        "bodyZh": "guide 声明模型可以调用的核对、确认与取消命令。这些命令只移动注意力或打开只读核对，不会执行业务写入。",
-        "file": "shared/course-create/guide.ts",
-        "match": "agent: {",
-        "lines": 5
-      },
-      {
-        "title": "Customise what the user sees (optional)",
-        "titleZh": "自定义用户看到什么（可省略）",
-        "body": "A full custom guide is optional. The minimum guide is one step, declared fields, and a save action; this demo adds explicit page commands and read-back evidence on top of that minimum.",
-        "bodyZh": "完整定制 guide 是可选的。最小 guide 只有一个步骤、声明字段和保存动作；本示例在此基础上增加了显式页面命令和回读证据。",
-        "file": "shared/course-create/guide.ts",
-        "match": "export function createCourseGuideDefinition",
-        "lines": 20
-      },
-      {
-        "title": "Write into the original controls",
-        "titleZh": "写回原控件",
-        "body": "Command handlers update the existing draft or mark the real field on the form. The chat never grows a second copy of the form; the original page remains the source of truth.",
-        "bodyZh": "命令处理函数更新现有草稿，或在表单上标记真实字段。聊天里不会再长出一套表单，原页面始终是事实来源。",
-        "file": "src/CourseWorkspace.vue",
-        "match": "async function onCommand",
-        "lines": 34
-      },
-      {
-        "title": "Verify from the page, not from the promise",
-        "titleZh": "从页面验证，而不是相信返回值",
-        "body": "After create_course runs, the page checks that the new record is first in the catalogue. Completion is based on that read-back, not merely on an action result.",
-        "bodyZh": "create_course 执行后，页面确认新记录已经位于课程库第一位。完成态依据这次回读，而不是只相信动作返回值。",
-        "file": "src/CourseWorkspace.vue",
-        "match": "courses.value[0]?.id === newCourseId.value",
+        "match": "pling.task.goal(courseGoal",
         "lines": 8
+      },
+      {
+        "title": "Land on the catalogue, not an open dialog",
+        "titleZh": "先落在课程库，而不是打开的弹窗",
+        "body": "The page starts with the real `new_course` action visible and the dialog closed. Starting the goal never calls page code; the agent must discover the button and click it.",
+        "bodyZh": "页面初始只显示真实的 `new_course` 动作，弹窗是关闭的。启动目标不会调用页面代码；助手必须自己发现并点击新建按钮。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "id: 'new_course'",
+        "lines": 8
+      },
+      {
+        "title": "Let the real form be the schema",
+        "titleZh": "让真实表单成为 schema",
+        "body": "Once the dialog opens, the agent operates `course_name`, `course_teacher`, `course_cards`, the star buttons and the text areas. There is no second field list to keep in sync.",
+        "bodyZh": "弹窗打开后，助手操作 `course_name`、`course_teacher`、`course_cards`、星级按钮和文本框。没有第二份字段表需要同步。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "id: 'course_name'",
+        "lines": 8
+      },
+      {
+        "title": "Keep the goal when the dialog closes",
+        "titleZh": "弹窗关闭后目标仍然存在",
+        "body": "Closing the dialog removes the field actions from the DOM, but not the goal. KeepActive is the default for `goal()`, so the agent can continue a conversation, reopen the form or ask the person to upload the cover.",
+        "bodyZh": "关闭弹窗会移除字段动作，但不会移除目标。`goal()` 默认 keepActive，因此助手可以继续对话、重新打开表单，或请用户上传封面。",
+        "file": "shared/course-create/task.ts",
+        "match": "cover",
+        "lines": 4
+      },
+      {
+        "title": "Verify through the page, then complete the goal",
+        "titleZh": "从页面验证，再完成目标",
+        "body": "`save_course` declares an `expect` check that reads the catalogue back. Only after that evidence exists should the agent call the task completion tool; completion closes the goal and never writes business data.",
+        "bodyZh": "`save_course` 声明了 `expect`，会回读课程库。只有这条证据成立后，助手才应调用任务完成工具；完成动作只关闭目标，不写业务数据。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "check: () => courses.value[0]?.id === newCourseId.value",
+        "lines": 6
       }
     ],
-    "note": "A minimum integration can stop after one TaskDefinition, a thin guide, and one pling.task.define. This demo adds explicit model-callable guide commands and read-back verification; it contains no natural-language intent parser.",
-    "noteZh": "最小接入可以只写一个 TaskDefinition、一个薄 guide 和一次 pling.task.define；本示例额外声明模型可调用的引导命令并回读验证，不包含自然语言意图解析器。"
+    "note": "Compare with Case 07. The page is identical. Case 06 adds one goal so the outcome survives closing the modal; Case 07 keeps only the three directives. Neither path adds a second form or a second execution channel.",
+    "noteZh": "和案例07对照：页面完全相同。案例06多一个目标，让结果在弹窗关闭后仍然存在；案例07只保留三个指令。两条路径都不会增加第二张表单或第二条执行通道。"
   }
 }

@@ -603,3 +603,136 @@ describe("guided task catalog", () => {
     catalog.destroy();
   });
 });
+
+describe("minimal goal tasks", () => {
+  it("registers a compact lifecycle card without fields, a controller, or form tools", async () => {
+    const { registry, catalog } = setup();
+    const dispose = catalog.goal({
+      id: "course.create",
+      title: "Create a course",
+      goal: "Create the course on the real page and verify it appears first.",
+      constraints: ["The person uploads the cover."],
+      successCriteria: ["The new course is first in the catalogue."],
+      examples: ["Create prenatal yoga"],
+    });
+
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+    catalog.activate("course.create", { startedBy: "agent" });
+
+    const active = catalog.active()!;
+    expect(active.goal).toBe(true);
+    expect(active.controller).toBeUndefined();
+    expect(active.definition.fields).toBeUndefined();
+    expect(active.definition.steps).toBeUndefined();
+    expect(active.definition.objective).toContain("real page");
+    expect(active.guide).toMatchObject({ compact: true, taskId: "course.create" });
+    expect(active.guide?.steps).toEqual([]);
+    expect(active.state.snapshot).toMatchObject({
+      taskId: "course.create",
+      mode: "agent",
+      status: "running",
+      fields: [],
+      values: {},
+      steps: [],
+    });
+    expect(active.state.completed).toBe(false);
+
+    expect(registry.get(catalog.updateActionId)?.isAvailable?.()).toMatchObject({ available: false });
+    expect(registry.get(catalog.focusActionId)?.isAvailable?.()).toMatchObject({ available: false });
+    expect(registry.get(catalog.completeActionId)?.isAvailable?.()).toBe(true);
+
+    dispose();
+    catalog.destroy();
+  });
+
+  it("keeps an explicitly started goal across route and scope changes, then completes it", async () => {
+    const { registry, catalog } = setup();
+    catalog.goal({
+      id: "course.create",
+      title: "Create a course",
+      goal: "Create the course on the real page and verify it appears first.",
+      route: "/courses",
+      scope: "course-dialog",
+    });
+    registry.setPage({ path: "/courses", name: "courses" });
+    registry.setAutoScopes(["course-dialog"]);
+    await Promise.resolve();
+
+    catalog.activate("course.create", { startedBy: "agent" });
+    registry.setAutoScopes([]);
+    registry.setPage({ path: "/lessons", name: "lessons" });
+    await Promise.resolve();
+
+    expect(catalog.available()).toHaveLength(0);
+    expect(catalog.active()?.id).toBe("course.create");
+
+    expect(catalog.complete()).toBe(true);
+    expect(catalog.active()?.state.completed).toBe(true);
+    expect(catalog.active()?.state.snapshot?.status).toBe("done");
+
+    const complete = registry.get(catalog.completeActionId)!;
+    expect(complete.isAvailable?.()).toMatchObject({ available: false });
+    catalog.destroy();
+  });
+
+  it("lets the model close a goal without executing a business write", async () => {
+    const { registry, catalog, invoke } = setup();
+    catalog.goal({
+      id: "course.create",
+      title: "Create a course",
+      goal: "Create the course on the real page and verify it appears first.",
+    });
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+    catalog.activate("course.create", { startedBy: "agent" });
+
+    const complete = registry.get(catalog.completeActionId)!;
+    const result = await complete.run?.({ task: "course.create" });
+
+    expect(result).toEqual({ taskId: "course.create", status: "done", completed: true });
+    expect(invoke).not.toHaveBeenCalled();
+    expect(catalog.active()?.state.snapshot?.status).toBe("done");
+    catalog.destroy();
+  });
+
+  it("cancels a goal from its compact guide without writing anything", async () => {
+    const { registry, catalog, invoke } = setup();
+    catalog.goal({ id: "course.create", title: "Create a course", goal: "Create it." });
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+    catalog.activate("course.create");
+
+    await catalog.command({
+      action: { label: "Cancel task", command: "course.create:cancel" },
+      step: null,
+      stepIndex: 0,
+      done: false,
+    });
+
+    expect(catalog.active()).toBeNull();
+    expect(invoke).not.toHaveBeenCalled();
+    catalog.destroy();
+  });
+
+  it("tells the model to operate page actions and complete the goal only after verification", async () => {
+    const { registry, catalog } = setup();
+    catalog.goal({
+      id: "course.create",
+      title: "Create a course",
+      goal: "Create the course on the real page and verify it appears first.",
+      successCriteria: ["The new course is first in the catalogue."],
+    });
+    registry.setPage({ path: "/courses", name: "courses" });
+    await Promise.resolve();
+    catalog.activate("course.create", { startedBy: "agent" });
+
+    const text = renderTaskContext(catalog);
+    expect(text).toContain("Mode: goal only");
+    expect(text).toContain("Do not use the task update tool");
+    expect(text).toContain("pling_complete_task");
+    expect(text).toContain("The new course is first in the catalogue.");
+    expect(text).toContain("a goal is orientation, not permission");
+    catalog.destroy();
+  });
+});

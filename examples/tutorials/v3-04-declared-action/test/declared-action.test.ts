@@ -82,7 +82,7 @@ describe("V3-04 · your first declared action", () => {
     await nextTick();
 
     await openDock(wrapper);
-    await wrapper.get(".dock__chat .composer input").setValue("Mark “Book the design review” as completed.");
+    await wrapper.get(".dock__chat .composer textarea, .dock__chat .composer input").setValue("Mark “Book the design review” as completed.");
     await wrapper.get(".dock__chat form").trigger("submit");
     await waitFor(() => wrapper.find(".dock__chat").text().includes("Marked the design review"));
 

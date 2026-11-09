@@ -11,7 +11,7 @@ Pling is not a browser agent, a replacement for backend APIs, or a generic click
 layer. It provides a bounded, auditable interface between a web application and
 an agent runtime. An action being visible never means it is authorized.
 
-> Status: `0.1.0-alpha.8`. Package APIs and the Surface protocol may still change.
+> Status: `0.1.0-alpha.9`. Package APIs and the Surface protocol may still change.
 > Check [releases](https://plingjs.dev/releases/) before relying on a production deployment.
 
 ## What it provides

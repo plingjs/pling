@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { useData } from "vitepress";
 import { DEMO_EXAMPLES, type DemoFile, type DemoGuideStep } from "virtual:pling-demo-data";
+import { useDemoOrigin } from "../demo-origin";
 
 const props = defineProps<{ id: string }>();
 const { lang } = useData();
@@ -48,10 +49,9 @@ const summary = computed(() => (isZh.value ? example.value?.summaryZh : undefine
 const guideTitle = computed(() => (isZh.value ? example.value?.guide.titleZh : undefined) ?? example.value?.guide.title ?? "");
 const guideIntro = computed(() => (isZh.value ? example.value?.guide.introZh : undefined) ?? example.value?.guide.intro ?? "");
 const guideNote = computed(() => (isZh.value ? example.value?.guide.noteZh : undefined) ?? example.value?.guide.note);
-const demoOrigin = ref("");
+const demoOrigin = useDemoOrigin();
 const launchUrl = computed(() => {
-  const origin = demoOrigin.value || (typeof window !== "undefined" ? window.location.origin : "https://plingjs.dev");
-  const url = new URL(example.value?.url ?? "/", origin);
+  const url = new URL(example.value?.url ?? "/", demoOrigin.value);
   if (example.value?.liveQuery) {
     for (const [key, value] of new URLSearchParams(example.value.liveQuery)) url.searchParams.set(key, value);
   }
@@ -100,14 +100,6 @@ watch(example, (value) => {
   mode.value = "preview";
   previewKey.value += 1;
   collapsedFolders.value = new Set();
-});
-
-onMounted(() => {
-  if (["localhost", "127.0.0.1"].includes(window.location.hostname) && window.location.port !== "5191") {
-    // Keep the hostname stable so HttpOnly SameSite cookies still work inside
-    // the docs iframe. Ports do not split the browser's site boundary.
-    demoOrigin.value = `${window.location.protocol}//${window.location.hostname}:5191`;
-  }
 });
 
 function toggleFolder(path: string): void {

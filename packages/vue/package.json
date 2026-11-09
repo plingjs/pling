@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/vue",
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.9",
   "private": false,
   "type": "module",
   "description": "Pling Vue adapter: v-tool/v-scope directives, coverage diagnostics, target resolution, visibility culling, and a debug panel.",

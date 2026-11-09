@@ -197,7 +197,7 @@ describe("<AgentDock> model settings", () => {
       (target.findComponent(AgentDock).vm as unknown as { runtime: AgentRuntime }).runtime;
     const oldRuntime = exposed(wrapper);
 
-    await wrapper.find(".dock__chat .composer input").setValue("first question");
+    await wrapper.find(".dock__chat .composer textarea, .composer input").setValue("first question");
     await wrapper.find(".dock__chat form").trigger("submit");
     await waitFor(() => wrapper.find(".dock__chat").text().includes("first answer"));
     expect(fetchMock).toHaveBeenCalledOnce();
@@ -219,7 +219,7 @@ describe("<AgentDock> model settings", () => {
     expect(window.sessionStorage.getItem(MODEL_SETTINGS_STORAGE_KEY)).toBeNull();
     expect(optionalLocalStorage()?.getItem(MODEL_SETTINGS_STORAGE_KEY) ?? null).toBeNull();
 
-    await wrapper.find(".dock__chat .composer input").setValue("second question");
+    await wrapper.find(".dock__chat .composer textarea, .composer input").setValue("second question");
     await wrapper.find(".dock__chat form").trigger("submit");
     await waitFor(() => wrapper.find(".dock__chat").text().includes("second answer"));
 

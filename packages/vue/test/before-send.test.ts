@@ -26,7 +26,7 @@ function setup(handler: (text: string) => { handled: boolean; reply?: string } |
 }
 
 async function send(wrapper: ReturnType<typeof mount>, text: string): Promise<void> {
-  await wrapper.find(".dock__chat .composer input").setValue(text);
+  await wrapper.find(".dock__chat .composer textarea, .composer input").setValue(text);
   await wrapper.find(".dock__chat form").trigger("submit");
   await nextTick();
   await new Promise((resolve) => setTimeout(resolve, 0));

@@ -164,7 +164,7 @@ const response = await surface.handle({
 });
 ```
 
-包住这次调用的适配器仍负责身份验证、HTTP、SSE、CORS、请求体上限与响应脱敏。`surface.plingjs.dev` 是演示端点，不是面向客户应用的共享代理。
+包住这次调用的适配器仍负责身份验证、HTTP、SSE、CORS、请求体上限与响应脱敏。`surface.plingjs.com` 是演示端点，不是面向客户应用的共享代理。
 
 ## 刻意不提供
 

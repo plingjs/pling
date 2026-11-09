@@ -1,6 +1,7 @@
 import {
   ActionError,
   type JsonSchema,
+  type Kind,
   type PageView,
   type Registry,
 } from "@plingjs/core";
@@ -16,6 +17,7 @@ import type {
   TaskGuideCommand,
   TaskGuideDefinition,
   TaskGuideField,
+  TaskGuideLabels,
   TaskGuideState,
   GuidedTaskView,
 } from "./task-guide";
@@ -60,6 +62,8 @@ export interface GuidedTaskRegistration {
   onActivate?: (task: ActiveGuidedTask) => void | Promise<void>;
   onDeactivate?: (task: ActiveGuidedTask) => void;
   onCommand?: (command: TaskGuideCommand, task: ActiveGuidedTask) => void | Promise<void>;
+  /** @internal Set by `goal()`. A goal has no controller and only tracks lifecycle. */
+  goal?: boolean;
 }
 
 export interface ActiveGuidedTask {
@@ -70,6 +74,8 @@ export interface ActiveGuidedTask {
   state: TaskGuideState;
   /** Who opened this run: the page context, a person, or the model choosing a registered task. */
   startedBy: "page" | "agent";
+  /** True for the compact, goal-only path created by `goal()`. */
+  goal?: boolean;
 }
 
 export interface GuidedTaskActivationOptions {
@@ -77,6 +83,36 @@ export interface GuidedTaskActivationOptions {
   values?: TaskValues;
   /** @internal Set by `pling_start_task`; page code normally leaves this as `page`. */
   startedBy?: "page" | "agent";
+}
+
+/**
+ * The minimal task contract.
+ *
+ * A goal names the outcome and its boundaries. It deliberately has no fields,
+ * steps, controller or page callbacks: the page's real actions remain the only
+ * way to read or write business UI. The catalog keeps the goal alive across
+ * modal changes and navigation, and exposes complete/cancel as task lifecycle
+ * tools rather than business operations.
+ */
+export interface TaskGoalInput {
+  id: string;
+  title: string;
+  /** The outcome the person is trying to reach. */
+  goal: string;
+  description?: string;
+  constraints?: readonly string[];
+  successCriteria?: readonly string[];
+  examples?: readonly string[];
+  risk?: Kind;
+  /** Limit where the goal can be started. Omit for the whole page. */
+  route?: GuidedTaskRoute;
+  /** Require active regions before the goal can be started. */
+  scope?: string | readonly string[];
+  /** Keep an explicitly started goal alive when its route/scope stops matching. Defaults to true. */
+  keepActive?: boolean;
+  labels?: TaskGuideLabels;
+  cancelLabel?: string;
+  stepSubtitle?: string;
 }
 
 export interface TaskCatalogOptions {
@@ -106,6 +142,14 @@ export interface TaskCatalog {
   readonly proposeSaveActionId: string;
   /** Model action that pauses or abandons the active task. */
   readonly cancelActionId: string;
+  /** Model action that marks a goal-only task complete. */
+  readonly completeActionId: string;
+  /**
+   * Register the minimal goal path. No fields, steps, controller, form tools or
+   * business callbacks are accepted; use `define()` only when those are truly
+   * required.
+   */
+  goal(input: TaskGoalInput): () => void;
   define(registration: GuidedTaskRegistration): () => void;
   get(id: string): GuidedTaskRegistration | undefined;
   list(): readonly GuidedTaskRegistration[];
@@ -114,6 +158,8 @@ export interface TaskCatalog {
   activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;
   deactivate(): void;
   command(command: TaskGuideCommand): boolean;
+  /** Mark the active goal-only task complete. Returns false for advanced tasks. */
+  complete(): boolean;
   views(): readonly GuidedTaskView[];
   refresh(): void;
   subscribe(listener: () => void): () => void;
@@ -126,6 +172,13 @@ const DEFAULT_FOCUS_ACTION_ID = "pling_focus_field";
 const DEFAULT_REVIEW_ACTION_ID = "pling_review_task";
 const DEFAULT_PROPOSE_SAVE_ACTION_ID = "pling_propose_save";
 const DEFAULT_CANCEL_ACTION_ID = "pling_cancel_task";
+const DEFAULT_COMPLETE_ACTION_ID = "pling_complete_task";
+
+interface GoalRunState {
+  status: "running" | "done";
+  startedAt: number;
+  finishedAt?: number;
+}
 
 function normalizedId(registration: GuidedTaskRegistration): string {
   const id = (registration.id ?? registration.definition.id).trim();
@@ -172,6 +225,8 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
   let autoSuppressedFor: string | null = null;
   let recomputeQueued = false;
   let destroyed = false;
+  const now = (): number => Date.now();
+  const goalRuns = new Map<string, GoalRunState>();
 
   const emit = (): void => {
     for (const listener of listeners) listener();
@@ -216,6 +271,26 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     } catch {
       state = {};
     }
+    if (registration.goal) {
+      const id = normalizedId(registration);
+      const run = goalRuns.get(id) ?? { status: "running" as const, startedAt: 0 };
+      const snapshot: TaskRunSnapshot = {
+        taskId: id,
+        title: registration.definition.title,
+        mode: "agent",
+        status: run.status,
+        fields: [],
+        values: {},
+        steps: [],
+        ...(run.startedAt ? { startedAt: run.startedAt } : {}),
+        ...(run.finishedAt ? { finishedAt: run.finishedAt } : {}),
+      };
+      return {
+        ...state,
+        snapshot: state.snapshot === undefined ? snapshot : state.snapshot,
+        completed: state.completed ?? run.status === "done",
+      };
+    }
     const snapshot = registration.controller?.snapshot() ?? null;
     return {
       ...state,
@@ -230,6 +305,7 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     ...(registration.controller ? { controller: registration.controller } : {}),
     state: stateOf(registration),
     startedBy: activeStartedBy,
+    ...(registration.goal ? { goal: true } : {}),
   });
 
   const validateValues = (registration: GuidedTaskRegistration, values: TaskValues | undefined): TaskValues => {
@@ -427,6 +503,9 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     explicitId = explicit ? id : null;
     autoSuppressedFor = null;
     start(registration, options?.values);
+    if (registration.goal) {
+      goalRuns.set(id, { status: "running", startedAt: now() });
+    }
     const task = activeTaskOf(registration);
     try {
       const result = registration.onActivate?.(task);
@@ -740,6 +819,7 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
   let offReviewAction: (() => void) | null = null;
   let offProposeSaveAction: (() => void) | null = null;
   let offCancelAction: (() => void) | null = null;
+  let offCompleteAction: (() => void) | null = null;
   let actionId = requestedActionId;
   let updateActionId =
     requestedActionId === DEFAULT_ACTION_ID ? DEFAULT_UPDATE_ACTION_ID : `${requestedActionId}_update`;
@@ -753,6 +833,10 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
       : `${requestedActionId}_propose_save`;
   let cancelActionId =
     requestedActionId === DEFAULT_ACTION_ID ? DEFAULT_CANCEL_ACTION_ID : `${requestedActionId}_cancel`;
+  let completeActionId =
+    requestedActionId === DEFAULT_ACTION_ID
+      ? DEFAULT_COMPLETE_ACTION_ID
+      : `${requestedActionId}_complete`;
 
   // The action appears only while this catalog has tasks. A page with no guided
   // tasks should not grow an always-unavailable tool, and multiple Pling
@@ -779,6 +863,7 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     reviewActionId = claim(reviewActionId);
     proposeSaveActionId = claim(proposeSaveActionId);
     cancelActionId = claim(cancelActionId);
+    completeActionId = claim(completeActionId);
     offStartAction = options.registry.bind({
       descriptor: {
         id: actionId,
@@ -856,12 +941,20 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
             reasonKey: "availability.noActiveTask",
           };
         }
-        const snapshot = registrations.get(activeId)?.controller?.snapshot();
+        const registration = registrations.get(activeId);
+        const snapshot = registration?.controller?.snapshot();
         if (snapshot && isTerminal(snapshot)) {
           return {
             available: false,
             reason: "The active guided task is already complete.",
             reasonKey: "availability.taskComplete",
+          };
+        }
+        if (registration && agentWritableFields(registration).length === 0) {
+          return {
+            available: false,
+            reason: "This task has no declared fields. Use the page's own form actions and the current page state instead.",
+            reasonKey: "availability.noTaskFields",
           };
         }
         return true;
@@ -1079,6 +1172,55 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
         return { taskId: id, command, cancelled: true, handled };
       },
     });
+
+    offCompleteAction = options.registry.bind({
+      descriptor: {
+        id: completeActionId,
+        primitive: "call",
+        description:
+          "Mark the active goal complete after its success criteria are actually satisfied. This only closes the goal; it never writes business data or replaces the page's own save action.",
+        label: "Complete the active goal",
+        summary: "Closes a goal-only task after the page shows the requested outcome.",
+        kind: "read",
+        confirm: false,
+        fidelity: "high",
+        params: taskOnlySchema(),
+        playbook: [
+          "Call this only after the page visibly satisfies every success criterion, or after a business action's read-back confirms it.",
+          "Do not call it merely because the person said thanks, or because you finished explaining the next step.",
+          "This does not save anything. Run the page's real save action first, then verify the result.",
+        ],
+      },
+      resolveParams: taskOnlySchema,
+      isAvailable: () => {
+        const registration = activeRegistration();
+        if (!registration?.goal) {
+          return {
+            available: false,
+            reason: "No goal-only task is active. Advanced tasks use their own completion state.",
+            reasonKey: "availability.noActiveGoal",
+          };
+        }
+        const run = goalRuns.get(normalizedId(registration));
+        if (run?.status === "done") {
+          return {
+            available: false,
+            reason: "The active goal is already complete.",
+            reasonKey: "availability.taskComplete",
+          };
+        }
+        return true;
+      },
+      run: async (args) => {
+        const registration = requireActiveRegistration(args);
+        const id = normalizedId(registration);
+        if (!registration.goal) {
+          throw new ActionError("ACTION_UNAVAILABLE", `Task "${id}" is not a goal-only task.`);
+        }
+        api.complete();
+        return { taskId: id, status: "done", completed: true };
+      },
+    });
   };
 
   const releaseAction = (): void => {
@@ -1089,12 +1231,14 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     offReviewAction?.();
     offProposeSaveAction?.();
     offCancelAction?.();
+    offCompleteAction?.();
     offStartAction = null;
     offUpdateAction = null;
     offFocusAction = null;
     offReviewAction = null;
     offProposeSaveAction = null;
     offCancelAction = null;
+    offCompleteAction = null;
   };
 
   const offRegistry = options.registry?.onChange(scheduleRecompute) ?? (() => undefined);
@@ -1117,6 +1261,47 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
     },
     get cancelActionId() {
       return cancelActionId;
+    },
+    get completeActionId() {
+      return completeActionId;
+    },
+    goal(input) {
+      const id = input.id.trim();
+      if (!id) throw new Error("Task goal id must be non-empty");
+      if (!input.goal.trim()) throw new Error("Task goal must be non-empty");
+      const cancelLabel = input.cancelLabel ?? "Cancel task";
+      const cancelCommand = `${id}:cancel`;
+      return api.define({
+        id,
+        goal: true,
+        definition: {
+          id,
+          title: input.title,
+          description: input.description ?? input.goal,
+          objective: input.goal,
+          ...(input.constraints?.length ? { constraints: input.constraints } : {}),
+          ...(input.successCriteria?.length ? { successCriteria: input.successCriteria } : {}),
+          ...(input.examples?.length ? { examples: input.examples } : {}),
+          risk: input.risk ?? "write",
+        },
+        guide: {
+          taskId: id,
+          title: input.title,
+          compact: true,
+          ...(input.stepSubtitle ? { stepSubtitle: input.stepSubtitle } : {}),
+          ...(input.labels ? { labels: input.labels } : {}),
+          cancel: { label: cancelLabel, command: cancelCommand },
+          agent: { cancel: cancelCommand },
+          steps: [],
+          done: { title: input.title, description: input.goal },
+        },
+        keepActive: input.keepActive ?? true,
+        ...(input.route !== undefined ? { route: input.route } : {}),
+        ...(input.scope !== undefined ? { scope: input.scope } : {}),
+        onCommand: (command) => {
+          if (command.action.command === cancelCommand) api.deactivate();
+        },
+      });
     },
     define(registration) {
       if (destroyed) throw new Error("Task catalog has been destroyed");
@@ -1143,6 +1328,7 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
       return () => {
         if (registrations.get(id) !== normalized) return;
         registrations.delete(id);
+        goalRuns.delete(id);
         offs.get(id)?.();
         offs.delete(id);
         if (activeId === id) deactivateCurrent();
@@ -1199,6 +1385,20 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
       }
       return true;
     },
+    complete() {
+      if (!activeId) return false;
+      const registration = registrations.get(activeId);
+      if (!registration?.goal) return false;
+      const current = goalRuns.get(activeId);
+      if (current?.status === "done") return true;
+      goalRuns.set(activeId, {
+        status: "done",
+        startedAt: current?.startedAt ?? now(),
+        finishedAt: now(),
+      });
+      emit();
+      return true;
+    },
     views() {
       return available().map((registration) => guidedTaskViewOf(registration.definition, registration.guide));
     },
@@ -1220,12 +1420,14 @@ export function createTaskCatalog(options: TaskCatalogOptions = {}): TaskCatalog
       offReviewAction?.();
       offProposeSaveAction?.();
       offCancelAction?.();
+      offCompleteAction?.();
       offStartAction = null;
       offUpdateAction = null;
       offFocusAction = null;
       offReviewAction = null;
       offProposeSaveAction = null;
       offCancelAction = null;
+      offCompleteAction = null;
       offRegistry();
       listeners.clear();
     },

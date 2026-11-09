@@ -47,7 +47,7 @@ describe("AgentChat transcript scrolling", () => {
 
     transcript.scrollTop = 100;
     transcript.dispatchEvent(new Event("scroll"));
-    await wrapper.find(".composer input").setValue("send this");
+    await wrapper.find(".composer textarea, .composer input").setValue("send this");
     await wrapper.find(".composer").trigger("submit");
     await wrapper.setProps({ events: [{ type: "user", text: "send this" }] });
     await flushPromises();

@@ -53,7 +53,11 @@ describe("Vanilla dock placement parity", () => {
 
   it("supports an overlay or fused sidebar with the same dock runtime", () => {
     const pling = createPling({ onWarn: () => {} });
-    const overlay = pling.dock({ layout: "sidebar", defaultOpen: true });
+    const fallback = pling.dock({ layout: "sidebar", defaultOpen: true });
+    expect(fallback.element.dataset.sidebarMode).toBe("fused");
+    expect(fallback.element.classList).toContain("pling-dock--fused");
+    fallback.destroy();
+    const overlay = pling.dock({ layout: "sidebar", sidebarMode: "overlay", defaultOpen: true });
     expect(overlay.element.dataset.sidebarMode).toBe("overlay");
     expect(overlay.element.classList).not.toContain("pling-dock--fused");
     overlay.destroy();
@@ -120,7 +124,7 @@ describe("Vanilla dock structural parity", () => {
     const dock = pling.dock({ defaultOpen: true, quick: ["Summarize the page"] });
     const panel = dock.element.querySelector<HTMLElement>(".pling-dock__panel")!;
     const nav = panel.querySelector<HTMLElement>(".pling-dock__nav")!;
-    const quick = panel.querySelector<HTMLElement>(".pling-dock__quick")!;
+    const quick = panel.querySelector<HTMLElement>(".pling-chat__quick")!;
     const body = panel.querySelector<HTMLElement>(".pling-dock__body")!;
     const status = panel.querySelector<HTMLElement>(".pling-dock__status")!;
 
@@ -128,8 +132,8 @@ describe("Vanilla dock structural parity", () => {
     expect(nav.firstElementChild).toBe(nav.querySelector(".pling-dock__tabs"));
     expect(panel.firstElementChild?.classList.contains("pling-dock__warn")).toBe(true);
     expect(panel.children[1]).toBe(nav);
-    expect([...panel.children].indexOf(nav)).toBeLessThan([...panel.children].indexOf(quick));
-    expect([...panel.children].indexOf(quick)).toBeLessThan([...panel.children].indexOf(body));
+    expect(quick.closest(".pling-chat__transcript")).not.toBeNull();
+    expect([...panel.children].indexOf(nav)).toBeLessThan([...panel.children].indexOf(body));
     expect([...panel.children].indexOf(body)).toBeLessThan([...panel.children].indexOf(status));
 
     for (const label of ["Clear", "Collapse"]) {
@@ -155,18 +159,15 @@ describe("Vanilla dock structural parity", () => {
   it("uses the same visual contract as the Vue dock", () => {
     const pling = createPling({ onWarn: () => {} });
     const dock = pling.dock({ defaultOpen: true, quick: ["Summarize the page"] });
-    const styles = dock.element.querySelector("style")?.textContent ?? "";
+    const styles = document.getElementById("pling-ui-styles")?.textContent ?? "";
 
     expect(dock.element.querySelector(".pling-chat")).not.toBeNull();
-    expect(styles).toContain(
-      ".pling-chat{display:flex;flex-direction:column;gap:8px;flex:1;height:100%;min-height:0;padding:12px;border:1px solid var(--pling-color-border,#ddd);border-radius:var(--pling-radius-md,8px);background:var(--pling-color-surface,#fff);color:var(--pling-color-text,#0f172a);font-size:13px;line-height:1.5;text-align:left}",
-    );
-    expect(styles).toContain(
-      ".pling-dock__quick button{padding:3px 8px;border:1px solid var(--pling-color-border,#cbd5e1);border-radius:999px;background:var(--pling-color-surface-muted,#f8fafc);color:var(--pling-color-text-muted,#334155);font-size:12px;cursor:pointer}",
-    );
-    expect(styles).toContain(
-      ".pling-chat__composer button{padding:6px 12px;border:0;border-radius:var(--pling-radius-sm,6px);background:var(--pling-color-primary,#2e9df7);color:var(--pling-color-on-primary,#fff);cursor:pointer}",
-    );
+    expect(dock.element.querySelector("style")).toBeNull();
+    expect(styles).toContain(".pling-chat {");
+    expect(styles).toContain(".pling-chat__composer-box");
+    expect(styles).toContain(".pling-chat__quick button");
+    expect(styles).toContain(".pling-dock__nav");
+    expect(styles).toContain("--pling-color-primary");
     pling.destroy();
   });
 });

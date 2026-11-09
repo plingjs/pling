@@ -4,7 +4,7 @@
   "page": "shared",
   "route": "/reference/api/shared",
   "package": "@plingjs/core",
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.9",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "compatibility": null,
@@ -2244,7 +2244,7 @@
     {
       "id": "tasks",
       "title": "Guided tasks",
-      "summary": "Tasks that collect user decisions, call existing actions in a fixed order, and render one shared run snapshot. The catalog decides which tasks are available in the current context; the guide decides how the active task is explained without duplicating execution or permissions.",
+      "summary": "Goals and advanced tasks. A goal declares an outcome, boundaries and success criteria; fields and execution stay on the real page. Advanced tasks add field schemas, lookups and fixed steps only when page actions cannot express the requirement.",
       "entries": [
         {
           "id": "createTaskController",
@@ -2348,8 +2348,14 @@
           "defaults": [],
           "examples": [
             {
-              "title": "Register one task for the current route",
-              "titleZh": "为当前路由登记一个任务",
+              "title": "Register a goal that survives a closed dialog",
+              "titleZh": "登记一个能在弹窗关闭后继续存在的目标",
+              "code": "catalog.goal({\n  id: \"course.create\",\n  title: \"创建课程\",\n  goal: \"打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。\",\n  constraints: [\"页面动作是唯一入口；封面由用户上传。\"],\n  successCriteria: [\"新课程出现在课程库第一位\"],\n});",
+              "lang": "ts"
+            },
+            {
+              "title": "Register one advanced task for the current route",
+              "titleZh": "为当前路由登记一个进阶任务",
               "code": "import { createTaskCatalog, createTaskController } from \"@plingjs/agent\";\n\nconst tasks = createTaskController({\n  invoke: (action, args) => executor.execute(action, JSON.stringify(args)),\n});\n\nconst catalog = createTaskCatalog({ registry: pling.registry });\nconst off = catalog.define({\n  definition: courseDefinition,\n  guide: courseGuide,\n  controller: tasks,\n  route: \"/courses/new\",\n  autoStart: true,\n  state: () => ({ snapshot: tasks.snapshot(), step: currentStep.value }),\n});\n\n// Later: off() removes the registration and any active guide it owns.",
               "lang": "ts"
             }
@@ -2373,11 +2379,11 @@
           "anchor": "api-taskcatalog",
           "name": "TaskCatalog",
           "kind": "interface",
-          "summary": "The current page's task directory: register definitions, query what is available now, activate at most one guide, forward guide commands, and notify renderers.",
+          "summary": "The current page's task catalog: register goals or advanced tasks, query what is available now, activate at most one guide, complete a goal, forward guide commands, and notify renderers.",
           "imports": [
             "@plingjs/agent"
           ],
-          "signature": "interface TaskCatalog {\n  readonly actionId: string;\n  readonly updateActionId: string;\n  define(registration: GuidedTaskRegistration): () => void;\n  get(id: string): GuidedTaskRegistration | undefined;\n  list(): readonly GuidedTaskRegistration[];\n  available(): readonly GuidedTaskRegistration[];\n  active(): ActiveGuidedTask | null;\n  activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;\n  deactivate(): void;\n  command(command: TaskGuideCommand): boolean;\n  views(): readonly GuidedTaskView[];\n  refresh(): void;\n  subscribe(listener: () => void): () => void;\n  destroy(): void;\n}",
+          "signature": "interface TaskCatalog {\n  readonly actionId: string;\n  readonly updateActionId: string;\n  readonly focusActionId: string;\n  readonly reviewActionId: string;\n  readonly proposeSaveActionId: string;\n  readonly cancelActionId: string;\n  readonly completeActionId: string;\n  goal(input: TaskGoalInput): () => void;\n  define(registration: GuidedTaskRegistration): () => void;\n  get(id: string): GuidedTaskRegistration | undefined;\n  list(): readonly GuidedTaskRegistration[];\n  available(): readonly GuidedTaskRegistration[];\n  active(): ActiveGuidedTask | null;\n  activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;\n  deactivate(): void;\n  command(command: TaskGuideCommand): boolean;\n  complete(): boolean;\n  views(): readonly GuidedTaskView[];\n  refresh(): void;\n  subscribe(listener: () => void): () => void;\n  destroy(): void;\n}",
           "parameters": [
             {
               "name": "actionId",
@@ -2428,12 +2434,36 @@
               "descriptionZh": "结束 active 引导的实际模型动作 id。只有 `guide.agent.cancel` 或 `guide.cancel` 声明命令时才可用。"
             },
             {
+              "name": "completeActionId",
+              "type": "readonly string",
+              "required": false,
+              "defaultValue": "",
+              "description": "The actual model action id that marks a goal-only task complete. It writes no business data.",
+              "descriptionZh": "把 goal-only 目标标记为完成的实际模型动作 id。它不写业务数据。"
+            },
+            {
+              "name": "goal(input)",
+              "type": "() => void",
+              "required": false,
+              "defaultValue": "",
+              "description": "Registers the minimal goal path and returns an unregister function. It accepts no fields, steps, controller, form tools or business callbacks.",
+              "descriptionZh": "登记最小目标任务路径并返回注销函数。它不接受字段、步骤、控制器、表单工具或业务回调。"
+            },
+            {
+              "name": "complete()",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "",
+              "description": "Marks the active goal-only task complete. Returns false for advanced tasks, which use their own completion state.",
+              "descriptionZh": "把当前 goal-only 目标标记为完成。进阶任务使用自己的完成状态，此时返回 `false`。"
+            },
+            {
               "name": "define(registration)",
               "type": "() => void",
               "required": false,
               "defaultValue": "",
-              "description": "Adds a task registration and returns an unregister function.",
-              "descriptionZh": "登记任务并返回注销函数。"
+              "description": "Adds an advanced task registration and returns an unregister function.",
+              "descriptionZh": "登记进阶任务并返回注销函数。"
             },
             {
               "name": "get(id)",
@@ -2545,6 +2575,161 @@
             {
               "package": "@plingjs/agent",
               "name": "TaskCatalog"
+            }
+          ],
+          "reference": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGoalInput",
+          "anchor": "api-taskgoalinput",
+          "name": "TaskGoalInput",
+          "kind": "interface",
+          "summary": "The minimal task declaration: id, title, outcome, boundaries, success criteria, examples and optional route/scope continuity. It has no fields, steps, controller or business callbacks.",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signature": "interface TaskGoalInput {\n  id: string;\n  title: string;\n  goal: string;\n  description?: string;\n  constraints?: readonly string[];\n  successCriteria?: readonly string[];\n  examples?: readonly string[];\n  risk?: Kind;\n  route?: GuidedTaskRoute;\n  scope?: string | readonly string[];\n  keepActive?: boolean;\n  labels?: TaskGuideLabels;\n  cancelLabel?: string;\n  stepSubtitle?: string;\n}",
+          "parameters": [
+            {
+              "name": "id",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Stable goal id, unique in the catalog.",
+              "descriptionZh": "稳定目标 id，在同一目录内唯一。"
+            },
+            {
+              "name": "title",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "Human-facing goal name.",
+              "descriptionZh": "面向人的目标名称。"
+            },
+            {
+              "name": "goal",
+              "type": "string",
+              "required": true,
+              "defaultValue": "",
+              "description": "The outcome to reach. Must not be empty.",
+              "descriptionZh": "要达成的结果。不能为空。"
+            },
+            {
+              "name": "description",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Extra description for the card or task list. Defaults to goal.",
+              "descriptionZh": "目标卡或任务列表里的补充说明。默认取 `goal`。"
+            },
+            {
+              "name": "constraints",
+              "type": "readonly string[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Boundaries the model must keep, such as “page actions are the only entry”.",
+              "descriptionZh": "模型必须守住的边界，例如“页面动作是唯一入口”。"
+            },
+            {
+              "name": "successCriteria",
+              "type": "readonly string[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Observable conditions that must hold before completion.",
+              "descriptionZh": "完成前必须成立的可观察条件。"
+            },
+            {
+              "name": "examples",
+              "type": "readonly string[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Sample sentences a person might say.",
+              "descriptionZh": "用户可能说出的示例句子。"
+            },
+            {
+              "name": "risk",
+              "type": "\"read\" | \"write\" | \"danger\"",
+              "required": false,
+              "defaultValue": "\"write\"",
+              "description": "Goal-level risk hint. Actions still apply their own risk rules.",
+              "descriptionZh": "目标级风险提示。动作仍执行自己的风险规则。"
+            },
+            {
+              "name": "route",
+              "type": "GuidedTaskRoute",
+              "required": false,
+              "defaultValue": "",
+              "description": "Exact path, route name, list or predicate that limits where the goal can start.",
+              "descriptionZh": "限制目标启动位置的精确路径、路由名、列表或判定函数。"
+            },
+            {
+              "name": "scope",
+              "type": "string | readonly string[]",
+              "required": false,
+              "defaultValue": "",
+              "description": "Every listed region must be active before the goal is available.",
+              "descriptionZh": "列出的区域必须全部活跃，目标才可用。"
+            },
+            {
+              "name": "keepActive",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "true",
+              "description": "Keep an explicitly started goal when its route or scope temporarily stops matching.",
+              "descriptionZh": "显式启动的目标在路由或作用域暂时不匹配时继续保持活动。"
+            },
+            {
+              "name": "labels",
+              "type": "TaskGuideLabels",
+              "required": false,
+              "defaultValue": "",
+              "description": "Overrides for running, completed and related labels.",
+              "descriptionZh": "覆盖运行中、已完成等标签。"
+            },
+            {
+              "name": "cancelLabel",
+              "type": "string",
+              "required": false,
+              "defaultValue": "\"Cancel task\"",
+              "description": "Cancel button label.",
+              "descriptionZh": "取消按钮文案。"
+            },
+            {
+              "name": "stepSubtitle",
+              "type": "string",
+              "required": false,
+              "defaultValue": "",
+              "description": "Subtitle for the compact goal card.",
+              "descriptionZh": "紧凑目标卡的副标题。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Register a goal without a field schema",
+              "titleZh": "登记一个没有字段 schema 的目标",
+              "code": "const disposeGoal = pling.task.goal({\n  id: \"course.create\",\n  title: \"创建课程\",\n  goal: \"打开真实表单，填写用户给出的信息，保存后回读课程库确认新课程在第一位。\",\n  constraints: [\n    \"页面上的动作是唯一操作入口。\",\n    \"封面必须由用户亲自上传。\",\n  ],\n  successCriteria: [\n    \"新课程出现在课程库第一位\",\n    \"保存动作已回读课程库并确认了这条新记录\",\n  ],\n  examples: [\"创建孕妇瑜伽，陈静，2 星，月卡，介绍自动填写\"],\n});\n\nonBeforeUnmount(disposeGoal);",
+              "lang": "ts"
+            },
+            {
+              "title": "Keep the goal available only on one route",
+              "titleZh": "只在一条路由上提供目标",
+              "code": "catalog.goal({\n  id: \"course.create\",\n  title: \"创建课程\",\n  goal: \"在课程管理里新建一门课程。\",\n  route: \"/courses\",\n  scope: \"course-catalogue\",\n});",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGoalInput"
             }
           ],
           "reference": "/reference/guided-task-api"
@@ -2760,7 +2945,7 @@
           "imports": [
             "@plingjs/agent"
           ],
-          "signature": "interface ActiveGuidedTask {\n  id: string;\n  definition: TaskDefinition;\n  guide?: TaskGuideDefinition;\n  controller?: TaskController;\n  state: TaskGuideState;\n  startedBy: \"page\" | \"agent\";\n}",
+          "signature": "interface ActiveGuidedTask {\n  id: string;\n  definition: TaskDefinition;\n  guide?: TaskGuideDefinition;\n  controller?: TaskController;\n  state: TaskGuideState;\n  startedBy: \"page\" | \"agent\";\n  goal?: boolean;\n}",
           "parameters": [
             {
               "name": "id",
@@ -2809,6 +2994,14 @@
               "defaultValue": "",
               "description": "Whether page context or the model opened this run.",
               "descriptionZh": "本次运行由页面上下文还是模型开启。"
+            },
+            {
+              "name": "goal",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "",
+              "description": "True for a compact goal created by goal(). A goal has no controller and no field schema.",
+              "descriptionZh": "由 `goal()` 创建的紧凑目标为 `true`。目标没有控制器，也没有字段 schema。"
             }
           ],
           "definition": null,

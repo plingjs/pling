@@ -252,7 +252,7 @@
         "lines": 12
       }
     ],
-    "note": "Open https://plingjs.dev/demos/external-agent-surface/?mcp=1&lang=zh, choose Codex, Claude, Hermes Agent, or WorkBuddy, and copy that tab's setup. Keep the page open. A page session lasts at most 24 hours; reloading creates a new token, and one page binds one Agent, so multiple Agents need separate pages. Deletion returns pending_approval and waits for the person on the page. The direct token is a public-demo convenience; production integrations should use OAuth or device authorization. The local stdio bridge remains in the source for development only.",
-    "noteZh": "打开 https://plingjs.dev/demos/external-agent-surface/?mcp=1&lang=zh，选择 Codex、Claude、Hermes Agent 或 WorkBuddy，复制对应标签页的接入片段。页面要保持打开。页面会话最长 24 小时；刷新会生成新 token，一个页面只绑定一个 Agent，多 Agent 请分别新开页面。删除会返回 pending_approval，并在本页等待真人确认。直接展示 token 是公开案例的便捷模式；生产环境应使用 OAuth 或设备授权。本地 stdio 桥只保留用于开发。"
+    "note": "Open https://demo.plingjs.com/demos/external-agent-surface/?mcp=1&lang=zh, choose Codex, Claude, Hermes Agent, or WorkBuddy, and copy that tab's setup. Keep the page open. A page session lasts at most 24 hours; reloading creates a new token, and one page binds one Agent, so multiple Agents need separate pages. Deletion returns pending_approval and waits for the person on the page. The direct token is a public-demo convenience; production integrations should use OAuth or device authorization. The local stdio bridge remains in the source for development only.",
+    "noteZh": "打开 https://demo.plingjs.com/demos/external-agent-surface/?mcp=1&lang=zh，选择 Codex、Claude、Hermes Agent 或 WorkBuddy，复制对应标签页的接入片段。页面要保持打开。页面会话最长 24 小时；刷新会生成新 token，一个页面只绑定一个 Agent，多 Agent 请分别新开页面。删除会返回 pending_approval，并在本页等待真人确认。直接展示 token 是公开案例的便捷模式；生产环境应使用 OAuth 或设备授权。本地 stdio 桥只保留用于开发。"
   }
 }

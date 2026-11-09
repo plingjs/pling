@@ -74,7 +74,7 @@ describe("<AgentDock> read-only debug inspector", () => {
   it("shows the current page projection and the exact model request in Activity", async () => {
     const { wrapper } = setup(true);
 
-    await wrapper.find(".dock__chat .composer input").setValue("Inspect this run");
+    await wrapper.find(".dock__chat .composer textarea, .composer input").setValue("Inspect this run");
     await wrapper.find(".dock__chat form").trigger("submit");
     await waitFor(() => wrapper.find(".dock__chat").text().includes("I saved it."));
 
@@ -92,7 +92,7 @@ describe("<AgentDock> read-only debug inspector", () => {
 
   it("clears request traces together with the conversation", async () => {
     const { wrapper } = setup(true);
-    await wrapper.find(".dock__chat .composer input").setValue("Inspect this run");
+    await wrapper.find(".dock__chat .composer textarea, .composer input").setValue("Inspect this run");
     await wrapper.find(".dock__chat form").trigger("submit");
     await waitFor(() => wrapper.find(".dock__chat").text().includes("I saved it."));
     await openDebug(wrapper);
@@ -122,7 +122,7 @@ describe("<AgentDock> read-only debug inspector", () => {
       { content: "I saved it." },
     ]);
 
-    await wrapper.find(".dock__chat .composer input").setValue("Inspect this run");
+    await wrapper.find(".dock__chat .composer textarea, .composer input").setValue("Inspect this run");
     await wrapper.find(".dock__chat form").trigger("submit");
     await waitFor(() => wrapper.find(".dock__chat").text().includes("I saved it."));
     await openDebug(wrapper);

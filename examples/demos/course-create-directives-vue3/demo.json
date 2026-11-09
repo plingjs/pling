@@ -1,0 +1,193 @@
+{
+  "id": "course-create-directives-vue3",
+  "title": "Case 07: Directives only — create a course (Vue 3)",
+  "titleZh": "案例07：只用指令创建课程（Vue 3）",
+  "eyebrow": "Case 07 · Directives only",
+  "eyebrowZh": "案例07 · 只用指令",
+  "summary": "The same course page without the task layer. v-scope names regions, v-record publishes the draft, and v-tool declares one action per real control. The page starts on the catalogue; the agent clicks the real create button itself.",
+  "summaryZh": "同一张课程页面，不使用任务层。v-scope 命名区域，v-record 公开草稿，v-tool 为每个真实控件声明动作。页面初始停在课程库；助手自己点击真实的创建按钮。",
+  "url": "/demos/course-create-directives-vue3/",
+  "open": "src/App.vue",
+  "files": [
+    {
+      "path": "src/App.vue",
+      "label": "App.vue",
+      "role": "Thin entry that renders the shared page",
+      "roleZh": "渲染共享页面的薄入口",
+      "lang": "vue"
+    },
+    {
+      "path": "shared/course-create/CourseCreatePage.vue",
+      "scope": "workspace",
+      "label": "CourseCreatePage.vue",
+      "role": "The real page, directives, and save handler",
+      "roleZh": "真实页面、指令与保存处理",
+      "lang": "vue"
+    },
+    {
+      "path": "shared/course-create/copy.ts",
+      "scope": "workspace",
+      "label": "copy.ts",
+      "role": "Action descriptions and assistant copy",
+      "roleZh": "动作说明与助手文案",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/model.ts",
+      "scope": "workspace",
+      "label": "model.ts",
+      "role": "Course rules and mock catalogue",
+      "roleZh": "课程规则与模拟数据",
+      "lang": "ts"
+    },
+    {
+      "path": "shared/course-create/page.ts",
+      "scope": "workspace",
+      "label": "page.ts",
+      "role": "Page copy and seed values",
+      "roleZh": "页面文案与初始值",
+      "lang": "ts"
+    },
+    {
+      "path": "src/main.ts",
+      "label": "main.ts",
+      "role": "Vue entry and Pling setup",
+      "roleZh": "Vue 入口与 Pling 初始化",
+      "lang": "ts"
+    },
+    {
+      "path": "src/course-create.css",
+      "label": "course-create.css",
+      "role": "Shared course-page styling",
+      "roleZh": "共享课程页面样式",
+      "lang": "css"
+    },
+    {
+      "path": "README.md",
+      "label": "README.md",
+      "role": "Comparison, run command, and tradeoffs",
+      "roleZh": "对照说明、运行命令与取舍",
+      "lang": "markdown"
+    },
+    {
+      "path": "index.html",
+      "label": "index.html",
+      "role": "Vite entry",
+      "roleZh": "Vite 入口",
+      "lang": "html"
+    }
+  ],
+  "focus": {
+    "open-create": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: 'new_course'"
+    },
+    "form-scope": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: 'create-course-form'"
+    },
+    "draft-record": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "v-record=\"draftRecord\""
+    },
+    "field-tool": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: 'course_name'"
+    },
+    "teacher-tool": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: 'course_teacher'"
+    },
+    "cover-handoff": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "handoff: {"
+    },
+    "save-tool": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "id: \"save_course\""
+    },
+    "catalogue-record": {
+      "selector": "shared/course-create/CourseCreatePage.vue",
+      "match": "data: course,"
+    }
+  },
+  "guide": {
+    "title": "The same page with only three directives",
+    "titleZh": "同一张页面，只靠三个指令",
+    "intro": [
+      "This page declares no task, no form surface and no custom tools. The agent sees regions, read-only records and one action per existing control.",
+      "That is enough to create a course. The cost moves to the developer: every requirement and every allowed value has to be written into the action description."
+    ],
+    "introZh": [
+      "这个页面没有任务、没有表单 surface、也没有自定义工具。Agent 看到的是区域、只读记录，以及每个现有控件对应的一条动作。",
+      "这足以完成创建课程。代价转移到开发者身上：每条要求、每个可选值都要写进动作说明。"
+    ],
+    "steps": [
+      {
+        "title": "Start from the real catalogue",
+        "titleZh": "从真实课程库开始",
+        "body": "The dialog is closed on load. `new_course` is a real action on the real button, so the agent can open the form itself instead of receiving a page that is already half completed for it.",
+        "bodyZh": "加载时弹窗是关闭的。`new_course` 绑定在真实按钮上，助手可以自己打开表单，而不是拿到一个已经被页面替它打开一半的界面。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "id: 'new_course'",
+        "lines": 8
+      },
+      {
+        "title": "Name the form region",
+        "titleZh": "命名表单区域",
+        "body": "v-scope groups the dialog and gives the agent a stable region id. It does not expose data or execution by itself.",
+        "bodyZh": "v-scope 把弹窗划成一个区域，并给 Agent 一个稳定的区域 id。它本身不暴露数据，也不提供执行能力。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "id: 'create-course-form'",
+        "lines": 10
+      },
+      {
+        "title": "Publish the draft as a record",
+        "titleZh": "把草稿公开成记录",
+        "body": "The current form values, the required labels and the missing labels are a read-only v-record. The agent can answer “what is missing?” without a separate read tool.",
+        "bodyZh": "当前表单值、必填标签和缺失标签组成一条只读 v-record。助手不需要单独的读取工具，就能回答“还差什么”。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "v-record=\"draftRecord\"",
+        "lines": 8
+      },
+      {
+        "title": "One action per control",
+        "titleZh": "每个控件一条动作",
+        "body": "Each input, select and save button is declared with v-tool. The action targets the same native element a person uses; there is no selector language in the prompt.",
+        "bodyZh": "每个输入框、下拉框和保存按钮都用 v-tool 声明。动作目标就是人使用的同一个原生元素，提示词里没有选择器语言。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "id: 'course_name'",
+        "lines": 10
+      },
+      {
+        "title": "Describe the options by hand",
+        "titleZh": "手动描述可选值",
+        "body": "Directives do not read the teacher option list into a schema, so the description lists every allowed name and subject. Add a teacher to the page and this description has to change too.",
+        "bodyZh": "指令不会把老师选项列表读成 schema，因此说明里必须列出每个可选姓名与方向。页面新增老师时，这段说明也要同步修改。",
+        "file": "shared/course-create/copy.ts",
+        "match": "teacherDesc: (values) =>",
+        "lines": 6
+      },
+      {
+        "title": "Hand the upload to the person",
+        "titleZh": "把上传交还给人",
+        "body": "The cover action uses handoff. The agent can ask for it and point at the upload tile, but cannot choose a local file; completion is checked from the page state.",
+        "bodyZh": "封面动作使用 handoff。Agent 可以提出请求并指向上传区域，但不能选择本地文件；完成与否从页面状态检查。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "handoff: {",
+        "lines": 8
+      },
+      {
+        "title": "Verify against the catalogue",
+        "titleZh": "从课程库验证结果",
+        "body": "save_course runs the page's own handler and declares an expect check. The save is only successful when the new record is first in the catalogue.",
+        "bodyZh": "save_course 调用页面自己的保存处理，并声明 expect。只有新记录出现在课程库第一位，保存才算成功。",
+        "file": "shared/course-create/CourseCreatePage.vue",
+        "match": "check: () => courses.value[0]?.id === newCourseId.value",
+        "lines": 6
+      }
+    ],
+    "note": "Try the same request here and in Case 06. Both create the same record from the same page. Case 06 adds one goal so the outcome survives closing the dialog; this case keeps only the directives and has no task lifecycle.",
+    "noteZh": "在案例06和这里试同一句话。两者都从同一张页面创建同一条课程记录。案例06多一个目标，让结果在弹窗关闭后继续存在；这里只保留指令，没有任务生命周期。"
+  }
+}

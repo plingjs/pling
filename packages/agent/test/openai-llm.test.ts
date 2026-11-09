@@ -225,6 +225,59 @@ describe("createOpenAiLlm：消息怎么翻", () => {
       { role: "tool", tool_call_id: "c1", content: '{"ok":true}' },
     ]);
   });
+
+  it("工具调用后插入的 assistant 文案会并入同一条消息，保证 tool 紧邻 tool_calls", () => {
+    const messages = toOpenAiMessages([
+      { role: "user", content: "保存" },
+      { role: "assistant", content: "", toolCalls: [{ id: "c1", name: "save_course", arguments: "{}" }] },
+      { role: "assistant", content: "保存前，再核对一次" },
+      { role: "tool", content: '{"ok":true}', toolCallId: "c1", name: "save_course" },
+      { role: "assistant", content: "已保存" },
+    ]);
+
+    expect(messages).toEqual([
+      { role: "user", content: "保存" },
+      {
+        role: "assistant",
+        content: "保存前，再核对一次",
+        tool_calls: [{ id: "c1", type: "function", function: { name: "save_course", arguments: "{}" } }],
+      },
+      { role: "tool", tool_call_id: "c1", content: '{"ok":true}' },
+      { role: "assistant", content: "已保存" },
+    ]);
+  });
+
+  it("并行工具调用之间插入的 assistant 文案也会收拢，工具结果保持连续", () => {
+    const messages = toOpenAiMessages([
+      {
+        role: "assistant",
+        content: "",
+        toolCalls: [
+          { id: "c1", name: "read_form", arguments: "{}" },
+          { id: "c2", name: "save_course", arguments: "{}" },
+        ],
+      },
+      { role: "assistant", content: "正在核对表单" },
+      { role: "tool", content: '{"ok":true}', toolCallId: "c1", name: "read_form" },
+      { role: "assistant", content: "表单一致，开始保存" },
+      { role: "tool", content: '{"ok":true}', toolCallId: "c2", name: "save_course" },
+      { role: "assistant", content: "已保存" },
+    ]);
+
+    expect(messages).toEqual([
+      {
+        role: "assistant",
+        content: "正在核对表单\n\n表单一致，开始保存",
+        tool_calls: [
+          { id: "c1", type: "function", function: { name: "read_form", arguments: "{}" } },
+          { id: "c2", type: "function", function: { name: "save_course", arguments: "{}" } },
+        ],
+      },
+      { role: "tool", tool_call_id: "c1", content: '{"ok":true}' },
+      { role: "tool", tool_call_id: "c2", content: '{"ok":true}' },
+      { role: "assistant", content: "已保存" },
+    ]);
+  });
 });
 
 describe("createOpenAiLlm：错误怎么分类", () => {

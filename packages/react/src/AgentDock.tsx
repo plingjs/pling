@@ -22,7 +22,7 @@ import {
   type SessionEvent,
 } from "@plingjs/agent";
 import type { Llm, Registry } from "@plingjs/core";
-import { PLING_UI_Z_INDEX, sameOriginUrl, type PlingAskOptions } from "@plingjs/dom";
+import { PLING_UI_Z_INDEX, ensurePlingStyles, sameOriginUrl, type PlingAskOptions } from "@plingjs/dom";
 import {
   describePlingDiagnostic,
   diagnosticMessageKey,
@@ -109,7 +109,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
   onOpenChange,
   navigate,
   layout = "dock",
-  sidebarMode = "overlay",
+  sidebarMode = "fused",
   side = "right",
   launcherPlacement = "bottom",
   launcherLabel,
@@ -134,6 +134,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
   const [open, setOpen] = useState(defaultOpen);
   const [tab, setTab] = useState<"chat" | "activity">("chat");
   const [debugOpen, setDebugOpen] = useState(false);
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [events, setEvents] = useState<SessionEvent[]>([]);
   const [resumeDismissed, setResumeDismissed] = useState(false);
   const [running, setRunning] = useState(false);
@@ -209,6 +210,10 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
   const runtime = runtimeRef.current;
 
   useEffect(() => {
+    ensurePlingStyles();
+  }, []);
+
+  useEffect(() => {
     // 整页导航恢复出来的事件在会话里，不在本次 document 的 onEvent 回调里。
     if (runtime.continuity.restored) setEvents([...runtime.session.events()]);
     if (runtime.readiness.ready && runtime.continuity.claimAutoResume()) {
@@ -273,6 +278,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
   async function send(text: string, revealSurface = true): Promise<void> {
     const value = text.trim();
     if (!value || running) return;
+    setQuickMenuOpen(false);
     if (revealSurface) reveal();
     setNotReady(false);
     if (!runtime.readiness.ready) {
@@ -325,6 +331,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
 
   function clear(): void {
     cancelReturn();
+    setQuickMenuOpen(false);
     setResumeDismissed(true);
     runtime.session.reset();
     runtime.approvals.clear();
@@ -357,7 +364,6 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
       data-launcher-placement={layout === "sidebar" ? launcherPlacement : undefined}
       style={{ ...uiSnapshot.cssVars, zIndex: PLING_UI_Z_INDEX } as CSSProperties}
     >
-      <style dangerouslySetInnerHTML={{ __html: DOCK_STYLES }} />
       {open ? (
         <section
           className={`pling-dock__panel${ui.classNames.panel ? ` ${ui.classNames.panel}` : ""}`}
@@ -365,114 +371,170 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
         >
           {notReadyText ? <p className="pling-dock__warn">{notReadyText}</p> : null}
 
-          {quickItems.length && tab === "chat" ? (
-            <div className="pling-dock__quick">
-              {quickItems.map((task, index) => (
+          <div className="pling-dock__nav">
+            <nav className="pling-dock__tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === "chat"}
+                className={tab === "chat" ? "is-active" : undefined}
+                onClick={() => setTab("chat")}
+              >
+                {t("dock.tab.chat")}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === "activity"}
+                className={tab === "activity" ? "is-active" : undefined}
+                onClick={() => setTab("activity")}
+              >
+                {t("dock.tab.activity")}
+                {activityRows.length ? (
+                  <span className={`pling-dock__badge${failedCount ? " is-bad" : ""}`}>{activityRows.length}</span>
+                ) : null}
+              </button>
+            </nav>
+            <div className="pling-dock__actions">
+              {quickItems.length ? (
+                <div className="pling-dock__action-wrap">
+                  <button
+                    type="button"
+                    className={`pling-dock__ghost${quickMenuOpen ? " is-active" : ""}`}
+                    aria-label={t("dock.pageActions")}
+                    aria-expanded={quickMenuOpen}
+                    title={t("dock.pageActions")}
+                    onClick={() => setQuickMenuOpen((value) => !value)}
+                  >
+                    <svg className="pling-dock__icon" viewBox="0 0 20 20" aria-hidden="true">
+                      <path d="M4 5.5h12M4 10h12M4 14.5h8" />
+                    </svg>
+                  </button>
+                  {quickMenuOpen ? (
+                    <div className="pling-dock__actions-menu" role="menu">
+                      <header>
+                        <strong>{t("dock.pageActions")}</strong>
+                        <span>{t("dock.pageActionsHint")}</span>
+                      </header>
+                      {quickItems.map((task, index) => (
+                        <button
+                          key={`${task.prompt}:${index}`}
+                          type="button"
+                          role="menuitem"
+                          disabled={running || task.disabled}
+                          title={task.description}
+                          onClick={() => {
+                            setQuickMenuOpen(false);
+                            void send(task.prompt);
+                          }}
+                        >
+                          <span>{task.label}</span>
+                          {task.description ? <small>{task.description}</small> : null}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+              <button
+                type="button"
+                className="pling-dock__ghost"
+                aria-label={t("dock.clear")}
+                title={t("dock.clear")}
+                onClick={clear}
+              >
+                <svg className="pling-dock__icon" viewBox="0 0 20 20" aria-hidden="true">
+                  <path d="M4 4.5h12v9H9l-4 3v-3H4z" />
+                  <path d="M8 7.5l4 4M12 7.5l-4 4" />
+                </svg>
+              </button>
+              {layout !== "inline" ? (
                 <button
-                  key={`${task.prompt}:${index}`}
                   type="button"
-                  disabled={running || task.disabled}
-                  title={task.description}
-                  onClick={() => void send(task.prompt)}
+                  className="pling-dock__ghost"
+                  aria-label={t("dock.collapse")}
+                  title={t("dock.collapse")}
+                  onClick={() => toggle(false)}
                 >
-                  {task.label}
+                  <svg className="pling-dock__icon" viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M5 8l5 5 5-5" />
+                  </svg>
                 </button>
-              ))}
+              ) : null}
+            </div>
+          </div>
+
+          {running ? (
+            <div className="pling-dock__running">
+              <span className="pling-dock__running-dot" aria-hidden="true" />
+              <span>{t("chat.running")}</span>
+              <button
+                type="button"
+                className="stop pling-chat__stop"
+                onClick={() => runtime.session.cancel()}
+              >
+                {t("chat.stop")}
+              </button>
             </div>
           ) : null}
 
-          <header className="pling-dock__bar">
-            {!gateActive ? (
-              <span className="pling-dock__gate" title={t("dock.gate.offTitle")}>
-                {t("dock.gate.off")}
-              </span>
-            ) : null}
-            <button type="button" className="pling-dock__ghost" onClick={clear}>{t("dock.clear")}</button>
-            {layout !== "inline" ? (
-              <button type="button" className="pling-dock__ghost" onClick={() => toggle(false)}>
-                {t("dock.collapse")}
-              </button>
-            ) : null}
-          </header>
-
-          <nav className="pling-dock__tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "chat"}
-              className={tab === "chat" ? "is-active" : undefined}
-              onClick={() => setTab("chat")}
-            >
-              {t("dock.tab.chat")}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tab === "activity"}
-              className={tab === "activity" ? "is-active" : undefined}
-              onClick={() => setTab("activity")}
-            >
-              {t("dock.tab.activity")}
-              {activityRows.length ? (
-                <span className={`pling-dock__badge${failedCount ? " is-bad" : ""}`}>{activityRows.length}</span>
-              ) : null}
-            </button>
-          </nav>
-
           {tab === "activity" ? (
-            <>
-              <div className="pling-dock__run">
-                <div className="pling-dock__diagnostics">
-                  <span className="pling-dock__model" title={limitsHint}>
-                    {runtime.model || t("dock.model.unconfigured")}
-                  </span>
-                  <span className="pling-dock__usage">{summary}</span>
-                </div>
-                <div className="pling-dock__run-head">
-                  <p className="pling-dock__run-label">{t("dock.run.actions")}</p>
-                  {debugEnabled ? (
-                    <button
-                      type="button"
-                      className={`pling-dock__run-toggle${debugOpen ? " is-active" : ""}`}
-                      aria-expanded={debugOpen}
-                      data-testid="pling-debug-toggle"
-                      onClick={() => setDebugOpen((value) => !value)}
-                    >
-                      {t("debug.title")}
-                    </button>
-                  ) : null}
-                </div>
-                <ol className="pling-dock__activity">
-                  {activityRows.map((row) => (
-                    <li key={row.seq} className="pling-dock__row">
-                      <p className="pling-dock__row-head">
-                        <code>{row.id}</code>
-                        <span className={`pling-dock__state is-${row.status}`}>{t(`dock.state.${row.status}`)}</span>
-                        {row.description ? <span className="pling-dock__desc">{row.description}</span> : null}
-                      </p>
-                      {Object.keys(row.args).length ? (
-                        <pre className="pling-dock__args">{showText(JSON.stringify(row.args))}</pre>
-                      ) : null}
-                      {row.detail ? <p className="pling-dock__detail">{showText(row.detail)}</p> : null}
-                    </li>
-                  ))}
-                  {!activityRows.length ? (
-                    <li className="pling-dock__empty">{t("dock.activity.empty")}</li>
-                  ) : null}
-                </ol>
-                {debugEnabled && debugOpen && runtime.trace ? (
-                  <AgentDebug runtime={runtime} registry={registry} />
+            <div className="pling-dock__run">
+              <div className="pling-dock__diagnostics">
+                <span className="pling-dock__model" title={limitsHint}>
+                  {runtime.model || t("dock.model.unconfigured")}
+                </span>
+                <span className="pling-dock__usage">{summary}</span>
+              </div>
+              <div className="pling-dock__run-head">
+                <p className="pling-dock__run-label">{t("dock.run.actions")}</p>
+                {debugEnabled ? (
+                  <button
+                    type="button"
+                    className={`pling-dock__run-toggle${debugOpen ? " is-active" : ""}`}
+                    aria-expanded={debugOpen}
+                    data-testid="pling-debug-toggle"
+                    onClick={() => setDebugOpen((value) => !value)}
+                  >
+                    {t("debug.title")}
+                  </button>
                 ) : null}
               </div>
-            </>
+              <ol className="pling-dock__activity">
+                {activityRows.map((row) => (
+                  <li key={row.seq} className="pling-dock__row">
+                    <p className="pling-dock__row-head">
+                      <code>{row.id}</code>
+                      <span className={`pling-dock__state is-${row.status}`}>{t(`dock.state.${row.status}`)}</span>
+                      {row.description ? <span className="pling-dock__desc">{row.description}</span> : null}
+                    </p>
+                    {Object.keys(row.args).length ? (
+                      <pre className="pling-dock__args">{showText(JSON.stringify(row.args))}</pre>
+                    ) : null}
+                    {row.detail ? <p className="pling-dock__detail">{showText(row.detail)}</p> : null}
+                  </li>
+                ))}
+                {!activityRows.length ? (
+                  <li className="pling-dock__empty">{t("dock.activity.empty")}</li>
+                ) : null}
+              </ol>
+              {debugEnabled && debugOpen && runtime.trace ? (
+                <AgentDebug runtime={runtime} registry={registry} />
+              ) : null}
+            </div>
           ) : (
             <AgentChat
               title={titleText}
               task={task}
+              taskPlacement="pinned"
               placeholder={placeholderText}
               emptyHint={emptyHintText}
               ui={ui}
               className={ui.classNames.chat}
+              showHeader={false}
+              speakers
+              multiline
+              quick={quickItems}
               events={events}
               running={running}
               pending={pending}
@@ -480,6 +542,7 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
               resume={resume}
               reveal={showText}
               onSend={(text) => void send(text)}
+              onQuick={(text) => void send(text)}
               onResume={resumeTask}
               onDismissResume={dismissResume}
               onReply={(decision) => runtime.approvals.reply(decision)}
@@ -489,6 +552,13 @@ export const AgentDock = forwardRef<AgentDockHandle, AgentDockProps>(function Ag
             />
           )}
 
+          {!gateActive ? (
+            <footer className="pling-dock__status">
+              <span className="pling-dock__gate" title={t("dock.gate.offTitle")}>
+                {t("dock.gate.off")}
+              </span>
+            </footer>
+          ) : null}
         </section>
       ) : null}
 
@@ -531,79 +601,3 @@ function describeUsage(runtime: AgentRuntime, usedTokens: number, t: PlingUiCont
   return parts.join(" · ");
 }
 
-const DOCK_STYLES = `
-.pling-dock{position:fixed;right:24px;bottom:24px;display:flex;flex-direction:column;align-items:flex-end;gap:10px;color:var(--pling-color-text,#0f172a);font-family:var(--pling-font-family,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif);font-size:13px;text-align:left}
-.pling-dock__panel{display:flex;flex-direction:column;gap:6px;width:min(400px,calc(100vw - 48px));height:min(600px,calc(100vh - 120px));padding:12px;border:1px solid var(--pling-color-border,#dbe7f5);border-radius:var(--pling-radius-lg,14px);background:var(--pling-color-surface,#fff);box-shadow:var(--pling-shadow-panel,0 18px 48px rgb(15 23 42 / 18%))}
-.pling-dock__panel .pling-chat{flex:1;min-height:0;padding:0;border:0;border-radius:0}
-.pling-dock__warn{margin:0;padding:8px 10px;border:1px solid var(--pling-color-warning,#fdba74);border-radius:var(--pling-radius-md,8px);background:var(--pling-color-warning-soft,#fff7ed);color:var(--pling-color-warning,#9a3412);font-size:12px}
-.pling-dock__quick{display:flex;flex-wrap:wrap;gap:6px}
-.pling-dock__quick button{padding:3px 8px;border:1px solid var(--pling-color-primary-soft,#bae6fd);border-radius:999px;background:var(--pling-color-primary-soft,#f0f9ff);color:var(--pling-color-primary-strong,#0369a1);font:inherit;font-size:12px;cursor:pointer}
-.pling-dock__quick button:disabled{opacity:.5;cursor:not-allowed}
-.pling-dock__bar{display:flex;align-items:center;gap:6px}
-.pling-dock__model{max-width:150px;overflow:hidden;padding:1px 6px;border-radius:999px;background:var(--pling-color-primary-soft,#eff6ff);color:var(--pling-color-primary-strong,#0369a1);font-size:11px;white-space:nowrap;text-overflow:ellipsis}
-.pling-dock__gate{color:var(--pling-color-warning,#b45309);font-size:11px;white-space:nowrap}
-.pling-dock__ghost{padding:2px 4px;border:0;background:none;color:var(--pling-color-text-muted,#64748b);font:inherit;font-size:12px;cursor:pointer}
-.pling-dock__ghost:last-child{margin-left:auto}
-.pling-dock__tabs{display:flex;gap:4px;margin:2px 0 6px;border-bottom:1px solid var(--pling-color-border-muted,#e2e8f0)}
-.pling-dock__tabs button{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border:0;border-bottom:2px solid transparent;background:none;color:var(--pling-color-text-muted,#64748b);font:inherit;font-size:12px;cursor:pointer}
-.pling-dock__tabs button.is-active{border-bottom-color:var(--pling-color-primary,#2e9df7);color:var(--pling-color-primary-strong,#0369a1)}
-.pling-dock__badge{padding:0 5px;border-radius:999px;background:var(--pling-color-primary-soft,#eff6ff);color:var(--pling-color-primary-strong,#0369a1);font-size:11px}
-.pling-dock__badge.is-bad{background:var(--pling-color-danger-soft,#fee2e2);color:var(--pling-color-danger,#b91c1c)}
-.pling-dock__run{display:flex;flex:1;min-height:0;flex-direction:column;gap:4px;overflow:auto}
-.pling-dock__run-head{display:flex;flex:none;align-items:center;justify-content:space-between;gap:8px;padding:2px 4px}
-.pling-dock__run-label{margin:0;color:var(--pling-color-text-subtle,#94a3b8);font-size:11px}
-.pling-dock__run-toggle{padding:1px 6px;border:1px solid var(--pling-color-border,#e3e8f0);border-radius:6px;background:var(--pling-color-surface,#fff);color:var(--pling-color-text-muted,#64748b);font:inherit;font-size:11px;cursor:pointer}
-.pling-dock__run-toggle.is-active{border-color:var(--pling-color-primary-soft,#bae6fd);background:var(--pling-color-primary-soft,#f0f9ff);color:var(--pling-color-primary-strong,#0369a1)}
-.pling-dock__activity{flex:none;margin:0;padding:4px 4px 4px 22px;font-size:12px}
-.pling-dock__diagnostics{display:flex;flex:none;align-items:center;flex-wrap:wrap;gap:4px 8px;padding:2px 4px 6px;border-bottom:1px solid var(--pling-color-border-muted,#f1f5f9)}
-.pling-dock__diagnostics .pling-dock__usage{flex:1 1 180px;min-width:0;line-height:1.45}
-.pling-dock__row{margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--pling-color-border-muted,#f1f5f9)}
-.pling-dock__row:last-child{border-bottom:0}
-.pling-dock__row-head{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:0}
-.pling-dock__activity code{color:var(--pling-color-text,#0f172a);word-break:break-all}
-.pling-dock__state{flex:none;color:var(--pling-color-text-muted,#64748b)}
-.pling-dock__state.is-running{color:var(--pling-color-primary-strong,#0369a1)}
-.pling-dock__state.is-ok{color:var(--pling-color-success,#15803d)}
-.pling-dock__state.is-failed,.pling-dock__state.is-blocked{color:var(--pling-color-danger,#b91c1c)}
-.pling-dock__desc{color:var(--pling-color-text-muted,#64748b)}
-.pling-dock__args{margin:2px 0 0;padding:4px 6px;border-radius:var(--pling-radius-sm,6px);background:var(--pling-color-surface-muted,#f8fafc);color:var(--pling-color-text-muted,#334155);font-family:var(--pling-font-family-mono,ui-monospace,SFMono-Regular,Menlo,monospace);font-size:11px;white-space:pre-wrap;word-break:break-all}
-.pling-dock__detail{margin:2px 0 0;color:var(--pling-color-text-subtle,#94a3b8)}
-.pling-dock__activity .pling-dock__empty{margin-left:-16px;color:var(--pling-color-text-subtle,#94a3b8);line-height:1.6;list-style:none}
-.pling-dock__usage{margin:0;color:var(--pling-color-text-subtle,#94a3b8);font-size:11px;font-variant-numeric:tabular-nums}
-.pling-dock__launcher{position:relative;padding:10px 16px;border:0;border-radius:999px;background:var(--pling-color-primary,#2e9df7);color:var(--pling-color-on-primary,#fff);font:inherit;font-size:13px;box-shadow:var(--pling-shadow-launcher,0 10px 24px rgb(46 157 247 / 32%));cursor:pointer}
-.pling-dock__launcher.is-open{background:var(--pling-color-text-muted,#475569);box-shadow:none}
-.pling-dock__dot{position:absolute;top:6px;right:8px;width:7px;height:7px;border-radius:50%;background:var(--pling-color-warning,#fbbf24);animation:pling-dock-pulse 1s ease-in-out infinite}
-.pling-dock--sidebar{top:0;bottom:0;height:100dvh;gap:0;pointer-events:none}
-.pling-dock--sidebar>*{pointer-events:auto}
-.pling-dock--sidebar.pling-dock--right{right:0;left:auto;align-items:flex-end}
-.pling-dock--sidebar.pling-dock--left{right:auto;left:0;align-items:flex-start}
-.pling-dock--sidebar .pling-dock__panel{width:var(--pling-sidebar-width,min(420px,100vw));height:100%;border-top:0;border-bottom:0;border-radius:0;box-shadow:var(--pling-shadow-sidebar,0 0 40px rgb(15 23 42 / 18%))}
-.pling-dock--sidebar.pling-dock--right .pling-dock__panel{border-right:0}
-.pling-dock--sidebar.pling-dock--left .pling-dock__panel{border-left:0}
-.pling-dock--sidebar .pling-dock__launcher{position:absolute;top:auto;bottom:24px;padding:10px 16px;writing-mode:horizontal-tb}
-.pling-dock--sidebar.pling-dock--right.pling-dock--launcher-bottom .pling-dock__launcher{right:16px}
-.pling-dock--sidebar.pling-dock--left.pling-dock--launcher-bottom .pling-dock__launcher{left:16px}
-.pling-dock--sidebar.pling-dock--launcher-center .pling-dock__launcher{top:50%;bottom:auto;transform:translateY(-50%);padding:14px 8px;writing-mode:vertical-rl}
-.pling-dock--sidebar.pling-dock--right.pling-dock--launcher-center .pling-dock__launcher{right:0}
-.pling-dock--sidebar.pling-dock--left.pling-dock--launcher-center .pling-dock__launcher{left:0}
-.pling-dock--sidebar.is-open .pling-dock__launcher{display:none}
-.pling-dock--sidebar.pling-dock--fused{position:relative;inset:auto;width:max-content;height:auto;min-height:520px;align-self:stretch;gap:12px;align-items:stretch;pointer-events:auto}
-.pling-dock--sidebar.pling-dock--fused:not(.is-open){width:auto;min-height:0;align-self:flex-start}
-.pling-dock--sidebar.pling-dock--fused.pling-dock--left{order:-1}
-.pling-dock--sidebar.pling-dock--fused .pling-dock__panel{width:var(--pling-sidebar-width,min(380px,100vw));height:auto;flex:1 1 auto;min-height:0;border:1px solid var(--pling-color-border,#e3e8f0);border-radius:var(--pling-radius-lg,14px);box-shadow:var(--pling-shadow-panel,0 18px 40px rgb(15 23 42 / 10%))}
-.pling-dock--sidebar.pling-dock--fused .pling-dock__launcher{position:relative;inset:auto;transform:none;padding:10px 16px;writing-mode:horizontal-tb}
-.pling-dock--sidebar.pling-dock--fused.is-open .pling-dock__launcher{display:none}
-.pling-dock--inline{position:relative;right:auto;bottom:auto;width:100%;align-items:stretch;gap:0}
-.pling-dock--inline .pling-dock__panel{width:100%;height:var(--pling-inline-height,min(640px,calc(100vh - 96px)))}
-@media (max-width:720px){
-  .pling-dock--sidebar{top:auto;bottom:12px;height:auto;width:auto}
-  .pling-dock--sidebar.pling-dock--right{right:12px;left:auto}
-  .pling-dock--sidebar.pling-dock--left{right:auto;left:12px}
-  .pling-dock--sidebar .pling-dock__panel{width:min(400px,calc(100vw - 24px));height:min(640px,calc(100dvh - 72px));border:1px solid var(--pling-color-border,#e3e8f0);border-radius:var(--pling-radius-lg,12px);box-shadow:var(--pling-shadow-panel,0 18px 40px rgb(15 23 42 / 16%))}
-  .pling-dock--sidebar .pling-dock__launcher{position:relative;top:auto;bottom:auto;left:auto;right:auto;transform:none;padding:10px 16px;writing-mode:horizontal-tb}
-  .pling-dock--sidebar.pling-dock--fused{position:fixed;right:12px;bottom:12px;left:auto;width:auto;min-height:0}
-  .pling-dock--sidebar.pling-dock--fused .pling-dock__panel{width:min(400px,calc(100vw - 24px));height:min(640px,calc(100dvh - 72px))}
-}
-@keyframes pling-dock-pulse{50%{opacity:.3}}
-@media (prefers-reduced-motion:reduce){.pling-dock__dot{animation:none}}
-`;

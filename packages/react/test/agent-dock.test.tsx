@@ -40,10 +40,15 @@ async function click(element: Element | null): Promise<void> {
 }
 
 async function say(text: string): Promise<void> {
-  const input = document.querySelector<HTMLInputElement>(".pling-chat__composer input");
+  const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+    ".pling-chat__composer textarea, .pling-chat__composer input",
+  );
   const form = document.querySelector<HTMLFormElement>(".pling-chat__composer");
   if (!input || !form) throw new Error("聊天输入框不存在");
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  const prototype = input instanceof HTMLTextAreaElement
+    ? HTMLTextAreaElement.prototype
+    : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, "value")!.set!;
   await act(async () => {
     setter.call(input, text);
     input.dispatchEvent(new Event("input", { bubbles: true }));
@@ -136,10 +141,10 @@ describe("<AgentDock> · React", () => {
       </PlingProvider>,
     );
 
+    const pinned = document.querySelector(".pling-chat__task-pinned")!;
+    expect(pinned.querySelector(".task-card-fixture")).not.toBeNull();
     const transcript = document.querySelector(".pling-chat__transcript")!;
-    expect(transcript.querySelector(".task-card-fixture")).not.toBeNull();
-    expect(transcript.textContent).toContain("Guided task");
-    expect(transcript.querySelector(".pling-chat__empty")).toBeNull();
+    expect(transcript.querySelector(".pling-chat__empty")).not.toBeNull();
   });
 
   it("默认英文界面：不配置 ui 也显示英文", async () => {
@@ -190,7 +195,7 @@ describe("<AgentDock> · React", () => {
 
     expect(document.querySelector(".pling-dock__launcher")!.textContent).toContain("Close assistant");
     expect(document.body.textContent).toContain("Activity");
-    expect(dock.style.getPropertyValue("--pling-color-bg")).toBe("#0f172a");
+    expect(dock.style.getPropertyValue("--pling-color-bg")).toBe("#111216");
     expect(dock.style.getPropertyValue("--pling-color-primary")).toBe("#abcdef");
 
     await act(async () => pling.ui.setLocale("en-US"));
@@ -322,9 +327,8 @@ describe("<AgentDock> · React", () => {
     expect(document.querySelector(".pling-dock__panel")).not.toBeNull();
     expect(document.body.textContent).toContain("运行");
 
-    const close = [...document.querySelectorAll<HTMLButtonElement>(".pling-dock__ghost")]
-      .find((button) => button.textContent?.includes("收起"));
-    await click(close ?? null);
+    const close = document.querySelector<HTMLButtonElement>('.pling-dock__ghost[aria-label="收起"]');
+    await click(close);
     expect(document.querySelector(".pling-dock__panel")).toBeNull();
   });
 

@@ -106,6 +106,11 @@ export interface TaskGuideLabels {
 export interface TaskGuideDefinition {
   taskId: string;
   title: string;
+  /**
+   * Render one compact status row instead of the full guide card or field rail.
+   * `fields` can still be declared for agent focus and task working memory.
+   */
+  compact?: boolean;
   welcome?: string;
   footer?: string;
   /** Supports `{step}` and `{total}` placeholders. */

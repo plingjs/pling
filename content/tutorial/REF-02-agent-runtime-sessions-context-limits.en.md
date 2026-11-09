@@ -59,6 +59,18 @@ Explicit values win per field. Nested `limits` and `retry` values are merged ins
 
 An injected `llm` is sufficient for a deterministic test or a custom gateway client. In that case `baseUrl` and `apiKey` are not required for readiness. The runtime still checks limits and retry values.
 
+## Built-in locate tool
+
+When the current page has at least one action, the runtime appends `pling_locate` to the tool list. It has one parameter, `actionId`, and accepts only an exact id from the current page action list. It bypasses the approval gate, does not call the action's `run`, and cannot write business data.
+
+| Parameter | Type | Required | Description |
+| --- | --- | --- | --- |
+| `actionId` | `string` | Yes | Exact id from the current action list |
+
+The executor scrolls the target into view and highlights it in the `locate` state. The highlight lasts 6 seconds by default. Set `locateDurationMs` when creating the executor to change it; `0` keeps the highlight until the next action or page unmount. An unknown id or an action without a DOM target returns `ACTION_NOT_FOUND` or `ACTION_UNAVAILABLE`.
+
+The page does not declare a separate location action. If a developer action already uses the name `pling_locate`, the protocol gives that action `pling_locate_2`; the built-in tool keeps the original name.
+
 ## What compaction does
 
 The history budget is not the same as the provider's full context window. Pling reserves space for the next response and compacts early:

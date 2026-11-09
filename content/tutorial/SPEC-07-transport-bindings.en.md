@@ -74,4 +74,4 @@ Reverse proxies, CDNs, and logging systems may truncate large responses, buffer 
 
 ## Implementation boundary
 
-The repository provides the protocol kernel, a reference delegation HTTP handler, and local bridges in cases. `surface.plingjs.dev` is a demonstration endpoint, not a shared production gateway for all customers. A production transport owner is responsible for TLS, identity, tenant isolation, persistence, rate limiting, and audit.
+The repository provides the protocol kernel, a reference delegation HTTP handler, and local bridges in cases. `surface.plingjs.com` is a demonstration endpoint, not a shared production gateway for all customers. A production transport owner is responsible for TLS, identity, tenant isolation, persistence, rate limiting, and audit.

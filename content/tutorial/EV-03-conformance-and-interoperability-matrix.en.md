@@ -25,7 +25,7 @@ This page records what the repository currently tests and what remains unverifie
 | Public cross-implementation conformance suite | Not present | Not yet available |
 | Certified third-party implementations | None claimed | Not yet established |
 | Production identity provider / SSO | No shared implementation | Host responsibility |
-| Production transport at `surface.plingjs.dev` | Demo only | Not a customer gateway |
+| Production transport at `surface.plingjs.com` | Demo only | Not a customer gateway |
 
 ## How to read “implemented”
 

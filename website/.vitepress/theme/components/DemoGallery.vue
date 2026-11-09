@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { useData } from "vitepress";
 import { DEMO_EXAMPLES } from "virtual:pling-demo-data";
+import { useDemoOrigin } from "../demo-origin";
 
 interface DemoCopy {
   eyebrow: string;
@@ -17,6 +18,7 @@ interface FlagshipCard extends DemoCopy {
 }
 
 const { lang } = useData();
+const demoOrigin = useDemoOrigin();
 const isZh = computed(() => lang.value.startsWith("zh"));
 const localePrefix = computed(() => (isZh.value ? "/zh" : ""));
 const props = withDefaults(defineProps<{ group?: "flagship" | "tasks" | "recipes" | "compatibility" }>(), { group: "flagship" });
@@ -126,13 +128,12 @@ function hrefFor(example: (typeof DEMO_EXAMPLES)[number]): string {
 }
 
 function liveHrefFor(example: (typeof DEMO_EXAMPLES)[number]): string {
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://plingjs.dev";
-  const url = new URL(example.url, origin);
+  const url = new URL(example.url, demoOrigin.value);
   if (example.liveQuery) {
     for (const [key, value] of new URLSearchParams(example.liveQuery)) url.searchParams.set(key, value);
   }
   if (isZh.value) url.searchParams.set("lang", "zh");
-  return url.pathname + url.search;
+  return url.toString();
 }
 
 const cards = computed<FlagshipCard[]>(() => {

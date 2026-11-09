@@ -54,12 +54,11 @@ Pling 把助手的“外壳”和“运行时”分开。外壳决定对话出�
 
 ## 有固定工作栏时使用侧栏
 
-页面本来就有清晰的左右结构时，侧栏通常比浮层更像产品的一部分。侧栏有两种模式：`overlay` 仍然覆盖在页面之上；`fused` 则作为页面栅格中的一列，与业务内容各自占用空间。
+页面本来就有清晰的左右结构时，侧栏通常比浮层更像产品的一部分。侧栏默认使用 `fused`：展开后作为页面栅格中的一列，与业务内容各自占用空间；只有确实需要盖住页面时，才显式设为 `overlay`。
 
-```vue{4-8}
+```vue
 <AgentDock
   layout="sidebar"
-  sidebar-mode="overlay"
   side="right"
   launcher-placement="bottom"
   launcher-label="Ask Pling"
@@ -67,18 +66,20 @@ Pling 把助手的“外壳”和“运行时”分开。外壳决定对话出�
 />
 ```
 
+上面这段使用默认的融合模式。若要临时覆盖页面，再显式写 `sidebar-mode="overlay"`。
+
 可用的位置参数如下：
 
 | 参数 | 取值 | 作用 |
 | --- | --- | --- |
 | `layout` | `"dock"` / `"sidebar"` | 浮动角落或视口边缘 |
-| `sidebar-mode` | `"overlay"` / `"fused"` | 覆盖页面，或进入页面栅格 |
+| `sidebar-mode` | `"overlay"` / `"fused"` | 覆盖页面，或进入页面栅格；默认 `fused` |
 | `side` | `"right"` / `"left"` | 侧栏贴在哪一边 |
 | `launcher-placement` | `"bottom"` / `"center"` | 收起后的入口位置 |
 | `launcher-label` | 字符串 | 收起入口上显示的文字 |
 | `default-open` | 布尔值 | 初始是否展开 |
 
-`side`、`sidebar-mode`、`launcher-placement` 和 `launcher-label` 只对侧栏生效。`launcher-placement` 只影响覆盖模式；融合模式没有浮在页面之外的收起入口。应用可以把用户选择存进自己的偏好设置，在运行时切换外壳，而无需重建对话。
+`side`、`sidebar-mode`、`launcher-placement` 和 `launcher-label` 只对侧栏生效。`launcher-placement` 只影响覆盖模式；融合模式收起时使用右下角的固定入口，展开后进入页面栅格。应用可以把用户选择存进自己的偏好设置，在运行时切换外壳，而无需重建对话。
 
 融合模式需要外层提供一列空间。助手仍然由 `AgentDock` 管理展开状态、启动按钮和同一份会话历史：
 
@@ -102,7 +103,7 @@ Pling 把助手的“外壳”和“运行时”分开。外壳决定对话出�
 }
 ```
 
-`fused` 适合“保留浮动入口，但展开时不要把表格盖住”的场景。窄屏下组件会退回浮动面板，避免侧栏把工作区域挤成一条窄缝。
+`fused` 是默认值，适合“保留浮动入口，但展开时不要把表格盖住”的场景。窄屏下组件会退回浮动面板，避免侧栏把工作区域挤成一条窄缝。只有确认可以盖住业务内容时，才改用 `overlay`。
 
 如果页面要自己控制栅格，可以把 `AgentInline` 放进一栏：
 

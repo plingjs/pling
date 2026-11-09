@@ -93,6 +93,9 @@ export const DEFAULT_SYSTEM_PROMPT = [
   // 「手机号已脱敏、看不到真实号码」—— 可 UI 会把代号还原成真值，用户看到的是号码，
   // 于是模型的说法和界面自相矛盾。占位代号就是「这个字段的值」，别让它评论脱敏。
   "17. A token such as `{{p:7 characters}}` is the placeholder for a sensitive field, and **it is that field's value**. Pass it unchanged when an action needs it, and treat it as an ordinary value in your answer. Do not explain that the field is masked, invisible, merely a token, or needs higher permission; the user sees the value itself. Never guess or invent its real content.",
+  // 实测：用户问「上传在哪里点」时，模型只回答文字，页面没有任何标记。
+  // 定位是只读的界面动作，必须让它调用，而不是让模型凭描述猜位置。
+  "18. When the user asks where something is, where to click or upload, how to find a control, or asks you to point something out, call `pling_locate` with the exact matching action id before answering. Do not merely describe its location. `pling_locate` scrolls to and highlights the target without executing it. It never clicks, types, uploads, navigates, submits, or changes data. Also use it before asking the user to complete a `requires human` step.",
 ].join("\n");
 
 /**
@@ -424,6 +427,11 @@ function renderActiveTask(catalog: TaskCatalog): string {
     ...(active.guide?.agent?.cancel || active.guide?.cancel
       ? [`\`${catalog.cancelActionId}\` ends the task guide without undoing values already written to the page.`]
       : []),
+    ...(active.goal
+      ? [
+          `When the page visibly satisfies the success criteria, call \`${catalog.completeActionId}\` with task="${active.id}". It only closes the goal; it does not write or save anything.`,
+        ]
+      : []),
   ];
 
   const lines = [
@@ -437,21 +445,40 @@ function renderActiveTask(catalog: TaskCatalog): string {
       ? [`Success criteria: ${active.definition.successCriteria.join(" | ")}`]
       : []),
     `Started by: ${active.startedBy}`,
-    `Missing required fields: ${missing.length ? missing.join(" / ") : "(none)"}`,
+    ...(active.goal ? ["Mode: goal only. The page's real actions are the only way to operate the page."] : []),
+    ...(fields.length
+      ? [`Missing required fields: ${missing.length ? missing.join(" / ") : "(none)"}`]
+      : []),
     ...(fieldLines.length ? [`Fields and current working memory:\n${fieldLines.join("\n")}`] : []),
     ...(stepStatus ? [`Steps: ${stepStatus}`] : []),
     ...(guideStep ? [`Current guide step: ${stepIndex}. ${guideStep.title}${guideStep.description ? ` — ${guideStep.description}` : ""}`] : []),
     ...(actions ? [`Guide actions available: ${actions}`] : []),
     ...(snapshot?.waitingFor ? [`Waiting for: ${snapshot.waitingFor}`] : []),
     ...(snapshot?.error ? [`Task error: ${snapshot.error.code}: ${snapshot.error.message}`] : []),
-    [
-      `To record a value the user supplied, corrected or explicitly delegated, call \`${catalog.updateActionId}\` with task="${active.id}" and a \`values\` object containing only the changed fields.`,
-      `Use \`clear\` for a field the user removed. Page-only fields must be completed in the page, not by you.`,
-      `Before writing, classify the turn: question, explanation, new value, correction, delegation, command, pause or abandonment.`,
-      `A whole sentence is never a field value. If the target field is ambiguous, ask instead of guessing.`,
-      `If the user delegates a choice, use a declared recommendation or allowed value and say what you chose; do not invent data. A single-field delegation is actionable even when other required fields are still empty: update the delegated field, then mention the remaining gaps instead of refusing the whole turn.`,
-      `After a write, summarise only what changed and the next real gap. Do not repeat a fixed field sequence.`,
-    ].join("\n"),
+    ...(fields.length
+      ? [
+          [
+            `To record a value the user supplied, corrected or explicitly delegated, call \`${catalog.updateActionId}\` with task="${active.id}" and a \`values\` object containing only the changed fields.`,
+            `Use \`clear\` for a field the user removed. Page-only fields must be completed in the page, not by you.`,
+            `Before writing, classify the turn: question, explanation, new value, correction, delegation, command, pause or abandonment.`,
+            `A whole sentence is never a field value. If the target field is ambiguous, ask instead of guessing.`,
+            `If the user delegates a choice, use a declared recommendation or allowed value and say what you chose; do not invent data. A single-field delegation is actionable even when other required fields are still empty: update the delegated field, then mention the remaining gaps instead of refusing the whole turn.`,
+            `After a write, summarise only what changed and the next real gap. Do not repeat a fixed field sequence.`,
+          ].join("\n"),
+        ]
+      : [
+          [
+            `This task has no declared field schema. The real page and its exposed actions are the source of truth.`,
+            active.goal
+              ? `This is a goal-only task. Do not use the task update tool or invent a form schema; inspect the page and use its real actions.`
+              : `Use the page's form-read and form-fill tools to inspect labels, current values, required fields and select options; never invent a field name or value.`,
+            `Page-only actions (uploads, signatures, one-time codes) must be completed by the person.`,
+            `Before writing, classify the turn: question, explanation, new value, correction, delegation, command, pause or abandonment.`,
+            active.goal
+              ? `After a write, inspect the page again, report only what changed and the remaining real gaps, then verify the outcome before completing the goal.`
+              : `After a write, re-read the form, report only what changed and the remaining real gaps, then use the task's business action to save and verify.`,
+          ].join("\n"),
+        ]),
     ...(controlLines.length
       ? [[`Page-owned control tools:`, ...controlLines.map((line) => `- ${line}`)].join("\n")]
       : []),
@@ -494,9 +521,9 @@ export function renderTaskContext(catalog: TaskCatalog | undefined, maxTasks = 1
       : "";
     return `- ${task.id}${active}: ${task.title}${description}${examples}${fields}${constraints}${success}${steps}`;
   });
-  const activeTask = renderActiveTask(catalog);
   const active = catalog.active();
   const activeRegistration = active ? catalog.get(active.id) : undefined;
+  const activeTask = renderActiveTask(catalog);
   const controlTools = active && activeRegistration?.onCommand
     ? [
         active.definition.fields?.length || active.guide?.fields ? "point at a field" : "",
@@ -518,8 +545,14 @@ export function renderTaskContext(catalog: TaskCatalog | undefined, maxTasks = 1
     `${lines.join("\n")}\n` +
     `When the user's request matches one of these tasks, first call \`${catalog.actionId}\` with its id. ` +
     `If the user already supplied values for listed fields, pass only those values in the optional \`values\` object; do not invent or guess missing values. ` +
-    `If the task is already active and you later learn more field values, call \`${catalog.updateActionId}\` with only the changed values. ` +
-    `While its guide is active, do not call the task's own write action directly; the page guide remains the single visible path.\n` +
+    (active
+      ? activeRegistration?.definition.fields?.length
+        ? `If the task is already active and you later learn more field values, call \`${catalog.updateActionId}\` with only the changed values. `
+        : `The active task has no declared fields; use its real page form actions instead of \`${catalog.updateActionId}\`. `
+      : "") +
+    (active?.goal
+      ? `The active goal has no write action of its own. Operate the page's real actions; a goal is orientation, not permission.\n`
+      : `While its guide is active, do not call the task's own write action directly; the page guide remains the single visible path.\n`) +
     `Treat an active task as goal + constraints + working memory, not a script. Answer the user's actual question first. The user may supply one value, correct a value, ask what to do, ask you to do it, choose to do it themselves, pause, or branch. Do not force the next missing field, do not repeat a value that is already present, and never turn an instruction sentence into a text field.` +
     controlHint +
     activeTask

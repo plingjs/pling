@@ -86,6 +86,26 @@ function ensureStyle(doc: Document): void {
 [${OVERLAY_ATTR}][data-effect="ring"].is-waiting::before {
   animation: pling-presence-pulse 1.6s ease-in-out infinite;
 }
+[${OVERLAY_ATTR}].is-locating {
+  background: rgba(46, 157, 247, 0.08);
+  box-shadow: 0 0 0 9999px rgba(10, 20, 32, 0.28);
+}
+[${OVERLAY_ATTR}].is-locating::before {
+  border-width: 3px;
+  animation: pling-presence-pulse 1.2s ease-in-out infinite;
+}
+[${OVERLAY_ATTR}].is-locating::after {
+  content: "";
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  border: 3px solid #fff;
+  border-radius: 999px;
+  background: #2e9df7;
+  box-shadow: 0 2px 8px rgba(14, 74, 128, 0.45);
+}
 [${OVERLAY_ATTR}][data-effect="spotlight"] {
   box-shadow: 0 0 0 9999px rgba(12, 22, 34, 0.42);
 }
@@ -185,7 +205,7 @@ export function createPresence(options: PresenceOptions | boolean = {}): Presenc
   };
 
   const startLoop = (): void => {
-    if (state === "waiting") {
+    if (state === "waiting" || state === "locate") {
       stopFrame();
       startListeners();
       place();
@@ -200,6 +220,7 @@ export function createPresence(options: PresenceOptions | boolean = {}): Presenc
   const paint = (): void => {
     const el = mount();
     el.classList.toggle("is-waiting", state === "waiting");
+    el.classList.toggle("is-locating", state === "locate");
     el.classList.toggle("is-hidden", false);
     place();
     startLoop();

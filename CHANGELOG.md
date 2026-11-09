@@ -3,6 +3,22 @@
 Pling 使用[语义化版本](https://semver.org/lang/zh-CN/)。`0.x` 阶段 API 仍可能调整，
 每次影响接入方式的变更都会记录在这里，并同步到 `website/releases/index.md` 的版本策略。
 
+## [0.1.0-alpha.9] — 2026-11-09
+
+- 助手界面收敛为素白主题，并默认使用融合模式；Vue 3、React、Vue 2.7 与原生 JS
+  统一消息头、时间、双行自动增高输入框、紧凑任务轨道和页面内定位高亮。
+- 任务目录新增最小 `goal()`：目标只声明结果、边界与成功条件，不携带字段、步骤、
+  controller 或业务回调；Agent 通过页面真实动作完成工作，并用 `pling_complete_task`
+  结束目标生命周期。
+- 新增 `pling_locate` 内置定位动作。用户问“在哪里点/上传”时，Agent 必须滚动到并
+  高亮真实控件，而不是只描述位置；定位是只读动作，不点击、不输入、不导航。
+- 新增 `course-create-directives-vue3` 案例：只用 `v-scope`、`v-record`、`v-tool`
+  完成创建课程，不定义任务、表单 surface 或自定义工具，展示最小接入路径。
+- 课程工作台迁移到共享页面与最大化精简的目标接入；新增并同步中英文案例说明、
+  API 索引、机器可读文档与发布检查。
+- 文档站与经典案例改用 `demo.plingjs.com` 运行模型示例，文档继续由
+  `plingjs.dev` 提供；发布脚本同步准备 `plingjs.com` 品牌站与运行面。
+
 ## [0.1.0-alpha.8] — 2026-11-08
 
 - 任务层改为 agent-first：模型通过 `pling_update_task` 理解整段描述并写入工作记忆，

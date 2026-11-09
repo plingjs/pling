@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-alpha.8",
+  "version": "0.1.0-alpha.9",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "categories": [
@@ -2115,8 +2115,8 @@
       "id": "tasks",
       "title": "Guided tasks",
       "titleZh": "引导任务",
-      "summary": "Tasks that collect user decisions, call existing actions in a fixed order, and render one shared run snapshot. The catalog decides which tasks are available in the current context; the guide decides how the active task is explained without duplicating execution or permissions.",
-      "summaryZh": "收集用户决策、按固定顺序调用已有动作，并用同一份运行快照渲染的任务层。任务目录判断当前上下文可用的任务，引导定义决定如何向用户解释当前任务；两者都不复制执行或权限逻辑。",
+      "summary": "Goals and advanced tasks. A goal declares an outcome, boundaries and success criteria; fields and execution stay on the real page. Advanced tasks add field schemas, lookups and fixed steps only when page actions cannot express the requirement.",
+      "summaryZh": "目标与进阶任务。目标只声明结果、边界和成功条件，字段与执行都留在真实页面。只有页面动作无法表达需求时，进阶任务才增加字段 schema、查找和固定步骤。",
       "entries": [
         {
           "id": "createTaskController",
@@ -2177,13 +2177,13 @@
           "anchor": "taskcatalog",
           "name": "TaskCatalog",
           "kind": "interface",
-          "summary": "The current page's task directory: register definitions, query what is available now, activate at most one guide, forward guide commands, and notify renderers.",
-          "summaryZh": "当前页面的任务目录：登记定义、查询此刻可用的任务、至多激活一个引导、转发引导命令，并通知渲染方。",
+          "summary": "The current page's task catalog: register goals or advanced tasks, query what is available now, activate at most one guide, complete a goal, forward guide commands, and notify renderers.",
+          "summaryZh": "当前页面的任务目录：登记目标或进阶任务、查询此刻可用的任务、至多激活一个引导、完成目标、转发引导命令，并通知渲染方。",
           "imports": [
             "@plingjs/agent"
           ],
           "signatures": {
-            "core": "interface TaskCatalog {\n  readonly actionId: string;\n  readonly updateActionId: string;\n  define(registration: GuidedTaskRegistration): () => void;\n  get(id: string): GuidedTaskRegistration | undefined;\n  list(): readonly GuidedTaskRegistration[];\n  available(): readonly GuidedTaskRegistration[];\n  active(): ActiveGuidedTask | null;\n  activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;\n  deactivate(): void;\n  command(command: TaskGuideCommand): boolean;\n  views(): readonly GuidedTaskView[];\n  refresh(): void;\n  subscribe(listener: () => void): () => void;\n  destroy(): void;\n}"
+            "core": "interface TaskCatalog {\n  readonly actionId: string;\n  readonly updateActionId: string;\n  readonly focusActionId: string;\n  readonly reviewActionId: string;\n  readonly proposeSaveActionId: string;\n  readonly cancelActionId: string;\n  readonly completeActionId: string;\n  goal(input: TaskGoalInput): () => void;\n  define(registration: GuidedTaskRegistration): () => void;\n  get(id: string): GuidedTaskRegistration | undefined;\n  list(): readonly GuidedTaskRegistration[];\n  available(): readonly GuidedTaskRegistration[];\n  active(): ActiveGuidedTask | null;\n  activate(id: string, options?: GuidedTaskActivationOptions): ActiveGuidedTask;\n  deactivate(): void;\n  command(command: TaskGuideCommand): boolean;\n  complete(): boolean;\n  views(): readonly GuidedTaskView[];\n  refresh(): void;\n  subscribe(listener: () => void): () => void;\n  destroy(): void;\n}"
           },
           "support": {
             "vue3": "core",
@@ -2195,6 +2195,33 @@
             {
               "package": "@plingjs/agent",
               "name": "TaskCatalog"
+            }
+          ],
+          "ref": "/reference/guided-task-api"
+        },
+        {
+          "id": "TaskGoalInput",
+          "anchor": "taskgoalinput",
+          "name": "TaskGoalInput",
+          "kind": "interface",
+          "summary": "The minimal task declaration: id, title, outcome, boundaries, success criteria, examples and optional route/scope continuity. It has no fields, steps, controller or business callbacks.",
+          "summaryZh": "最小任务声明：id、标题、结果、边界、成功条件、示例，以及可选的路由/作用域连续性。它没有字段、步骤、控制器或业务回调。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface TaskGoalInput {\n  id: string;\n  title: string;\n  goal: string;\n  description?: string;\n  constraints?: readonly string[];\n  successCriteria?: readonly string[];\n  examples?: readonly string[];\n  risk?: Kind;\n  route?: GuidedTaskRoute;\n  scope?: string | readonly string[];\n  keepActive?: boolean;\n  labels?: TaskGuideLabels;\n  cancelLabel?: string;\n  stepSubtitle?: string;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "TaskGoalInput"
             }
           ],
           "ref": "/reference/guided-task-api"
@@ -2264,7 +2291,7 @@
             "@plingjs/agent"
           ],
           "signatures": {
-            "core": "interface ActiveGuidedTask {\n  id: string;\n  definition: TaskDefinition;\n  guide?: TaskGuideDefinition;\n  controller?: TaskController;\n  state: TaskGuideState;\n  startedBy: \"page\" | \"agent\";\n}"
+            "core": "interface ActiveGuidedTask {\n  id: string;\n  definition: TaskDefinition;\n  guide?: TaskGuideDefinition;\n  controller?: TaskController;\n  state: TaskGuideState;\n  startedBy: \"page\" | \"agent\";\n  goal?: boolean;\n}"
           },
           "support": {
             "vue3": "core",

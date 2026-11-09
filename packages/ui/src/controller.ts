@@ -63,7 +63,7 @@ function sameSnapshot(a: PlingUiSnapshot, b: PlingUiSnapshot): boolean {
 
 function sameTheme(a: PlingTheme, b: PlingTheme): boolean {
   if (typeof a === "string" || typeof b === "string") return a === b;
-  return a.mode === b.mode && sameOptionalRecord(a.tokens, b.tokens);
+  return a.mode === b.mode && a.preset === b.preset && sameOptionalRecord(a.tokens, b.tokens);
 }
 
 function sameOptionalRecord(

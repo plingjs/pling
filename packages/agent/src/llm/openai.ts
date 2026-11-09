@@ -186,25 +186,70 @@ class DsmlOutputFilter {
   }
 }
 
-/** 内部消息 → OpenAI 消息。注意 assistant 带工具调用时 content 必须允许为 null。 */
+/**
+ * 内部消息 → OpenAI 消息。
+ *
+ * OpenAI 兼容接口要求 `assistant(tool_calls)` 后**紧邻**对应 `tool` 消息。页面上的
+ * 本地提示（例如点击“核对”后立即追加的一句 assistant 文案）可能先于工具结果进入
+ * 历史，形成 `assistant(tool_calls) → assistant(text) → tool`。这里把这类插入文本
+ * 并回工具调用消息的 `content`，既保留给用户看的内容，又保证线上协议合法。
+ */
 export function toOpenAiMessages(messages: readonly LlmMessage[]): unknown[] {
-  return messages.map((message) => {
+  const translated: Record<string, unknown>[] = [];
+
+  for (let index = 0; index < messages.length; index += 1) {
+    const message = messages[index]!;
     if (message.role === "tool") {
-      return { role: "tool", tool_call_id: message.toolCallId ?? "", content: message.content };
+      translated.push({ role: "tool", tool_call_id: message.toolCallId ?? "", content: message.content });
+      continue;
     }
     if (message.role === "assistant" && (message.toolCalls?.length ?? 0) > 0) {
-      return {
+      const pendingToolCallIds = new Set(message.toolCalls!.map((call) => call.id));
+      const toolResults: Record<string, unknown>[] = [];
+      const insertedText: string[] = [];
+      let cursor = index + 1;
+
+      // 同一轮可能有多个工具调用。把这一轮里夹在中间或前面的本地 assistant
+      // 文案全部收进工具调用消息，再把对应 tool 结果连续排好。
+      while (cursor < messages.length && pendingToolCallIds.size > 0) {
+        const candidate = messages[cursor]!;
+        if (candidate.role === "tool" && pendingToolCallIds.has(candidate.toolCallId ?? "")) {
+          pendingToolCallIds.delete(candidate.toolCallId ?? "");
+          toolResults.push({
+            role: "tool",
+            tool_call_id: candidate.toolCallId ?? "",
+            content: candidate.content,
+          });
+          cursor += 1;
+          continue;
+        }
+        if (candidate.role === "assistant" && (candidate.toolCalls?.length ?? 0) === 0) {
+          if (candidate.content) insertedText.push(candidate.content);
+          cursor += 1;
+          continue;
+        }
+        break;
+      }
+      index = cursor - 1;
+
+      const content = [message.content, ...insertedText].filter(Boolean).join("\n\n");
+      const toolMessage: Record<string, unknown> = {
         role: "assistant",
-        content: message.content === "" ? null : message.content,
+        content: content || null,
         tool_calls: message.toolCalls!.map((call) => ({
           id: call.id,
           type: "function",
           function: { name: call.name, arguments: call.arguments },
         })),
       };
+      translated.push(toolMessage);
+      translated.push(...toolResults);
+      continue;
     }
-    return { role: message.role, content: message.content };
-  });
+    translated.push({ role: message.role, content: message.content });
+  }
+
+  return translated;
 }
 
 async function readBody(response: Response): Promise<string> {

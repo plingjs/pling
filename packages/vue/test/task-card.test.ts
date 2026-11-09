@@ -33,7 +33,7 @@ afterEach(() => {
 describe("guided task card · Vue", () => {
   it("passes the task slot into the chat transcript", async () => {
     const wrapper = setup(
-      `<AgentDock default-open><template #task><section class="task-card-fixture">Guided task</section></template></AgentDock>`,
+      `<AgentDock default-open task-placement="inline"><template #task><section class="task-card-fixture">Guided task</section></template></AgentDock>`,
       () => ({}),
     );
     await nextTick();

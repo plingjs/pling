@@ -162,7 +162,7 @@ describe("<AgentDock>：人工接力", () => {
     const wrapper = mount(Host, { attachTo: document.body, global: { plugins: [pi.plugin] } });
 
     await wrapper.find(".dock__launcher").trigger("click");
-    const input = wrapper.find(".dock__chat .composer input");
+    const input = wrapper.find(".dock__chat .composer textarea, .composer input");
     await input.setValue("帮我注册");
     await wrapper.find(".dock__chat form").trigger("submit");
 
@@ -225,7 +225,7 @@ describe("<AgentDock>：人工接力", () => {
     const wrapper = mount(Host, { attachTo: document.body, global: { plugins: [pi.plugin] } });
 
     await wrapper.find(".dock__launcher").trigger("click");
-    await wrapper.find(".dock__chat .composer input").setValue("帮我注册");
+    await wrapper.find(".dock__chat .composer textarea, .composer input").setValue("帮我注册");
     await wrapper.find(".dock__chat form").trigger("submit");
 
     await waitFor(() => wrapper.find(".handoff").exists());

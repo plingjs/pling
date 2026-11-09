@@ -15,6 +15,8 @@ import { computed, inject, nextTick, onMounted, onUnmounted, ref, useSlots, watc
 import MarkdownIt from "markdown-it";
 import { supportsAlwaysAllow } from "@plingjs/core";
 import { toTranscriptLines, type PendingApproval, type PendingHandoff, type SessionEvent } from "@plingjs/agent";
+import { ensurePlingStyles } from "@plingjs/dom";
+import { quickTaskOf, type QuickTaskItem } from "@plingjs/ui";
 import { PLING_KEY } from "../directive";
 import { STANDALONE_UI } from "../ui";
 
@@ -80,17 +82,23 @@ const props = withDefaults(
     guidePlacement?: "top" | "end";
     /** Render a speaker header (name + time) above each chat message. */
     speakers?: boolean;
+    /** Page-level suggestions shown only while the conversation is empty. */
+    quick?: readonly QuickTaskItem[];
+    /** Keep the standalone title/running header. Workspace panels usually hide it. */
+    showHeader?: boolean;
   }>(),
   {
     events: () => [],
     running: false,
     pending: null,
     tools: false,
-    multiline: false,
-    taskPlacement: "inline",
+    multiline: true,
+    taskPlacement: "pinned",
     hasTask: true,
     guidePlacement: "top",
-    speakers: false,
+    speakers: true,
+    quick: () => [],
+    showHeader: true,
   },
 );
 
@@ -102,6 +110,7 @@ const emit = defineEmits<{
   resume: [];
   dismissResume: [];
   stop: [];
+  quick: [text: string];
 }>();
 
 const draft = ref("");
@@ -112,6 +121,7 @@ const followLatest = ref(true);
 const pi = inject(PLING_KEY, null);
 const slots = useSlots();
 const ui = pi?.ui ?? STANDALONE_UI;
+ensurePlingStyles();
 const t = ui.t;
 const titleText = computed(() => props.title ?? t("chat.title"));
 const placeholderText = computed(() => props.placeholder ?? t("chat.placeholder"));
@@ -134,6 +144,7 @@ watch(
   { immediate: true },
 );
 const shown = (text: string): string => (props.reveal ? props.reveal(text) : text);
+const quickItems = computed(() => props.quick.map(quickTaskOf));
 const handoffSteps = computed(() => props.pendingHandoff?.request.steps ?? []);
 const handoffStep = computed(() => props.pendingHandoff?.step ?? 0);
 const handoffLast = computed(() => handoffStep.value >= handoffSteps.value.length - 1);
@@ -157,7 +168,7 @@ function resizeComposer(): void {
   const element = composerEl.value;
   if (!element || element.tagName !== "TEXTAREA") return;
   element.style.height = "auto";
-  const height = Math.min(150, Math.max(46, element.scrollHeight));
+  const height = Math.min(150, Math.max(44, element.scrollHeight));
   element.style.height = `${height}px`;
   element.style.overflowY = element.scrollHeight > 150 ? "auto" : "hidden";
 }
@@ -202,67 +213,80 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="chat" :class="ui.classNames.chat" :style="ui.cssVars">
-    <header>
+  <section class="chat pling-chat" :class="ui.classNames.chat" :style="ui.cssVars">
+    <header v-if="showHeader" class="pling-chat__head">
       <strong>{{ titleText }}</strong>
       <!-- 给外壳（如 <AgentDock>）放自己的控件：模型徽标、清空、收起… -->
       <slot name="actions" />
-      <span v-if="running" class="running">{{ t("chat.running") }}</span>
-      <button v-if="running" type="button" class="stop" @click="emit('stop')">{{ t("chat.stop") }}</button>
+      <span v-if="running" class="running pling-chat__running">{{ t("chat.running") }}</span>
+      <button v-if="running" type="button" class="stop pling-chat__stop" @click="emit('stop')">{{ t("chat.stop") }}</button>
     </header>
 
-    <div v-if="taskPlacement === 'pinned' && hasTask && $slots.task" class="task-pinned">
+    <div v-if="taskPlacement === 'pinned' && hasTask && $slots.task" class="task-pinned pling-chat__task-pinned">
       <slot name="task" />
     </div>
 
-    <div ref="transcriptEl" class="transcript" :class="{ 'is-empty': transcriptEmpty }">
+    <div ref="transcriptEl" class="transcript pling-chat__transcript" :class="{ 'is-empty': transcriptEmpty }">
       <div v-if="guidePlacement === 'top' && $slots.guide" class="chat-guide">
         <slot name="guide" />
       </div>
-      <div v-if="resume" class="resume">
+      <div v-if="resume" class="resume pling-chat__resume">
         <strong>{{ resume.goal ? t("chat.resume.goal", { goal: shown(resume.goal) }) : t("chat.resume.pending") }}</strong>
-        <p v-if="resume.interrupted" class="resume__hint">
+        <p v-if="resume.interrupted" class="resume__hint pling-chat__resume-hint">
           {{ t("chat.resume.interrupted") }}
         </p>
-        <p class="resume__hint">{{ t("chat.resume.record") }}</p>
-        <div class="answers">
+        <p class="resume__hint pling-chat__resume-hint">{{ t("chat.resume.record") }}</p>
+        <div class="answers pling-chat__answers">
           <button type="button" @click="emit('resume')">{{ t("chat.resume.continue") }}</button>
           <button type="button" class="reject" @click="emit('dismissResume')">{{ t("chat.resume.dismiss") }}</button>
         </div>
       </div>
-      <p v-if="!lines.length && !$slots.guide && !(taskPlacement === 'inline' && hasTask && $slots.task)" class="empty">
-        {{ emptyText }}
-      </p>
+      <template v-if="!lines.length && !$slots.guide && !(taskPlacement === 'inline' && hasTask && $slots.task)">
+        <p class="empty pling-chat__empty">{{ emptyText }}</p>
+        <div v-if="quickItems.length" class="pling-chat__quick dock__quick">
+          <button
+            v-for="(task, index) in quickItems"
+            :key="`${task.prompt}:${index}`"
+            type="button"
+            :disabled="running || task.disabled"
+            :title="task.description"
+            @click="emit('quick', task.prompt)"
+          >
+            {{ task.label }}
+          </button>
+        </div>
+      </template>
       <template v-for="(line, index) in lines" :key="index">
-        <div v-if="line.kind === 'user'" class="line user">
-          <header v-if="speakers" class="line-head">
+        <div v-if="line.kind === 'user'" class="line user pling-chat__line is-user">
+          <header v-if="speakers" class="line-head pling-chat__line-head">
             <span>{{ t("chat.me") }}</span>
+            <time>{{ lineTimes[index] }}</time>
           </header>
-          <p class="line-body">{{ shown(line.text) }}</p>
+          <p class="line-body pling-chat__line-body">{{ shown(line.text) }}</p>
         </div>
-        <div v-else-if="line.kind === 'final'" class="line final">
-          <header v-if="speakers" class="line-head">
+        <div v-else-if="line.kind === 'final'" class="line final pling-chat__line is-final">
+          <header v-if="speakers" class="line-head pling-chat__line-head">
             <strong>{{ t("chat.assistantName") }}</strong>
             <time>{{ lineTimes[index] }}</time>
           </header>
           <div class="markdown" v-html="renderMarkdown(shown(line.text))" />
         </div>
-        <div v-else-if="line.kind === 'assistant'" class="line assistant">
-          <header v-if="speakers" class="line-head">
+        <div v-else-if="line.kind === 'assistant'" class="line assistant pling-chat__line is-assistant">
+          <header v-if="speakers" class="line-head pling-chat__line-head">
             <strong>{{ t("chat.assistantName") }}</strong>
             <time>{{ lineTimes[index] }}</time>
           </header>
           <div class="markdown" v-html="renderMarkdown(shown(line.text))" />
         </div>
-        <p v-else-if="line.kind === 'notice'" class="line notice">{{ shown(line.text) }}</p>
-        <p v-else-if="line.kind === 'cancelled'" class="line notice">{{ t("chat.cancelled") }}</p>
-        <p v-else-if="line.kind === 'error'" class="line error">{{ shown(line.text) }}</p>
-        <p v-else-if="line.kind === 'blocked'" class="line blocked">{{ shown(line.text) }}</p>
-        <p v-else-if="line.kind === 'call'" class="line call">
+        <p v-else-if="line.kind === 'notice'" class="line notice pling-chat__line is-notice">{{ shown(line.text) }}</p>
+        <p v-else-if="line.kind === 'cancelled'" class="line notice pling-chat__line is-notice">{{ t("chat.cancelled") }}</p>
+        <p v-else-if="line.kind === 'error'" class="line error pling-chat__line is-error">{{ shown(line.text) }}</p>
+        <p v-else-if="line.kind === 'blocked'" class="line blocked pling-chat__line is-blocked">{{ shown(line.text) }}</p>
+        <p v-else-if="line.kind === 'call'" class="line call pling-chat__line is-call">
           <code>{{ line.id }}</code>
-          <span class="args">{{ shown(line.args) }}</span>
+          <span class="args pling-chat__args">{{ shown(line.args) }}</span>
         </p>
-        <p v-else class="line result" :class="{ ok: line.ok }">
+        <p v-else class="line result pling-chat__line is-result" :class="{ ok: line.ok, 'is-ok': line.ok }">
           <code>{{ line.id }}</code>
           <span>{{ shown(line.detail) }}</span>
         </p>
@@ -273,32 +297,32 @@ onUnmounted(() => {
       </div>
       <!-- 「正在执行」：动作流水不刷屏了，但「它在动」这件事要看得见。
            待确认时让位给下面的确认条（那本身就是一次交互，不是「在跑」）。 -->
-      <p v-if="running && !pending && !pendingHandoff" class="line executing">
-        <span class="executing__dot" aria-hidden="true" />
+      <p v-if="running && !pending && !pendingHandoff" class="line executing pling-chat__line is-executing">
+        <span class="executing__dot pling-chat__executing-dot" aria-hidden="true" />
         {{ t("chat.executing") }}
       </p>
     </div>
 
-    <div v-if="pendingHandoff" class="handoff">
-      <div class="ask">
+    <div v-if="pendingHandoff" class="handoff pling-chat__handoff">
+      <div class="ask pling-chat__ask">
         <strong>{{ handoffSteps.length ? t("chat.handoff.step", { current: handoffStep + 1, total: handoffSteps.length }) : t("chat.handoff.takeover") }}</strong>
         <code>{{ pendingHandoff.request.id }}</code>
       </div>
-      <p class="handoff__reason">{{ pendingHandoff.request.reason }}</p>
-      <ol v-if="handoffSteps.length" class="handoff__steps">
+      <p class="handoff__reason pling-chat__handoff-reason">{{ pendingHandoff.request.reason }}</p>
+      <ol v-if="handoffSteps.length" class="handoff__steps pling-chat__handoff-steps">
         <li
           v-for="(step, index) in handoffSteps"
           :key="index"
           :class="{ 'is-current': index === handoffStep, 'is-done': index < handoffStep }"
         >
-          <span class="handoff__num">{{ index + 1 }}</span>
+          <span class="handoff__num pling-chat__handoff-num">{{ index + 1 }}</span>
           <span>{{ shown(step.text) }}</span>
         </li>
       </ol>
-      <p class="handoff__hint">
+      <p class="handoff__hint pling-chat__handoff-hint">
         {{ handoffSteps.length ? t("chat.handoff.follow") : t("chat.handoff.completeHint") }}
       </p>
-      <div class="answers">
+      <div class="answers pling-chat__answers">
         <button v-if="handoffStep > 0" type="button" @click="emit('handoffStep', -1)">{{ t("chat.handoff.previous") }}</button>
         <button v-if="handoffSteps.length && !handoffLast" type="button" @click="emit('handoffStep', 1)">{{ t("chat.handoff.next") }}</button>
         <button v-else type="button" @click="emit('handoff', true)">{{ t("chat.handoff.done") }}</button>
@@ -306,13 +330,13 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <div v-else-if="pending" class="confirm" :class="{ danger: pending.request.kind === 'danger' }">
-      <div class="ask">
+    <div v-else-if="pending" class="confirm pling-chat__confirm" :class="{ danger: pending.request.kind === 'danger', 'is-danger': pending.request.kind === 'danger' }">
+      <div class="ask pling-chat__ask">
         <strong>{{ pending.request.kind === "danger" ? t("chat.confirm.danger") : t("chat.confirm.title") }}</strong>
         <code>{{ pending.request.id }}</code>
-        <span class="desc">{{ pending.request.description }}</span>
+        <span class="desc pling-chat__confirm-desc">{{ pending.request.description }}</span>
       </div>
-      <div class="answers">
+      <div class="answers pling-chat__answers">
         <button type="button" @click="emit('reply', true)">{{ t("chat.confirm.approve") }}</button>
         <button v-if="supportsAlwaysAllow(pending.request.approval)" type="button" @click="emit('reply', 'always')">
           {{ t("chat.confirm.always") }}
@@ -323,426 +347,24 @@ onUnmounted(() => {
 
     <slot name="footer" />
 
-    <form class="composer" @submit.prevent="submit">
-      <textarea
-        v-if="multiline"
-        ref="composerEl"
-        v-model="draft"
-        rows="2"
-        :aria-label="t('chat.inputLabel')"
-        :placeholder="placeholderText"
-        :disabled="running"
-        @keydown="onComposerKeydown"
-      />
-      <input v-else ref="composerEl" v-model="draft" :aria-label="t('chat.inputLabel')" :placeholder="placeholderText" :disabled="running" />
-      <button type="submit" :disabled="running || !draft.trim()">{{ t("chat.send") }}</button>
+    <form class="composer pling-chat__composer" @submit.prevent="submit">
+      <div class="pling-chat__composer-box">
+        <textarea
+          v-if="multiline"
+          ref="composerEl"
+          v-model="draft"
+          rows="2"
+          :aria-label="t('chat.inputLabel')"
+          :placeholder="placeholderText"
+          :disabled="running"
+          @keydown="onComposerKeydown"
+        />
+        <input v-else ref="composerEl" v-model="draft" :aria-label="t('chat.inputLabel')" :placeholder="placeholderText" :disabled="running" />
+        <button class="pling-chat__send" type="submit" :aria-label="t('chat.send')" :title="t('chat.send')" :disabled="running || !draft.trim()">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4.5 10h10M11 6.5l3.5 3.5-3.5 3.5" /></svg>
+        </button>
+      </div>
     </form>
   </section>
 </template>
 
-<style scoped>
-.chat {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  height: 100%;
-  min-height: 0;
-  border: 1px solid var(--pling-color-border, #ddd);
-  border-radius: var(--pling-radius-lg, 12px);
-  padding: 14px;
-  background: var(--pling-color-surface, #fff);
-  color: var(--pling-color-text, #0f172a);
-  font-family: var(--pling-font-family, system-ui, sans-serif);
-  font-size: 14px;
-  line-height: 1.55;
-}
-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--pling-color-border-muted, #eee);
-}
-header strong {
-  font-size: 15px;
-  line-height: 1.4;
-}
-header .running {
-  color: var(--pling-color-primary-strong, #1565c0);
-  font-size: 12.5px;
-}
-header .stop {
-  margin-left: auto;
-}
-.transcript {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-/* A scrolling flex column must not shrink its children to fit. Without this,
-   long transcripts compress every line to a few pixels and scrollHeight never
-   reflects the real content height. */
-.transcript > * {
-  flex: 0 0 auto;
-}
-.transcript.is-empty {
-  align-items: center;
-  justify-content: center;
-}
-.task-pinned {
-  flex: 0 0 auto;
-  max-height: min(58%, 560px);
-  overflow: auto;
-  overscroll-behavior: contain;
-}
-.task-pinned:empty {
-  display: none;
-}
-.chat-guide {
-  flex: 0 0 auto;
-}
-.resume {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  padding: 10px 12px;
-  border: 1px solid var(--pling-color-primary, #7dd3fc);
-  border-radius: 10px;
-  background: var(--pling-color-primary-soft, #f0f9ff);
-}
-.resume strong {
-  color: var(--pling-color-primary-strong, #075985);
-  font-size: 13px;
-  line-height: 1.45;
-}
-.resume__hint {
-  margin: 0;
-  color: var(--pling-color-primary-strong, #0369a1);
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-.line {
-  margin: 0;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border-left: 3px solid var(--pling-color-border, #ddd);
-  white-space: pre-wrap;
-  word-break: break-word;
-  line-height: 1.6;
-}
-.line.user {
-  border-color: var(--pling-color-primary, #90caf9);
-  background: var(--pling-color-primary-soft, #f3f8ff);
-}
-.line.assistant {
-  border-color: var(--pling-color-border, #c5cae9);
-}
-.line.final {
-  border-color: var(--pling-color-success, #66bb6a);
-  background: var(--pling-color-success-soft, #f1f8f2);
-}
-.line-body {
-  margin: 0;
-  white-space: pre-wrap;
-}
-.line-head {
-  display: flex;
-  align-items: baseline;
-  gap: 5px;
-  margin-bottom: 6px;
-  color: var(--pling-color-text-subtle, #888);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.3;
-}
-.line-head time {
-  color: var(--pling-color-text-faint, #a8b3c2);
-  font-size: 11px;
-  font-weight: 400;
-}
-.line.user .line-head {
-  justify-content: flex-end;
-}
-.line.assistant .line-head strong,
-.line.final .line-head strong {
-  color: var(--pling-color-text, #172033);
-}
-.line .markdown {
-  white-space: normal;
-}
-.line .markdown :deep(p) {
-  margin: 0 0 0.55em;
-}
-.line .markdown :deep(p:last-child) {
-  margin-bottom: 0;
-}
-.line .markdown :deep(h1),
-.line .markdown :deep(h2),
-.line .markdown :deep(h3),
-.line .markdown :deep(h4),
-.line .markdown :deep(h5),
-.line .markdown :deep(h6) {
-  margin: 0.25em 0 0.5em;
-  line-height: 1.35;
-}
-.line .markdown :deep(ul),
-.line .markdown :deep(ol) {
-  margin: 0.35em 0;
-  padding-left: 1.5em;
-}
-.line .markdown :deep(blockquote) {
-  margin: 0.5em 0;
-  padding-left: 0.75em;
-  border-left: 3px solid var(--pling-color-border, #cbd5e1);
-  color: var(--pling-color-text-muted, #475569);
-}
-.line .markdown :deep(pre) {
-  overflow-x: auto;
-  margin: 0.5em 0;
-  padding: 8px;
-  border-radius: 5px;
-  background: var(--pling-color-surface-muted, #f1f5f9);
-}
-.line .markdown :deep(code) {
-  padding: 0.08em 0.28em;
-  border-radius: 3px;
-  background: var(--pling-color-surface-muted, #eef2f7);
-  font-family: var(--pling-font-family-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
-  font-size: 0.94em;
-}
-.line .markdown :deep(pre code) {
-  padding: 0;
-  background: transparent;
-  white-space: pre;
-}
-.line .markdown :deep(a) {
-  color: var(--pling-color-primary, #2e9df7);
-  text-decoration: underline;
-}
-.line .markdown :deep(table) {
-  display: block;
-  max-width: 100%;
-  overflow-x: auto;
-  border-collapse: collapse;
-}
-.line .markdown :deep(th),
-.line .markdown :deep(td) {
-  padding: 3px 6px;
-  border: 1px solid var(--pling-color-border, #dbe2ea);
-  text-align: left;
-}
-.line.notice {
-  border-color: var(--pling-color-warning, #ffe082);
-  background: var(--pling-color-warning-soft, #fffdf3);
-  color: var(--pling-color-warning, #795548);
-  font-size: 12.5px;
-}
-.line.error {
-  border-color: var(--pling-color-danger, #ef9a9a);
-  background: var(--pling-color-danger-soft, #fff5f5);
-  color: var(--pling-color-danger, #b71c1c);
-}
-.line.blocked {
-  border-color: var(--pling-color-warning, #ffb74d);
-  background: var(--pling-color-warning-soft, #fff8e1);
-  color: var(--pling-color-warning, #8d5b00);
-}
-.line.executing {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  border-color: var(--pling-color-border, #cbd5e1);
-  color: var(--pling-color-text-muted, #64748b);
-  font-size: 12.5px;
-}
-.executing__dot {
-  width: 7px;
-  height: 7px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--pling-color-primary, #2e9df7);
-  animation: chat-pulse 1s ease-in-out infinite;
-}
-@keyframes chat-pulse {
-  50% {
-    opacity: 0.25;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .executing__dot {
-    animation: none;
-  }
-}
-.line.call {
-  border-color: var(--pling-color-border, #b0bec5);
-  font-family: var(--pling-font-family-mono, ui-monospace, monospace);
-}
-.line.result {
-  border-color: var(--pling-color-danger, #ef9a9a);
-  font-family: var(--pling-font-family-mono, ui-monospace, monospace);
-  color: var(--pling-color-danger, #b71c1c);
-}
-.line.result.ok {
-  border-color: var(--pling-color-success, #a5d6a7);
-  color: var(--pling-color-success, #2e7d32);
-}
-.args {
-  color: var(--pling-color-text-subtle, #888);
-  margin-left: 6px;
-}
-.empty {
-  color: var(--pling-color-text-subtle, #888);
-}
-.transcript.is-empty .empty {
-  max-width: 280px;
-  padding: 0 10px;
-  text-align: center;
-  line-height: 1.7;
-}
-.confirm {
-  border: 1px solid var(--pling-color-warning, #ffe082);
-  background: var(--pling-color-warning-soft, #fffdf3);
-  border-radius: var(--pling-radius-md, 8px);
-  padding: 10px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.confirm.danger {
-  border-color: var(--pling-color-danger, #ef9a9a);
-  background: var(--pling-color-danger-soft, #fff5f5);
-}
-.handoff {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding: 10px;
-  border: 1px solid var(--pling-color-primary, #93c5fd);
-  border-radius: var(--pling-radius-md, 8px);
-  background: var(--pling-color-primary-soft, #eff6ff);
-  font-size: 13px;
-}
-.handoff .ask {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.handoff__reason {
-  margin: 0;
-  color: var(--pling-color-primary-strong, #1e3a8a);
-}
-.handoff__steps {
-  margin: 3px 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: 4px;
-}
-.handoff__steps li {
-  display: flex;
-  gap: 6px;
-  align-items: baseline;
-  color: var(--pling-color-text-muted, #64748b);
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-.handoff__steps li.is-current {
-  color: var(--pling-color-text, #0f172a);
-  font-weight: 600;
-}
-.handoff__steps li.is-done {
-  color: var(--pling-color-success, #15803d);
-  text-decoration: line-through;
-}
-.handoff__num {
-  display: inline-grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--pling-color-primary-soft, #dbeafe);
-  color: var(--pling-color-primary-strong, #1d4ed8);
-  font-size: 10.5px;
-  flex: none;
-}
-.handoff__steps li.is-current .handoff__num {
-  background: var(--pling-color-primary, #2e9df7);
-  color: var(--pling-color-on-primary, #fff);
-}
-.handoff__hint {
-  margin: 0;
-  color: var(--pling-color-text-muted, #64748b);
-  font-size: 12.5px;
-  line-height: 1.55;
-}
-.confirm .ask {
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-.confirm .desc {
-  color: var(--pling-color-text-muted, #666);
-}
-.answers {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-}
-.answers .reject {
-  color: var(--pling-color-danger, #b71c1c);
-}
-.composer {
-  display: flex;
-  gap: 8px;
-}
-.composer input,
-.composer textarea {
-  flex: 1;
-  min-width: 0;
-  min-height: 38px;
-  padding: 7px 10px;
-  border: 1px solid var(--pling-color-border, #ddd);
-  border-radius: var(--pling-radius-md, 8px);
-  background: var(--pling-color-surface, #fff);
-  color: var(--pling-color-text, #0f172a);
-  font: inherit;
-  font-size: 14px;
-  outline: none;
-}
-.composer textarea {
-  height: 46px;
-  max-height: 150px;
-  resize: none;
-  line-height: 22px;
-}
-.composer input:focus,
-.composer textarea:focus {
-  border-color: var(--pling-color-primary, #2e9df7);
-  box-shadow: 0 0 0 3px rgb(46 157 247 / 15%);
-}
-.composer button {
-  flex: none;
-  min-height: 38px;
-  padding: 0 14px;
-  border: 0;
-  border-radius: var(--pling-radius-md, 8px);
-  background: var(--pling-color-primary, #2e9df7);
-  color: var(--pling-color-on-primary, #fff);
-  font: inherit;
-  font-size: 14px;
-  font-weight: 620;
-  cursor: pointer;
-}
-.composer button:disabled {
-  background: var(--pling-color-primary, #2e9df7);
-  color: var(--pling-color-on-primary, #fff);
-  opacity: 0.45;
-  cursor: not-allowed;
-}
-</style>

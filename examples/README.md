@@ -7,7 +7,7 @@ minimal Pling integration, and the local model connection used at runtime.
 `examples/apps/todo-surface-auth/` is the complete authenticated Todo
 application: page assistant, BFF-owned sessions, Surface pairing, external-agent
 access, and page-side approval. It is also the deployment reference for the
-public `todo.plingjs.dev` service.
+public `todo.plingjs.com` service.
 
 Two retrofit labs show the same application before and after Pling:
 

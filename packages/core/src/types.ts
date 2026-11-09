@@ -223,7 +223,7 @@ export interface HandoffStep {
  *
  * core 不认识 DOM、样式、动画 —— 这里只是一个通知，省略就等于不显示。
  */
-export type PresenceState = "acting" | "waiting" | "idle";
+export type PresenceState = "acting" | "waiting" | "locate" | "idle";
 
 /**
  * 指引目标（S17）：只负责「被高亮」，不是可执行动作。

@@ -22,7 +22,7 @@ try {
 const allowedOrigins = csv(process.env.TODO_ALLOWED_ORIGINS) || [
   "http://127.0.0.1:5220",
   "http://localhost:5220",
-  "https://todo.plingjs.dev",
+  "https://todo.plingjs.com",
 ];
 const staticDir = process.env.TODO_DIST?.trim() || `${caseRoot}dist`;
 

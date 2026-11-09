@@ -198,11 +198,11 @@ than reusing the user's cookie as an Agent credential.
 For the official public demo, use dedicated hosts:
 
 ```text
-https://todo.plingjs.dev     Todo page and BFF
-https://surface.plingjs.dev  Shared demo Gateway
+https://todo.plingjs.com     Todo page and BFF
+https://surface.plingjs.com  Shared demo Gateway
 ```
 
-`surface.plingjs.dev` is a demonstration endpoint, not a shared customer proxy.
+`surface.plingjs.com` is a demonstration endpoint, not a shared customer proxy.
 An enterprise should run the same Gateway at its own origin, for example
 `https://surface.example.com`, and should let its own backend create page
 sessions. The Todo BFF in this case is the reference for that backend boundary.

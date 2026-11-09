@@ -9,8 +9,8 @@ describe("AgentChat Markdown 渲染", () => {
 
     expect(wrapper.find("header strong").text()).toBe("Chat");
     expect(wrapper.find(".running").text()).toBe("Working…");
-    expect(wrapper.find(".composer button").text()).toBe("Send");
-    expect(wrapper.find(".composer input").attributes("aria-label")).toBe("Message");
+    expect(wrapper.find(".pling-chat__send").attributes("aria-label")).toBe("Send");
+    expect(wrapper.find(".composer textarea, .composer input").attributes("aria-label")).toBe("Message");
     wrapper.unmount();
   });
 
@@ -41,7 +41,7 @@ describe("AgentChat Markdown 渲染", () => {
     const wrapper = mount(AgentChat, { props: { events } });
 
     expect(wrapper.find(".line.assistant h2").text()).toBe("处理中");
-    expect(wrapper.find(".line.assistant strong").text()).toBe("两条");
+    expect(wrapper.find(".line.assistant .markdown strong").text()).toBe("两条");
     expect(wrapper.find(".line.assistant code").text()).toBe("待发货");
     expect(wrapper.findAll(".line.final li")).toHaveLength(2);
     expect(wrapper.findAll(".line.final table tbody tr")).toHaveLength(1);
@@ -51,7 +51,7 @@ describe("AgentChat Markdown 渲染", () => {
       rel: "noopener noreferrer",
     });
     expect(wrapper.find(".line.user strong").exists()).toBe(false);
-    expect(wrapper.find(".line.user").text()).toBe("**用户输入仍是纯文本**");
+    expect(wrapper.find(".line.user .line-body").text()).toBe("**用户输入仍是纯文本**");
     wrapper.unmount();
   });
 
@@ -102,7 +102,7 @@ describe("AgentChat Markdown 渲染", () => {
     const wrapper = mount(AgentChat, { props: { events, speakers: true } });
 
     expect(wrapper.findAll(".line-head")).toHaveLength(2);
-    expect(wrapper.find(".line.user .line-head").text()).toMatch(/^(我|Me)$/);
+    expect(wrapper.find(".line.user .line-head span").text()).toMatch(/^(我|Me)$/);
     expect(wrapper.find(".line.final .line-head strong").text()).toBe("Pling");
     expect(wrapper.find(".line.final .line-head time").text()).toMatch(/^\d{2}:\d{2}$/);
     wrapper.unmount();
@@ -129,7 +129,7 @@ describe("AgentChat Markdown 渲染", () => {
     const transcript = wrapper.find(".transcript");
     const children = Array.from(transcript.element.children);
     expect(children.at(-1)?.classList.contains("chat-guide--end")).toBe(true);
-    expect(transcript.find(".line.final").text()).toBe("上一轮回答");
+    expect(transcript.find(".line.final .markdown").text()).toBe("上一轮回答");
     expect(transcript.find(".chat-guide--end .custom-guide").text()).toBe("Next field");
     wrapper.unmount();
   });

@@ -75,7 +75,7 @@ describe("会话接线：一份配置 → 一条能用的会话", () => {
     expect(llm.received[0]![0]!.content).toContain(DEFAULT_SYSTEM_PROMPT);
     // 默认模式下 write 不问，所以清单里没有「需确认」标记
     expect(llm.received[0]![0]!.content).toContain("add_todo (click / write) 新增一条待办");
-    expect(llm.toolsSeen[0]!.map((tool) => tool.function.name)).toEqual(["add_todo"]);
+    expect(llm.toolsSeen[0]!.map((tool) => tool.function.name)).toEqual(["add_todo", "pling_locate"]);
   });
 
   it("应用自己的角色说明是追加在框架规则后面的", async () => {

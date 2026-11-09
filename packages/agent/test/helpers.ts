@@ -7,6 +7,7 @@ import {
   type Kind,
   type Policy,
   type Primitive,
+  type PresenceState,
   type Registry,
   type Snapshot,
 } from "@plingjs/core";
@@ -23,6 +24,7 @@ export interface FakeAction {
   source?: "declared" | "derived";
   available?: Availability | (() => Availability);
   visible?: boolean;
+  presence?: (state: PresenceState) => void;
   onRun?: (args: Record<string, unknown>) => unknown;
   /** 复合动作（S6a）：给了它就是 `primitive: flow`（对模型 1 个 tool，内部按顺序走） */
   steps?: readonly FlowStep[];
@@ -45,6 +47,7 @@ export function makeRegistry(actions: readonly FakeAction[]): Registry {
         ...(action.handoff ? { handoff: { reason: action.handoff.reason } } : {}),
       },
       isAvailable: () => (typeof action.available === "function" ? action.available() : action.available ?? true),
+      ...(action.presence ? { presence: action.presence } : {}),
       ...(action.handoff ? { handoff: action.handoff } : {}),
       ...(action.visible === false ? { isVisible: () => false } : {}),
       ...(action.steps ? { steps: action.steps } : {}),

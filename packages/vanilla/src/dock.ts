@@ -12,11 +12,10 @@ import {
   type SessionEvent,
 } from "@plingjs/agent";
 import { supportsAlwaysAllow } from "@plingjs/core";
-import { PLING_UI_Z_INDEX, sameOriginUrl } from "@plingjs/dom";
+import { PLING_UI_Z_INDEX, ensurePlingStyles, sameOriginUrl } from "@plingjs/dom";
 import { describePlingDiagnostic, diagnosticMessageKey, quickTaskOf } from "@plingjs/ui";
 import { readViteEnv } from "./env";
 import { renderMarkdown } from "./markdown";
-import { DOCK_STYLES } from "./dock-styles";
 import { createDebugInspector, type DebugInspector } from "./debug-view";
 import {
   applyUserModelSettings,
@@ -95,7 +94,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   registry.setDefaultApproval(baseConfig.defaultApproval);
 
   const layout = options.layout ?? "dock";
-  const sidebarMode = options.sidebarMode ?? "overlay";
+  const sidebarMode = options.sidebarMode ?? "fused";
   const side = options.side ?? "right";
   const launcherPlacement = options.launcherPlacement ?? "bottom";
   let open = options.defaultOpen ?? layout === "inline";
@@ -110,6 +109,8 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   let returnTimer: ReturnType<typeof setTimeout> | null = null;
   let debugOpen = false;
   let settingsOpen = false;
+  let quickMenuOpen = false;
+  let lineTimes: string[] = [];
   let offTask: (() => void) | null = null;
   let debugView: DebugInspector | null = null;
   let settingsPanel: HTMLElement | null = null;
@@ -145,9 +146,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     root.dataset.launcherPlacement = launcherPlacement;
   }
   root.style.zIndex = String(PLING_UI_Z_INDEX);
-  const style = make("style");
-  style.textContent = DOCK_STYLES;
-  root.append(style);
+  ensurePlingStyles(document);
 
   const panel = make("section", "pling-dock__panel");
   panel.className = `pling-dock__panel${ui.classNames.panel ? ` ${ui.classNames.panel}` : ""}`;
@@ -156,15 +155,35 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   const warn = make("p", "pling-dock__warn");
   warn.hidden = true;
 
-  const quick = make("div", "pling-dock__quick");
+  const quick = make("div", "pling-chat__quick pling-dock__quick");
   const quickItems = (options.quick ?? []).map((item) => {
     const task = quickTaskOf(item);
-    const element = button(task.label, undefined, () => void send(task.prompt));
+    const element = button(task.label, undefined, () => {
+      quickMenuOpen = false;
+      void send(task.prompt);
+    });
     if (task.description) element.title = task.description;
     return { task, element };
   });
   quick.append(...quickItems.map((item) => item.element));
   quick.hidden = !quickItems.length;
+
+  const quickMenuButton = iconButton(
+    t("dock.pageActions"),
+    "pling-dock__ghost",
+    ["M4 5.5h12M4 10h12M4 14.5h8"],
+    () => {
+      quickMenuOpen = !quickMenuOpen;
+      render();
+    },
+  );
+  quickMenuButton.hidden = !quickItems.length;
+  const quickMenu = make("div", "pling-dock__actions-menu");
+  quickMenu.setAttribute("role", "menu");
+  quickMenu.hidden = true;
+  const quickWrap = make("div", "pling-dock__action-wrap");
+  quickWrap.append(quickMenuButton, quickMenu);
+  quickWrap.hidden = !quickItems.length;
 
   const gateHint = make("span", "pling-dock__gate", t("dock.gate.off"));
   gateHint.title = t("dock.gate.offTitle");
@@ -197,7 +216,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   activityTab.append(badge);
   tabs.append(chatTab, activityTab, tasksTab);
   const actions = make("div", "pling-dock__actions");
-  actions.append(clearButton, closeButton);
+  actions.append(quickWrap, clearButton, closeButton);
   const nav = make("div", "pling-dock__nav");
   nav.append(tabs, actions);
 
@@ -207,13 +226,13 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   const body = make("div", "pling-dock__body");
 
   const chat = make("section", "pling-chat pling-dock__view");
-  const chatHead = make("header", "pling-chat__head");
-  const chatTitle = make("strong", undefined, options.title ?? t("dock.assistant"));
-  const runningHint = make("span", "pling-chat__running", t("chat.running"));
-  const stopButton = button(t("chat.stop"), "pling-chat__stop", () => runtime.session.cancel());
-  runningHint.hidden = true;
-  stopButton.hidden = true;
-  chatHead.append(chatTitle, runningHint, stopButton);
+  const runningBar = make("div", "pling-dock__running");
+  const runningDot = make("span", "pling-dock__running-dot");
+  runningDot.setAttribute("aria-hidden", "true");
+  const runningHint = make("span", undefined, t("chat.running"));
+  const stopButton = button(t("chat.stop"), "stop pling-chat__stop", () => runtime.session.cancel());
+  runningBar.append(runningDot, runningHint, stopButton);
+  runningBar.hidden = true;
 
   const transcript = make("div", "pling-chat__transcript");
   transcript.setAttribute("aria-live", "polite");
@@ -228,14 +247,41 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   const pendingHost = make("div", "pling-chat__pending");
 
   const form = make("form", "pling-chat__composer");
-  const input = make("input");
+  const composerBox = make("div", "pling-chat__composer-box");
+  const input = make("textarea");
+  input.rows = 2;
   input.placeholder = options.placeholder ?? t("chat.placeholder");
-  input.setAttribute("aria-label", input.placeholder);
-  const sendButton = make("button", undefined, t("chat.send"));
+  input.setAttribute("aria-label", t("chat.inputLabel"));
+  const sendButton = make("button", "pling-chat__send");
   sendButton.type = "submit";
   sendButton.disabled = true;
-  form.append(input, sendButton);
-  chat.append(chatHead, transcript, pendingHost, form);
+  sendButton.setAttribute("aria-label", t("chat.send"));
+  sendButton.title = t("chat.send");
+  const sendIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  sendIcon.setAttribute("viewBox", "0 0 20 20");
+  sendIcon.setAttribute("aria-hidden", "true");
+  const sendPath = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  sendPath.setAttribute("d", "M4.5 10h10M11 6.5l3.5 3.5-3.5 3.5");
+  sendIcon.append(sendPath);
+  sendButton.append(sendIcon);
+  composerBox.append(input, sendButton);
+  form.append(composerBox);
+  function resizeComposer(): void {
+    input.style.height = "auto";
+    const height = Math.min(150, Math.max(44, input.scrollHeight));
+    input.style.height = `${height}px`;
+    input.style.overflowY = input.scrollHeight > 150 ? "auto" : "hidden";
+  }
+  input.addEventListener("input", () => {
+    sendButton.disabled = running || !input.value.trim();
+    resizeComposer();
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    form.requestSubmit();
+  });
+  chat.append(transcript, pendingHost, form);
 
   const activityView = make("section", "pling-dock__view pling-dock__activity-view");
   activityView.hidden = true;
@@ -283,7 +329,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   tasksView.append(tasksIntro, tasksList);
 
   body.append(chat, activityView, tasksView);
-  panel.append(warn, nav, quick, roleHint, body, gateStatus);
+  panel.append(warn, nav, runningBar, roleHint, body, gateStatus);
 
   const launcher = button(t("dock.launcher.open"), "pling-dock__launcher", () => toggle());
   launcher.className = `pling-dock__launcher${ui.classNames.launcher ? ` ${ui.classNames.launcher}` : ""}`;
@@ -387,6 +433,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     if (layout === "inline") next = true;
     if (destroyed || open === next) return;
     open = next;
+    quickMenuOpen = false;
     render();
     options.onOpenChange?.(open);
     if (open) input.focus();
@@ -399,6 +446,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
   function setTab(next: "chat" | "activity" | "tasks"): void {
     if (tab === next) return;
     tab = next;
+    quickMenuOpen = false;
     render();
     if (next === "tasks") void refreshTasks();
   }
@@ -758,34 +806,53 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
           options.emptyHint ?? t("chat.empty"),
         ),
       );
+      if (quickItems.length) nodes.push(quick);
+    } else if (quickItems.length) {
+      nodes.push(quick);
     }
 
-    for (const line of lines) {
+    const formatter = new Intl.DateTimeFormat(ui.locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    while (lineTimes.length < lines.length) lineTimes.push(formatter.format(new Date()));
+    if (lineTimes.length > lines.length) lineTimes = lineTimes.slice(0, lines.length);
+
+    lines.forEach((line, index) => {
       if (line.kind === "user") {
-        nodes.push(make("p", "pling-chat__line is-user", shown(line.text)));
-        continue;
+        const bubble = make("div", "pling-chat__line is-user");
+        const head = make("header", "pling-chat__line-head");
+        head.append(make("span", undefined, t("chat.me")), make("time", undefined, lineTimes[index]));
+        bubble.append(head, make("p", "pling-chat__line-body", shown(line.text)));
+        nodes.push(bubble);
+        return;
       }
       if (line.kind === "final" || line.kind === "assistant") {
-        const bubble = make("div", `pling-chat__line is-${line.kind} is-markdown`);
-        bubble.innerHTML = renderMarkdown(shown(line.text));
+        const bubble = make("div", `pling-chat__line is-${line.kind}`);
+        const head = make("header", "pling-chat__line-head");
+        head.append(make("strong", undefined, t("chat.assistantName")), make("time", undefined, lineTimes[index]));
+        const markdown = make("div", "markdown");
+        markdown.innerHTML = renderMarkdown(shown(line.text));
+        bubble.append(head, markdown);
         nodes.push(bubble);
-        continue;
+        return;
       }
       if (line.kind === "notice") {
         nodes.push(make("p", "pling-chat__line is-notice", shown(line.text)));
-        continue;
+        return;
       }
       if (line.kind === "cancelled") {
         nodes.push(make("p", "pling-chat__line is-notice", t("chat.cancelled")));
-        continue;
+        return;
       }
       if (line.kind === "error") {
         nodes.push(make("p", "pling-chat__line is-error", shown(line.text)));
-        continue;
+        return;
       }
       if (line.kind === "blocked") {
         nodes.push(make("p", "pling-chat__line is-blocked", shown(line.text)));
-        continue;
+        return;
       }
       if (line.kind === "call" || line.kind === "result") {
         nodes.push(
@@ -796,18 +863,19 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
           ),
         );
       }
-    }
+    });
 
     if (task) nodes.push(task);
 
     if (running && !pending && !pendingHandoff) {
       const executing = make("p", "pling-chat__line is-executing");
-      const dot = make("span", "pling-chat__dot");
+      const dot = make("span", "pling-chat__executing-dot");
       dot.setAttribute("aria-hidden", "true");
       executing.append(dot, document.createTextNode(t("chat.executing")));
       nodes.push(executing);
     }
 
+    quick.hidden = tab !== "chat" || !quickItems.length || Boolean(lines.length) || Boolean(task);
     transcript.replaceChildren(...nodes);
     transcript.scrollTop = transcript.scrollHeight;
   }
@@ -1019,6 +1087,32 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     else element.prepend(document.createTextNode(label));
   }
 
+  function renderQuickMenu(): void {
+    quickMenu.replaceChildren();
+    quickMenu.hidden = !quickMenuOpen || !quickItems.length;
+    quickMenuButton.hidden = !quickItems.length;
+    quickWrap.hidden = !quickItems.length;
+    quickMenuButton.classList.toggle("is-active", quickMenuOpen);
+    quickMenuButton.setAttribute("aria-expanded", String(quickMenuOpen));
+    quickMenuButton.setAttribute("aria-label", t("dock.pageActions"));
+    quickMenuButton.title = t("dock.pageActions");
+    if (!quickItems.length) return;
+    const head = make("header");
+    head.append(make("strong", undefined, t("dock.pageActions")), make("span", undefined, t("dock.pageActionsHint")));
+    quickMenu.append(head);
+    for (const item of quickItems) {
+      const control = button(item.task.label, undefined, () => {
+        quickMenuOpen = false;
+        void send(item.task.prompt);
+      });
+      control.setAttribute("role", "menuitem");
+      control.disabled = running || item.task.disabled === true;
+      if (item.task.description) control.title = item.task.description;
+      if (item.task.description) control.append(make("small", undefined, item.task.description));
+      quickMenu.append(control);
+    }
+  }
+
   function applyUi(): void {
     root.className = `pling-dock pling-dock--${layout}${open ? " is-open" : ""}${layout === "sidebar" ? ` pling-dock--${side} pling-dock--launcher-${launcherPlacement}${sidebarMode === "fused" ? " pling-dock--fused" : ""}` : ""}${ui.classNames.dock ? ` ${ui.classNames.dock}` : ""}`;
     panel.className = `pling-dock__panel${ui.classNames.panel ? ` ${ui.classNames.panel}` : ""}`;
@@ -1027,7 +1121,6 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     for (const [name, value] of Object.entries(ui.cssVars)) root.style.setProperty(name, value);
 
     panel.setAttribute("aria-label", options.title ?? t("dock.assistant"));
-    chatTitle.textContent = options.title ?? t("dock.assistant");
     gateHint.textContent = t("dock.gate.off");
     gateHint.title = t("dock.gate.offTitle");
     clearButton.setAttribute("aria-label", t("dock.clear"));
@@ -1040,7 +1133,8 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     if (debugToggle) debugToggle.textContent = t("debug.title");
     runningHint.textContent = t("chat.running");
     stopButton.textContent = t("chat.stop");
-    sendButton.textContent = t("chat.send");
+    sendButton.setAttribute("aria-label", t("chat.send"));
+    sendButton.title = t("chat.send");
     input.setAttribute("aria-label", t("chat.inputLabel"));
   }
 
@@ -1096,8 +1190,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     chat.hidden = tab !== "chat";
     activityView.hidden = tab !== "activity";
     tasksView.hidden = tab !== "tasks";
-    quick.hidden = tab !== "chat" || quickItems.length === 0;
-    runningHint.hidden = !running;
+    runningBar.hidden = !running;
     stopButton.hidden = !running;
     closeButton.hidden = layout === "inline";
     roleHint.hidden = !browserScope();
@@ -1123,6 +1216,7 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
       debugToggle.setAttribute("aria-expanded", String(debugOpen));
     }
 
+    renderQuickMenu();
     renderTranscript();
     renderPending();
     renderTasks();
@@ -1182,7 +1276,9 @@ export function createDock(host: VanillaHost, options: VanillaDockOptions = {}):
     pending = null;
     pendingHandoff = null;
     notReady = false;
+    quickMenuOpen = false;
     input.value = "";
+    resizeComposer();
     render();
   }
 

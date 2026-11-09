@@ -36,7 +36,7 @@ const localHost = location.hostname === "localhost" || location.hostname === "12
 const gatewayMode = !localHost || params.get("transport") === "gateway";
 const gatewayUrl = (
   import.meta.env.VITE_SURFACE_GATEWAY_URL?.trim() ||
-  (localHost ? "http://127.0.0.1:5219" : "https://surface.hunger-valley.com")
+  (localHost ? "http://127.0.0.1:5219" : "https://surface.plingjs.com")
 ).replace(/\/$/, "");
 const localBridge = gatewayMode || !mcpEnabled ? null : installMcpBridge({ surface: inspectorSurface, approval, app: "example-todo-surface" });
 const bridgeState = computed<BridgeConnectionState | "disabled">(() => localBridge?.state.value ?? "disabled");

@@ -1,6 +1,7 @@
 import {
   createPolicy,
   createExecutor,
+  LOCATE_ACTION_ID,
   RESUME_FLOW_ACTION_ID,
   type ExecResult,
   type Llm,
@@ -116,6 +117,8 @@ export interface LoopOptions {
    * 本次 run 的第一个动作**不等**：点了按钮立刻有反应，否则会觉得「没点动」。
    */
   minActionIntervalMs?: number;
+  /** How long `pling_locate` keeps a target highlighted. 0 keeps it until the next action. */
+  locateDurationMs?: number;
   /** 睡眠实现（测试注入假实现，避免真的等） */
   sleep?: (ms: number) => Promise<void>;
   /** 返回 true 表示请求取消（在下一个安全点退出）。要打断**在飞**的请求用 `loop.abort()` */
@@ -205,6 +208,7 @@ export function createAgentLoop(options: LoopOptions): AgentLoop {
     maxNudges = DEFAULT_MAX_NUDGES,
     settle = defaultSettle,
     minActionIntervalMs = 0,
+    locateDurationMs,
     sleep = defaultSleep,
     shouldStop,
     observe,
@@ -260,6 +264,7 @@ export function createAgentLoop(options: LoopOptions): AgentLoop {
           lastActionAt = now();
           await pace(controller?.signal ?? new AbortController().signal);
         },
+        ...(locateDurationMs === undefined ? {} : { locateDurationMs }),
         ...(evidence === undefined ? {} : { evidence }),
       })
     : null;
@@ -397,6 +402,58 @@ export function createAgentLoop(options: LoopOptions): AgentLoop {
       emit({ type: "notice", text: message });
       state.errors += 1;
       return { error: { code: "LOOP_DETECTED", message } };
+    }
+
+    // Built-in locate: a read-only UI command, not a business action. It is
+    // handled before action resolution because it intentionally has no entry in
+    // `nameToId` (it is not declared by the page).
+    if (call.name === LOCATE_ACTION_ID) {
+      if (!executor) {
+        const result: ExecResult = {
+          error: {
+            code: "ACTION_NOT_FOUND",
+            message: "This session has no page capability (pure chat), so there is no target to locate. Answer in text instead.",
+          },
+        };
+        state.errors += 1;
+        emit({ type: "tool_result", id: LOCATE_ACTION_ID, tool: call.name, result });
+        return result;
+      }
+
+      const rawTarget = typeof args.actionId === "string" ? args.actionId.trim() : "";
+      const targetId = protocol.nameToId.get(rawTarget) ?? knownNames.get(rawTarget) ?? rawTarget;
+      if (!targetId) {
+        const result: ExecResult = {
+          error: {
+            code: "INVALID_PARAMS",
+            message: `Missing required parameter actionId. Copy an exact action id from the current action list: ${listActionIds(current)}`,
+          },
+        };
+        state.errors += 1;
+        emit({ type: "tool_result", id: LOCATE_ACTION_ID, tool: call.name, result });
+        return result;
+      }
+
+      const startedAt = now();
+      emit({ type: "tool_call", id: targetId, tool: call.name, args: { ...args, actionId: targetId } });
+      const pre = await hooks.firePreToolUse({ id: targetId, tool: call.name, args, turn });
+      if (pre.blocked) {
+        const reason = pre.reason ?? "Blocked by a hook";
+        emit({ type: "blocked", id: targetId, tool: call.name, reason });
+        telemetry.toolCall({ id: targetId, tool: call.name, status: "blocked", durationMs: now() - startedAt });
+        state.errors += 1;
+        return { error: { code: "HOOK_BLOCKED", message: `Action ${targetId} was blocked: ${reason}` } };
+      }
+
+      await pace(controller?.signal ?? new AbortController().signal);
+      let result = withActionableHint(await executor.locate(targetId), current);
+      lastActionAt = now();
+      result = await hooks.firePostToolUse({ id: targetId, tool: call.name, args, turn, result });
+      const ok = !("error" in result);
+      if (!ok) state.errors += 1;
+      telemetry.toolCall({ id: targetId, tool: call.name, status: ok ? "ok" : "error", durationMs: now() - startedAt });
+      emit({ type: "tool_result", id: targetId, tool: call.name, result });
+      return result;
     }
 
     if (!id || !executor) {

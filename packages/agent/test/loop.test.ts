@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createPolicy, createRegistry, type Availability, type Registry } from "@plingjs/core";
 import { Telemetry } from "../src/telemetry";
 import { HookRegistry } from "../src/hooks";
@@ -186,10 +186,41 @@ describe("循环：协议层（id ↔ function name）", () => {
     );
     await loop.run("审批");
 
-    expect(llm.toolsSeen[0]!.map((tool) => tool.function.name)).toEqual(["approve_order_SO-1001"]);
+    expect(llm.toolsSeen[0]!.map((tool) => tool.function.name)).toEqual(["approve_order_SO-1001", "pling_locate"]);
     const call = ofType(events, "tool_call")[0]!;
     expect(call.tool).toBe("approve_order_SO-1001");
     expect(call.id).toBe("approve@order:SO-1001");
+  });
+
+  it("pling_locate 只高亮目标，不执行目标动作", async () => {
+    const marks: string[] = [];
+    const run = vi.fn(async () => {});
+    const { loop, events } = setup(
+      [
+        { calls: [{ tool: "pling_locate", args: { actionId: "upload_cover" } }] },
+        { content: "上传入口在课程封面区域，我已经标出来了。" },
+      ],
+      [
+        {
+          id: "upload_cover",
+          description: "上传课程封面",
+          presence: (state) => marks.push(state),
+          onRun: run,
+        },
+      ],
+      { locateDurationMs: 0 },
+    );
+
+    const answer = await loop.run("上传在哪里点？");
+
+    expect(answer).toContain("已经标出来");
+    expect(marks).toEqual(["locate"]);
+    expect(run).not.toHaveBeenCalled();
+    const call = ofType(events, "tool_call")[0]!;
+    expect(call).toMatchObject({ id: "upload_cover", tool: "pling_locate" });
+    expect(JSON.parse(toolMessages(loop)[0]!.content)).toMatchObject({
+      result: { ok: true, executed: false, located: { id: "upload_cover" } },
+    });
   });
 });
 

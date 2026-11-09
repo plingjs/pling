@@ -43,10 +43,15 @@ function click(element: Element | null): void {
 }
 
 function say(text: string): void {
-  const input = document.querySelector<HTMLInputElement>(".pling-chat__composer input");
+  const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+    ".pling-chat__composer textarea, .pling-chat__composer input",
+  );
   const form = document.querySelector<HTMLFormElement>(".pling-chat__composer");
   if (!input || !form) throw new Error("聊天输入框不存在");
-  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!;
+  const prototype = input instanceof HTMLTextAreaElement
+    ? HTMLTextAreaElement.prototype
+    : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(prototype, "value")!.set!;
   setter.call(input, text);
   input.dispatchEvent(new Event("input", { bubbles: true }));
   form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
@@ -116,7 +121,7 @@ describe("pling.dock() · 原生 JS", () => {
 
     expect(document.querySelector(".pling-dock__launcher")!.textContent).toContain("Close assistant");
     expect(document.body.textContent).toContain("Activity");
-    expect(root.style.getPropertyValue("--pling-color-bg")).toBe("#0f172a");
+    expect(root.style.getPropertyValue("--pling-color-bg")).toBe("#111216");
     expect(root.style.getPropertyValue("--pling-color-primary")).toBe("#abcdef");
 
     pling.ui.setLocale("en-US");
@@ -132,7 +137,7 @@ describe("pling.dock() · 原生 JS", () => {
     expect(document.querySelector(".pling-dock__panel")).toBeNull();
     click(document.querySelector(".pling-dock__launcher"));
     expect(document.querySelector(".pling-dock__panel")).not.toBeNull();
-    expect(document.body.textContent).toContain("Todo 助手");
+    expect(document.querySelector(".pling-dock__panel")?.getAttribute("aria-label")).toBe("Todo 助手");
     expect(document.body.textContent).toContain("运行");
 
     const close = document.querySelector<HTMLButtonElement>('.pling-dock__ghost[aria-label="收起"]');

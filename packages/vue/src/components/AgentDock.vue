@@ -27,6 +27,8 @@ const props = withDefaults(
     placeholder?: string;
     emptyHint?: string;
     quick?: readonly QuickTaskItem[];
+    /** Render speaker names and timestamps above messages. */
+    speakers?: boolean;
     defaultOpen?: boolean;
     config?: AgentConfigOverrides;
     llm?: Llm;
@@ -47,6 +49,10 @@ const props = withDefaults(
     launcherPlacement?: "bottom" | "center";
     /** Custom copy for the collapsed launcher. Defaults to the localized "Ask Pling". */
     launcherLabel?: string;
+    /** Keep the active task above the transcript (`pinned`), in the message flow (`inline`), or hidden (`none`). */
+    taskPlacement?: "inline" | "pinned" | "none";
+    /** Render the `#guide` slot above the transcript (`top`) or as the newest message (`end`). */
+    guidePlacement?: "top" | "end";
     /** Enable the read-only request inspector in Activity. Off by default. */
     debug?: boolean | AgentTraceOptions;
     /** Expose model connection details in Activity. `off` unless explicitly enabled. */
@@ -56,9 +62,12 @@ const props = withDefaults(
     quick: () => [],
     defaultOpen: false,
     layout: "dock",
-    sidebarMode: "overlay",
+    sidebarMode: "fused",
     side: "right",
     launcherPlacement: "bottom",
+    taskPlacement: "pinned",
+    guidePlacement: "top",
+    speakers: true,
   },
 );
 
@@ -73,10 +82,13 @@ const status = ref({ running: false, resume: false });
 let offTask: (() => void) | null = null;
 
 const shellClass = computed(() => [
+  "pling-dock",
   `dock--${props.layout}`,
+  `pling-dock--${props.layout}`,
   ...(props.layout === "sidebar" ? [`dock--${props.side}`] : []),
-  ...(props.layout === "sidebar" && props.sidebarMode === "fused" ? ["dock--fused"] : []),
-  ...(props.layout === "sidebar" ? [`dock--launcher-${props.launcherPlacement}`] : []),
+  ...(props.layout === "sidebar" ? [`pling-dock--${props.side}`] : []),
+  ...(props.layout === "sidebar" && props.sidebarMode === "fused" ? ["dock--fused", "pling-dock--fused"] : []),
+  ...(props.layout === "sidebar" ? [`dock--launcher-${props.launcherPlacement}`, `pling-dock--launcher-${props.launcherPlacement}`] : []),
   ...(open.value ? ["is-open"] : []),
   ...(ui.classNames.dock ? [ui.classNames.dock] : []),
 ]);
@@ -137,7 +149,7 @@ defineExpose({
   >
     <AgentInline
       ref="inline"
-      class="dock__surface"
+      class="dock__surface pling-dock__surface"
       :visible="open"
       variant="dock"
       :manage-surface="false"
@@ -146,6 +158,7 @@ defineExpose({
       :placeholder="placeholder"
       :empty-hint="emptyHint"
       :quick="quick"
+      :speakers="speakers"
       :config="config"
       :llm="llm"
       :hooks="hooks"
@@ -154,6 +167,8 @@ defineExpose({
       :navigate="navigate"
       :debug="debug"
       :model-settings="modelSettings"
+      :task-placement="taskPlacement"
+      :guide-placement="guidePlacement"
       @event="(event) => emit('event', event)"
       @status="setStatus"
       @collapse="toggle(false)"
@@ -163,234 +178,15 @@ defineExpose({
 
     <button
       type="button"
-      class="dock__launcher"
+      class="dock__launcher pling-dock__launcher"
       :class="[{ 'is-open': open }, ui.classNames.launcher]"
       :aria-expanded="open"
       :title="launcherText"
       @click="toggle()"
     >
       {{ launcherText }}
-      <span v-if="status.running || (!open && status.resume)" class="dock__dot" aria-hidden="true" />
+      <span v-if="status.running || (!open && status.resume)" class="dock__dot pling-dock__dot" aria-hidden="true" />
     </button>
   </div>
 </template>
 
-<style>
-.dock {
-  position: fixed;
-  right: 24px;
-  bottom: 24px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
-  color: var(--pling-color-text, #0f172a);
-  font-family: var(--pling-font-family, system-ui, sans-serif);
-  font-size: 13px;
-}
-.dock__surface {
-  width: min(400px, calc(100vw - 48px));
-}
-.dock__launcher {
-  position: relative;
-  padding: 10px 16px;
-  border: 0;
-  border-radius: 999px;
-  background: var(--pling-color-primary, #2e9df7);
-  color: var(--pling-color-on-primary, #fff);
-  font-size: 13px;
-  box-shadow: var(--pling-shadow-launcher, 0 10px 24px rgb(46 157 247 / 32%));
-  cursor: pointer;
-}
-.dock__launcher.is-open {
-  background: var(--pling-color-text-muted, #475569);
-  box-shadow: none;
-}
-
-/* A viewport-edge utility surface. It does not reserve page space: put
-   <AgentInline> in the page grid when the business layout should make room. */
-.dock--sidebar {
-  top: 0;
-  bottom: 0;
-  height: 100dvh;
-  gap: 0;
-  pointer-events: none;
-}
-.dock--sidebar > .dock__launcher,
-.dock--sidebar.is-open > .dock__surface {
-  pointer-events: auto;
-}
-.dock--sidebar.dock--right {
-  right: 0;
-  left: auto;
-  align-items: flex-end;
-}
-.dock--sidebar.dock--left {
-  right: auto;
-  left: 0;
-  align-items: flex-start;
-}
-.dock--sidebar .dock__surface {
-  width: var(--pling-sidebar-width, min(420px, 100vw));
-  height: 100%;
-}
-.dock--sidebar .dock__surface .dock__panel {
-  width: 100%;
-  height: 100%;
-  border-radius: 0;
-  border-top: 0;
-  border-bottom: 0;
-  box-shadow: var(--pling-shadow-sidebar, 0 0 40px rgb(15 23 42 / 18%));
-}
-.dock--sidebar.dock--right .dock__surface .dock__panel {
-  border-right: 0;
-}
-.dock--sidebar.dock--left .dock__surface .dock__panel {
-  border-left: 0;
-}
-.dock--sidebar .dock__launcher {
-  position: absolute;
-  top: auto;
-  bottom: 24px;
-  padding: 10px 16px;
-  writing-mode: horizontal-tb;
-}
-.dock--sidebar.dock--right.dock--launcher-bottom .dock__launcher {
-  right: 16px;
-}
-.dock--sidebar.dock--left.dock--launcher-bottom .dock__launcher {
-  left: 16px;
-}
-.dock--sidebar.dock--launcher-center .dock__launcher {
-  top: 50%;
-  bottom: auto;
-  transform: translateY(-50%);
-  padding: 14px 8px;
-  writing-mode: vertical-rl;
-}
-.dock--sidebar.dock--right.dock--launcher-center .dock__launcher {
-  right: 0;
-}
-.dock--sidebar.dock--left.dock--launcher-center .dock__launcher {
-  left: 0;
-}
-.dock--sidebar.is-open .dock__launcher {
-  display: none;
-}
-
-/* A fused sidebar is part of the application grid. The surface takes real
-   width instead of covering the work area underneath it. */
-.dock--sidebar.dock--fused {
-  position: relative;
-  inset: auto;
-  width: max-content;
-  height: auto;
-  min-height: 520px;
-  align-self: stretch;
-  gap: 12px;
-  align-items: stretch;
-  pointer-events: auto;
-}
-.dock--sidebar.dock--fused:not(.is-open) {
-  width: auto;
-  min-height: 0;
-  align-self: flex-start;
-}
-.dock--sidebar.dock--fused:not(.is-open) .dock__surface {
-  display: none;
-}
-.dock--sidebar.dock--fused.dock--left {
-  order: -1;
-}
-.dock--sidebar.dock--fused .dock__surface {
-  width: var(--pling-sidebar-width, min(380px, 100vw));
-  flex: 1 1 auto;
-  min-height: 0;
-}
-.dock--sidebar.dock--fused .dock__surface .dock__panel {
-  flex: 1 1 auto;
-  min-height: 0;
-  border: 1px solid var(--pling-color-border, #e3e8f0);
-  border-radius: var(--pling-radius-lg, 14px);
-  box-shadow: var(--pling-shadow-panel, 0 18px 40px rgb(15 23 42 / 10%));
-}
-.dock--sidebar.dock--fused .dock__launcher {
-  position: relative;
-  inset: auto;
-  transform: none;
-  padding: 10px 16px;
-  writing-mode: horizontal-tb;
-}
-.dock--sidebar.dock--fused.is-open .dock__launcher {
-  display: none;
-}
-
-/* On phones a full-height sidebar would leave no working page. Degrade to the
-   familiar floating panel instead of hiding the assistant behind a drawer. */
-@media (max-width: 720px) {
-  .dock--sidebar {
-    top: auto;
-    bottom: 12px;
-    height: auto;
-    width: auto;
-  }
-  .dock--sidebar.dock--right {
-    right: 12px;
-    left: auto;
-  }
-  .dock--sidebar.dock--left {
-    right: auto;
-    left: 12px;
-  }
-  .dock--sidebar .dock__surface {
-    width: min(400px, calc(100vw - 24px));
-    height: auto;
-  }
-  .dock--sidebar .dock__surface .dock__panel {
-    height: min(640px, calc(100dvh - 72px));
-    border: 1px solid var(--pling-color-border, #e3e8f0);
-    border-radius: var(--pling-radius-lg, 12px);
-    box-shadow: var(--pling-shadow-panel, 0 18px 40px rgb(15 23 42 / 16%));
-  }
-  .dock--sidebar .dock__launcher {
-    position: relative;
-    top: auto;
-    bottom: auto;
-    left: auto;
-    right: auto;
-    transform: none;
-    padding: 10px 16px;
-    writing-mode: horizontal-tb;
-  }
-  .dock--sidebar.dock--fused {
-    position: fixed;
-    right: 12px;
-    bottom: 12px;
-    left: auto;
-    width: auto;
-    min-height: 0;
-  }
-  .dock--sidebar.dock--fused .dock__surface {
-    width: min(400px, calc(100vw - 24px));
-    height: auto;
-  }
-  .dock--sidebar.dock--fused .dock__surface .dock__panel {
-    height: min(640px, calc(100dvh - 72px));
-  }
-}
-.dock__dot {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: var(--pling-color-warning, #fbbf24);
-  animation: dock-pulse 1s ease-in-out infinite;
-}
-@keyframes dock-pulse {
-  50% {
-    opacity: 0.3;
-  }
-}
-</style>

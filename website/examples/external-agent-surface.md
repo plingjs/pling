@@ -13,7 +13,7 @@ locale: en
 
 ## Live page
 
-Open [Example 05 on plingjs.dev](https://plingjs.dev/demos/external-agent-surface/?mcp=1&lang=en). The page has three work areas:
+Open [Example 05 on the demo site](https://demo.plingjs.com/demos/external-agent-surface/?mcp=1&lang=en). The page has three work areas:
 
 - **Todo**: the real business page. Manual operations and external Agent calls act on the same data.
 - **Protocol inspector**: sends `describe` / `invoke` directly and shows what an external client actually receives.
@@ -43,7 +43,7 @@ the current page.
 export PLING_AGENT_TOKEN='token shown on the page'
 codex mcp remove pling-todo 2>/dev/null || true
 codex mcp add pling-todo \
-  --url https://surface.hunger-valley.com/mcp \
+  --url https://surface.plingjs.com/mcp \
   --bearer-token-env-var PLING_AGENT_TOKEN
 codex --no-daemon
 ```
@@ -59,7 +59,7 @@ codex --no-daemon
 export PLING_AGENT_TOKEN='token shown on the page'
 claude mcp remove pling-todo >/dev/null 2>&1 || true
 claude mcp add --transport http pling-todo \
-  https://surface.hunger-valley.com/mcp \
+  https://surface.plingjs.com/mcp \
   --header "Authorization: Bearer $PLING_AGENT_TOKEN"
 claude
 ```

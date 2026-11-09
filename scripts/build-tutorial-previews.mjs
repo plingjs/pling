@@ -12,6 +12,7 @@ import {
 } from "./lib/tutorial-previews.mjs";
 
 const root = resolve(import.meta.dirname, "..");
+const docsOrigin = "https://plingjs.dev";
 const registryPath = join(root, "examples", "tutorials", "registry.json");
 const registry = JSON.parse(await readFile(registryPath, "utf8"));
 const outputRoot = join(root, "examples", "dist", "tutorials");
@@ -29,15 +30,17 @@ const credentialPatterns = [
 function parseArgs(argv) {
   let only = [];
   let all = false;
+  let galleryOnly = false;
   for (const arg of argv) {
     if (arg === "--all") all = true;
+    else if (arg === "--gallery-only") galleryOnly = true;
     else if (arg.startsWith("--only=")) {
       only = arg.slice("--only=".length).split(",").map((value) => value.trim()).filter(Boolean);
     } else {
       throw new Error(`Unknown option: ${arg}`);
     }
   }
-  return { all, only };
+  return { all, only, galleryOnly };
 }
 
 const args = parseArgs(process.argv.slice(2));
@@ -228,15 +231,21 @@ async function writeGallery() {
   <main class="page">
     <p class="eyebrow">Pling tutorials</p>
     <h1>每一章，都可以直接运行。</h1>
-    <p class="lead">这些页面与教程中的本地夹具使用同一份源码。选择章节后可直接体验，也可以回到文档复制本地命令。线上预览的模型请求经过服务端网关，浏览器不持有供应商密钥。</p>
+    <p class="lead">这些页面与教程中的本地夹具使用同一份源码。选择章节后可直接体验，也可以回到文档复制本地命令。线上预览由 demo.plingjs.com 提供，模型请求直接经过这台国内服务端网关，浏览器不持有供应商密钥。</p>
     ${sections.join("\n")}
-    <footer>查看全部教程与源码，请回到 <a href="/zh/">Pling 文档</a>。</footer>
+    <footer>查看全部教程与源码，请回到 <a href="${docsOrigin}/zh/">Pling 文档</a>。</footer>
   </main>
 </body>
 </html>
 `;
   await mkdir(outputRoot, { recursive: true });
   await writeFile(join(outputRoot, "index.html"), html);
+}
+
+if (args.galleryOnly) {
+  await writeGallery();
+  console.log(`[tutorial-preview] gallery written to ${relative(root, join(outputRoot, "index.html"))}`);
+  process.exit(0);
 }
 
 const requestedPackages = [...new Set(selectedIds.flatMap((id) => registry[id].packages ?? []))];

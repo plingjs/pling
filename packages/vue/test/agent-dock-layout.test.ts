@@ -2,9 +2,9 @@ import { mount } from "@vue/test-utils";
 import { defineComponent, nextTick } from "vue";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createReplayLlm } from "@plingjs/agent";
+import { PLING_UI_STYLES } from "@plingjs/dom";
 import { createPling } from "../src/directive";
 import AgentDock from "../src/components/AgentDock.vue";
-import dockSource from "../src/components/AgentDock.vue?raw";
 
 const mounted: Array<{ wrapper: ReturnType<typeof mount>; destroy: () => void }> = [];
 
@@ -108,18 +108,26 @@ describe("<AgentDock> placement", () => {
       expect.arrayContaining(["dock--sidebar", "dock--fused", "dock--left"]),
     );
     expect(dock.attributes("data-sidebar-mode")).toBe("fused");
-    expect(dockSource).toContain(".dock--sidebar.dock--fused.dock--left");
-    expect(dockSource).toContain("order: -1");
-    expect(dockSource).toContain(".dock--sidebar.dock--fused:not(.is-open)");
-    expect(dockSource).toContain("display: none");
+    expect(PLING_UI_STYLES).toContain(".pling-dock--sidebar.pling-dock--fused.pling-dock--left");
+    expect(PLING_UI_STYLES).toContain("order: -1");
+    expect(PLING_UI_STYLES).toContain(".pling-dock--sidebar.pling-dock--fused:not(.is-open)");
+    expect(PLING_UI_STYLES).toContain("display: none");
 
     await pi.ask("Keep this history");
     await vi.waitFor(() => expect(llm.received).toHaveLength(1));
     expect(wrapper.findAll(".dock__surface")).toHaveLength(1);
   });
 
-  it("keeps overlay as the sidebar default", () => {
+  it("uses fused as the sidebar default", () => {
     const { wrapper } = setup(`<AgentDock layout="sidebar" />`);
+    const dock = wrapper.find(".dock");
+
+    expect(dock.attributes("data-sidebar-mode")).toBe("fused");
+    expect(dock.classes()).toContain("dock--fused");
+  });
+
+  it("can opt into an overlay sidebar", () => {
+    const { wrapper } = setup(`<AgentDock layout="sidebar" sidebar-mode="overlay" />`);
     const dock = wrapper.find(".dock");
 
     expect(dock.attributes("data-sidebar-mode")).toBe("overlay");
@@ -145,16 +153,15 @@ describe("<AgentDock> placement", () => {
   });
 
   it("ships a mobile fallback and a CSS-only width override", () => {
-    expect(dockSource).toContain("@media (max-width: 720px)");
-    expect(dockSource).toContain("var(--pling-sidebar-width");
-    expect(dockSource).toContain("height: min(640px, calc(100dvh - 72px))");
-    expect(dockSource).toContain("bottom: 24px");
-    expect(dockSource).toContain("writing-mode: horizontal-tb");
+    expect(PLING_UI_STYLES).toContain("@media (max-width: 720px)");
+    expect(PLING_UI_STYLES).toContain("var(--pling-sidebar-width");
+    expect(PLING_UI_STYLES).toContain("calc(100dvh - 72px)");
+    expect(PLING_UI_STYLES).toContain("writing-mode: horizontal-tb");
   });
 
   it("does not leave a closed sidebar surface intercepting page clicks", () => {
-    expect(dockSource).not.toContain(".dock--sidebar > * {");
-    expect(dockSource).toContain(".dock--sidebar > .dock__launcher,");
-    expect(dockSource).toContain(".dock--sidebar.is-open > .dock__surface {");
+    expect(PLING_UI_STYLES).not.toContain(".pling-dock--sidebar > * {");
+    expect(PLING_UI_STYLES).toContain(".pling-dock--sidebar > .pling-dock__launcher,");
+    expect(PLING_UI_STYLES).toContain(".pling-dock--sidebar.is-open > .pling-dock__surface {");
   });
 });

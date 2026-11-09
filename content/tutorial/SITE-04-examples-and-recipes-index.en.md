@@ -11,14 +11,15 @@ status: drafted
 
 Examples show complete applications; task recipes address reusable interface boundaries. Both are now grounded in runnable pages: every recipe has its own page, source, start path, and verification steps instead of sending several problems to one shared demo.
 
-## Six classic examples
+## Classic examples and one comparison
 
 - [Example 01: Todo](/examples/quickstart) covers create, complete, edit, filter, and cleanup.
 - [Example 02: Order workspace](/examples/orders) covers a business queue, records, row actions, and confirmation.
 - [Example 03: Single-page route workspace](/examples/vue3-spa-routing) continues a task across client-side routes.
 - [Example 04: Multi-page workspace](/examples/multi-page-continuity) continues a task across full document navigation.
 - [Example 05: Expose capabilities](/examples/external-agent-surface) exposes named capabilities to an agent outside the page.
-- [Example 06: Create a course with a guided task](/examples/course-workspace-vue3) keeps long recommendations as one-line previews and asks only for real gaps.
+- [Example 06: A persistent goal — create a course](/examples/course-workspace-vue3) adds one goal to the same course page. The agent opens the real dialog, operates real controls, asks the person to upload the cover, saves, and reads the catalogue back.
+- [Example 07: Directives only — create a course](/examples/course-create-directives-vue3) completes the same flow with `v-scope`, `v-record`, and `v-tool`, without a task layer. Use it for one stable single-page form.
 
 Every example page includes an operable preview, marked source, and integration notes. Model requests go through a server-side gateway; the browser does not hold a provider key.
 

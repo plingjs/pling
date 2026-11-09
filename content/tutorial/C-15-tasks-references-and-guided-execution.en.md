@@ -9,204 +9,266 @@ status: drafted
 
 # Tasks, references, and guided execution
 
-A chat box asks the user to explain the work before the application has shown what it can do. That is a poor starting point for a booking desk, an admin console, or a support queue. The person usually knows the outcome, not the prompt, the action id, or the database key behind a customer record.
+An empty chat box asks the person to learn how to prompt. The application has not told them what it can do. That is a poor starting point for a booking desk, a back office or a support queue.
 
-Guided Tasks turn that outcome into a goal with constraints and working memory. The application names the task, states what completion means and which boundaries apply, asks only for decisions that are still missing, resolves references such as a student or course, and reports what happened. Deterministic business writes may still use ordered steps, but the conversation is not a field-by-field script. The agent handles questions, corrections, delegated choices, and exceptions against the same task state.
+People usually know the outcome they want. They do not know the prompt, the action id, or the database key behind a customer record. A guided task turns the outcome into **goal + constraints + working memory**: the app states what should be reached, which boundaries must hold and what counts as done. The assistant then decides whether to answer, ask, execute, or wait for a person.
 
-## Why a task layer is separate from the agent loop
+## Decide whether the task layer is needed
 
-The agent loop decides what to do next from context. A routine business task should not be reinvented every time, but it should also not be reduced to `next field`. The application declares the objective, constraints, success criteria, and fields that matter. The model reads that state as working memory and decides whether this turn should answer, ask, update one value, pause, or leave the task untouched.
+A short form usually does not need it. With `v-scope`, `v-record` and `v-tool`, the page declares regions, drafts and actions. The assistant can understand one sentence, operate real controls and verify the result. This is the smallest integration and the closest to existing business code.
 
-The task layer also gives the interface something the chat transcript cannot: a stable list of entrances. A new employee can see “Find a member's card” or “Schedule a lesson” without learning how to prompt for them.
+The task layer solves a different set of problems:
 
-A task existing is not the same as a task always being available. On a real page, availability depends on the route, an open dialog, a selected row, and the current user's permissions. Spreading those checks through components creates two versions of the truth: one on the page and one in the assistant. A task catalog centralizes that decision.
+- the flow crosses several pages and must retain progress;
+- the job continues after a dialog closes or a route changes;
+- the task needs a fixed entrance that can be started repeatedly;
+- several steps share one working memory;
+- an external agent needs an auditable playbook and completion boundary.
 
-### The catalog owns “what is legal right now”
+Add task declarations only when one of these applies.
 
-The page registers a task with `pling.task.define()` and declares its context:
+| Situation | Recommended path |
+| --- | --- |
+| One page, stable fields, one save path | `v-scope` + `v-record` + `v-tool` |
+| The outcome must survive a closed dialog | Add one `pling.task.goal()` |
+| The job crosses routes and needs cancel/complete | `pling.task.goal()` |
+| An external agent needs the same playbook | `pling.task.goal()` |
+| Fields need validation, lookup or a fixed sequence | Advanced `TaskDefinition` + `TaskController` |
+
+The first column is not a capability ladder. It is an integration-cost ladder. If page actions can express the job, do not write a task definition.
+
+## A goal answers what the page cannot
+
+Page actions explain what a button does and what an input accepts. They cannot explain whether the job still counts after the dialog closes.
+
+A goal contains only:
 
 ```ts
-pling.task.define({
-  definition: courseTask,
-  guide: courseGuide,
-  controller,
-  route: "/courses",
-  scope: "create-course-form",
-  autoStart: true,
-  onCommand,
+const disposeGoal = pling.task.goal({
+  id: "course.create",
+  title: "Create a course",
+  goal: "Create a course in the course workspace and read the catalogue back to confirm the new course is first.",
+  constraints: [
+    "The page's actions are the only way to operate it; do not invent a second form.",
+    "The person must upload the cover.",
+  ],
+  successCriteria: [
+    "The new course appears first in the catalogue",
+    "Name, teacher, eligible cards and cover match what the person confirmed",
+  ],
 });
 ```
 
-- `route` makes the task available only on a matching route;
-- `scope` makes it available only while a region or dialog exists;
-- `autoStart` opens its guide when the context matches;
-- omitting both means a global task, still opened explicitly by the page or the assistant.
+There is no field table, no step array and no execution callback. Fields come from the real page; execution goes through real actions.
 
-The catalog stores registrations and the active guide. It never executes the task. Writes still go through `controller` and the existing executor.
+A goal solves four things:
 
-### The assistant chooses from the catalog; it cannot invent tasks
+1. **Continuity**: after an explicit start, the goal stays active when the dialog or region disappears.
+2. **Availability**: `route` and `scope` decide where it can be started.
+3. **Lifecycle**: a person can cancel; the model can mark it complete when success criteria hold.
+4. **External description**: Surface can receive the same goal, constraints and success criteria.
 
-Each turn, the model receives the currently available tasks, their fields, and a summary of their steps. When the user says “create a yoga course”, it may call one narrow action, `pling_start_task`:
+A goal does not grant permission. Every action keeps its own risk, confirmation, scope and audit. It does not save either. Saving is always the page's own action.
+
+## The catalog decides what can start now
+
+A page registers tasks with `pling.task.goal()` or `pling.task.define()`. The task catalog decides which tasks are available in the current context and keeps at most one active.
+
+```ts
+pling.task.goal({
+  ...courseGoal,
+  route: "/courses",
+  scope: "course-catalogue",
+});
+```
+
+- `route`: available only on a matching route;
+- `scope`: available only while a region exists;
+- `keepActive`: whether an explicitly started task survives a temporary context change;
+- omitting both means the whole page, but a person or the model still has to start it.
+
+Keeping availability in the catalog means the page and the assistant do not maintain separate answers. The page renders real controls, the catalog decides whether the task can start, and the executor decides whether an action may run.
+
+## The assistant may choose a task, not invent one
+
+Every turn, the model receives the available goals or tasks. When the person says “create a yoga course”, it can call the narrow `pling_start_task` action:
 
 ```json
 {
-  "task": "course.create",
-  "values": { "name": "Yoga foundations", "teacherId": "teacher_zhoumin" }
+  "task": "course.create"
 }
 ```
 
-The action accepts only ids that are available right now, and `values` may contain only fields declared by that task. An unknown id or field returns `INVALID_ARGS`. Supplied values prefill a task run; they do not bypass the action's permission, confirmation, or audit path.
+The action accepts only a currently available task id. An unknown id returns `INVALID_ARGS`. The model cannot assemble a workflow that was never registered, and cannot bypass an action's own permissions.
 
-Today this means “the assistant starts a run of a registered task”. Once active, it may update the run through the separate `pling_update_task` action. That action writes only the active task's declared, agent-writable fields; it does not execute the business write. A page can subscribe to the run snapshot and mirror the values into its original form. If a later version composes new workflows, it must register task templates, validate them, and ask the user before they enter the same catalog. The model must not assemble arbitrary action sequences into a task definition.
+While a goal is active, the model also sees `pling_complete_task`. It calls this only when success criteria hold. It closes the goal and writes no business data.
 
-The separation is deliberate:
+For advanced tasks, the model may also see `pling_update_task`, `pling_focus_field`, `pling_review_task`, `pling_propose_save` and `pling_cancel_task`. The task declaration decides which of these exist; they are not all open by default.
 
-| Layer | Owns | Must not own |
+Three boundaries hold at once:
+
+| Layer | Owns | Does not own |
 | --- | --- | --- |
-| Application task definition | Goal, constraints, success criteria, fields, lookup sources, deterministic steps | DOM selectors or model transport |
-| Task run | Collected values, progress, errors, cancellation | A second permission system |
-| Existing action executor | Availability, confirmation, execution, verification | Business task names |
-| Agent loop | Ambiguous requests and exception handling | The only path to routine work |
+| Page | Real controls, regions, records, save handler | Intent matching, task scheduling |
+| Task catalog | Availability, activation, cancel, complete | Business writes, relaxed permissions |
+| Model | Understanding the turn, choosing actions, explaining results | Inventing actions, bypassing confirmation |
 
-## Describe only the decisions a person can make
+## Catch what the person already said
 
-A task field is not a database column. It should exist because the person must choose something. The current shop, operator, request time, and authorization scope come from the session and server. A customer identifier comes from a selected row, a search result, or a stable reference resolved by the server.
+Creating a course needs many values. Asking one by one turns the conversation into a form interview. This example puts no intent classifier in the page and no fixed “what to ask next” script in the task.
 
-The following definition asks for a student and a membership card. It does not ask for `shopId`, `operatorId`, or a raw student primary key.
+The person says:
 
-```ts
-import { createTaskController } from "@plingjs/agent";
-
-const tasks = createTaskController({
-  invoke: (action, args) => businessApi.invoke(action, args),
-});
-
-tasks.register({
-  id: "student.cards",
-  title: "查看学员会员卡",
-  description: "按姓名或手机号找到学员，再读取会员卡。",
-  objective: "Find the right student and show the cards they can actually use.",
-  constraints: ["Ask the person to choose when names are ambiguous."],
-  successCriteria: ["The cards belong to the student the person confirmed."],
-  fields: [
-    {
-      name: "studentRef",
-      label: "学员",
-      type: "lookup",
-      recommended: "student_li_na",
-      lookup: (query) => businessApi.searchStudents(query),
-    },
-  ],
-  steps: [
-    { label: "读取学员", action: "get_student" },
-    { label: "读取会员卡", action: "get_student_cards" },
-  ],
-});
+```text
+Pregnancy yoga, Chen Jing, 2 stars, monthly card, write the intro
 ```
 
-The action names still belong to the existing registry or business service. The task controller passes arguments to the host's `invoke` function; it does not execute DOM operations, approve itself, or reinterpret permission.
+The model sees the goal, constraints, page actions, draft record and gaps. It treats the sentence as several values and calls page actions to write name, teacher, difficulty, eligible cards and introduction into the real form. Then it asks only for what is genuinely missing, such as the cover.
 
-### Accept what the user already said
+If a teacher is not in the list, it asks instead of substituting a similar name. If the person says “fill it however”, the action description allows a draft only under explicit delegation. Without that, it does not invent content.
 
-A guided task is not a field-by-field questionnaire. When the user says “pregnancy yoga, Chen, 2 stars, write the intro”, the page should write every explicit value at once, then ask only for what is missing, conflicting, or must be done by a person. Prompting for one field at a time makes the assistant feel like a chat-shaped form and is slower than using the page directly. If the user says “you choose the card”, the model may use a declared `recommended` value for that one field even while other required fields are empty; the recommendation is a suggestion, not an automatic write.
+Validation belongs to the page. Native `min` / `max`, the option set of a `select`, and disabled or read-only state are checked at write time. A wrong type, an unknown option or a missing field returns a reason instead of leaving a half-applied form.
 
-Field values do not need a page-side intent classifier first. The model receives the active task's fields, current values, and gaps, then calls `pling_update_task` with the values it understood from the whole sentence. The page only checks that each value belongs to a declared field, matches its type, and satisfies its business constraints. A failed check writes no partial value; the model can retry or ask the person. A follow-up such as “change the difficulty to 4 stars” is likewise a correction to the current task, not a new creation request. The model decides what was meant using working memory; the page does not maintain a parallel set of regular expressions or keywords.
+## Resolve references into something a person can confirm
 
-## Resolve references before they become IDs
+In a real task, people say “Li Na's membership card”, not `student_0018`. The model should not guess the key and the person should not type it.
 
-People recognize names, rows, and recent activity. APIs require stable references. A guided task should cross that boundary without making the person or the model guess.
+Advanced tasks can declare a `lookup` field:
 
-| Source | Example | Interface |
-| --- | --- | --- |
-| Current selection | A row on a student detail page | Bind the row context; do not ask for its id |
-| Small closed set | Lesson types or card templates | A select field with labelled values |
-| Large collection | Students or courses | A lookup with a search function |
-| Server fact | Shop, operator, request time | Derive on the server; never expose as a field |
+```ts
+const studentField: TaskField = {
+  name: "studentRef",
+  label: "Student",
+  type: "lookup",
+  minChars: 2,
+  searchAction: "search_students",
+  lookup: async (query, { signal }) => api.searchStudents(query, { signal }),
+};
+```
 
-A lookup returns labelled choices. The selected value may be an opaque reference, but the choice must include enough human context to distinguish duplicates. Two students named “Li Na” need different phone suffixes, membership numbers, or recent lesson dates. Selecting the first result is not a safe default for a write operation.
+The model calls `search_students`, receives the same candidates the person sees, and writes the confirmed result. Duplicate names must show candidates and masked details; it must not silently pick the first.
 
-References also expire. A reference obtained before a page reload may no longer be valid, and a reference from one shop must not be accepted by another. The server resolves the reference again before executing the write. The browser-side choice is an intent, not a grant of authority.
+Small sets can use `values`. Large lists use asynchronous lookup so thousands of records never enter the context.
 
-## Bind the selected record instead of asking for its id
+## Bind the selected record, not a hidden id
 
-The strongest reference is the one the page already has. If a staff member opens a lesson row and chooses “Write a note”, the lesson id is not a question for the form; it is a fact of the current view. Supplying it through `start(id, values, binding)` keeps it out of user input and out of the model prompt.
+Many tasks start from a table row or a detail page. When the person clicks “write a note”, the page already knows which lesson or order is selected.
 
-Use `requiresRecord: true` when the task cannot work without that selection. A generic task list can still show the card, but it must open it from a row or detail page rather than starting an empty run. Inside a step, `args(values, binding)` reads `binding.record?.id`; the form only asks for the note. This is also safer for the model: it never has to guess or repeat an opaque id.
+`TaskBinding` carries that page fact:
+
+```ts
+const addNote: TaskDefinition = {
+  id: "lesson.note",
+  title: "Write a lesson note",
+  requiresRecord: true,
+  fields: [{ name: "note", label: "Note", type: "textarea" }],
+  steps: [{
+    label: "Save the note",
+    action: "update_lesson_note",
+    args: (values, binding) => ({
+      lessonId: binding.record?.id,
+      note: values.note,
+    }),
+  }],
+};
+```
+
+When `requiresRecord` is true and no record id exists, `start()` throws. A task list should show the task as an entrance, not allow it to start without context.
 
 ## Keep one execution path
 
-A task step refers to an existing action. The action may be backed by a button, a function-level tool, an application API, or a governed Surface call. This lets an application start with the visible workflow and later move a step to a read-only API without changing the task's language or the user's mental model.
+The task layer does not create a second executor. Advanced task steps call registered actions through the same executor, confirmation and audit path.
 
-Reading data is usually better through a read-only API: it is faster and avoids scrolling a table just to answer a question. Writing is usually better through the application's service layer so existing validation, idempotency, audit, and notifications still run. Visual work such as cropping an image, entering a one-time code, or dragging a schedule stays in the UI.
+```ts
+const controller = createTaskController({
+  invoke: (action, args, context) => executor.execute(action, JSON.stringify(args), context),
+});
+```
 
-The rule is not “API first” or “DOM first”. The rule is that the task must use the same business boundary as a person using the page. A successful task is not an HTTP 200; it is observable after the write, through a reload, a read-after-write check, or a declared expectation.
+The goal path is simpler: it executes nothing. The model calls page actions directly and the executor handles each one.
 
-## Make progress legible
+Neither path allows a generic `click(selector)` or `eval` escape hatch. Every operation must be a narrow action the page declared.
 
-The task interface should answer four questions without exposing implementation detail:
+## Make progress readable
 
-1. What is the user trying to finish?
-2. What does the application need from them?
-3. Which step is running now, and why?
-4. What changed, or why did it stop?
+People need to know what is happening, what is missing and whether something failed. The task snapshot carries that visible state.
 
-Step labels should be written for people: “Check the time slot”, “Create the lesson”, “Verify the card balance”. Raw action ids, argument objects, and stack traces belong in diagnostics. The same distinction applies to errors. Show the cause and the next safe action; keep internal codes available for support.
+| State | What it means | How to resume |
+| --- | --- | --- |
+| `collecting` | More information is needed | Fill the named fields |
+| `ready` | Ready to run | Run or switch tasks |
+| `running` | A step is executing | Wait or cancel |
+| `waiting` | Waiting for confirmation or a human handoff | Confirm, or complete it on the page |
+| `verifying` | The action returned; the host is checking the result | Review evidence, then continue |
+| `done` | Finished | Review the result |
+| `failed` | A step failed | Read the reason, retry or change input |
+| `cancelled` | The person stopped the task | Start again when ready |
 
-Progress has three distinct moments that are easy to merge by accident. `planned` means the route is fixed but nothing has run. `running` means a call is in flight. `verifying` means the call returned and the page is being checked for evidence. A task that shows only “running” cannot tell the user whether the write actually happened.
+A goal has only running and completed. It has no field rail and no step controller. The UI shows the goal, cancel and completion, not fake form controls.
 
-Task-level confirmation is also separate from action approval. The task asks “should this plan proceed?”; the executor still asks whether the individual write is allowed. Neither can override the other. A `waitingFor: "confirmation"` snapshot is resolved with `confirm()`, while `waitingFor: "handoff"` waits for a person to finish work in the page.
+## Human steps and ambiguity
 
-## Pause for human work and ambiguity
+Some steps can only be done by a person: signatures, one-time codes, payment confirmation, or a visual choice that cannot be described reliably. The task should pause and return control rather than simulate a click.
 
-Some steps require a person: a signature, a verification code, a payment confirmation, or a visual choice that cannot be described reliably. The task should pause and return control instead of simulating the action. After the person finishes, the flow resumes from the next step, not from the first one.
+Use `handoff` on a page action:
 
-Mark such a step with `handoff`. The run enters `waitingFor: "handoff"`, and the host is responsible for observing the page and deciding that the work is done. A long-running bridge can use `context.report("waiting", "handoff")` or `report("verifying")` for the same reason: the UI should reflect the real sub-state, not a generic spinner.
+```ts
+v-tool="{
+  id: 'course_cover',
+  desc: 'Upload the course cover',
+  handoff: {
+    reason: 'Choose a local image',
+    expect: { desc: 'The page recorded the chosen cover', check: () => draft.cover }
+  }
+}"
+```
 
-Ambiguity is different from manual work. If two students match, ask which one. If a requested course is unavailable, explain the conflict and offer another time. Do not silently choose a different record or create a partial result. The task run should end in a visible, recoverable state.
+The run enters waiting. The host observes the page and decides whether it completed. The model cannot choose the file or fake completion.
+
+Ambiguity is different from a human step. When two students share a name, ask which one. When a lesson time conflicts, explain the conflict and offer another time. Do not silently substitute a record or leave a half-finished state.
 
 ## Failure is part of the contract
 
-A run moves from collecting to ready, then through running to done, failed, or cancelled. A required field prevents execution. A failed write stops the flow. An optional enrichment step may be skipped, but that decision must be visible. Cancellation aborts the work in progress and must not be reported as success.
+A save without required fields must not run. A failed write stops. An optional step may be skipped, but the person must see it. Cancellation aborts the current step and must not report success.
 
-| State | User-visible meaning | Recovery |
-| --- | --- | --- |
-| `collecting` | More information is needed | Complete the named field |
-| `ready` | The task can start | Run it or choose another task |
-| `running` | A step is in progress | Wait or cancel |
-| `done` | The steps completed | Review the result |
-| `failed` | A step failed | Read the cause; retry or change input |
-| `cancelled` | The person stopped the run | Start again when ready |
+An action's `expect` verifies the result:
+
+```ts
+expect: {
+  desc: "The new course appears first in the catalogue",
+  check: () => courses.value[0]?.id === newCourseId.value,
+}
+```
+
+The executor checks it after the action returns. A failed condition produces a visible reason. The result card shows the read-back evidence, not a pre-written success message.
 
 ## Where the implementation lives
 
-The business definitions live with the application. The framework-independent run model lives in `@plingjs/agent`. The existing action registry and executor remain in `@plingjs/core`. Task rendering belongs to the adapter layer, not the agent loop. This keeps the same task model available to Vue, React, Vue 2, and Vanilla without four execution engines.
+Business task definitions stay in the application. The framework-neutral run model lives in `@plingjs/agent`. The action registry and executor stay in `@plingjs/core`. Task rendering belongs to adapters, not the agent loop.
 
-The catalog lives in `@plingjs/agent`; it only decides availability, activation, and command routing. The adapter decides where the active guide appears. Vue 3's `<AgentInline>` subscribes to the catalog and renders the guide automatically, so a business page does not have to rebuild chat chrome or mount a task card by hand. Use the `#task` slot only when a product deliberately needs a different presentation.
+The task catalog only handles availability, activation and command forwarding. Vue 3's `<AgentInline>` subscribes to the catalog and renders the guide. A business page does not need a second chat shell or a manually mounted task card.
 
-`@plingjs/vanilla` still exposes lower-level renderers such as `createTaskPanel()` and `createTaskCard()` for vanilla pages or custom layouts. They share the same task run, lookup, confirmation, and failure handling; there is no second execution engine.
+Vue, React, Vue 2.7 and vanilla JS share one task model and one DOM renderer. There are no four execution engines.
 
-The compact row for the next actions is provided by `@plingjs/dom`, not copied into each adapter. `GuideActionItem` reduces an action to one line: short label, business command, optional kind. A long recommendation lives in `preview`, ellipsised on one line, while the full value stays in the conversation, `title`, and `aria-label`. The button width is therefore not decided by business copy, and the row cannot push the conversation away. The renderer only emits a command; writing a field, locating it, and calling the executor remain the host's job.
+The same goal can also be exposed to external agents through Surface `tasks`. The description is a map, not a key: it explains which capabilities form a job, but `invoke` still goes through the exposed list, session scope, approval and audit.
 
-Lookup fields can also become read actions through `registerTaskLookupActions`. The model then searches by a human name before it writes, using the same candidates the person sees. This closes the gap between “the model knows an id is required” and “the person knows which row they mean”.
+## Runnable examples
 
-The same task can be described to an external agent through Surface `tasks`. That description is a map, not a key: it explains which capabilities belong together, but `invoke` still passes through the existing export allowlist, session scope, approval, and audit.
+[Case 06: a persistent goal](/demos/course-workspace-vue3/?lang=en) registers one goal. The page is the original course workspace. The assistant opens the dialog, operates real fields, asks the person to upload the cover, saves, and reads the catalogue back.
 
-## Runnable reference
+[Case 07: directives only](/demos/course-create-directives-vue3/?lang=en) uses the same page without the task layer. It is the comparison: when page actions already express the job, no goal is needed.
 
-The [course back office](/demos/course-workspace/) puts these ideas on one page: course creation, duplicate-name lookup, a teacher-creation form, a slot-conflict failure, a bound lesson-note task, and a catalogue and schedule that update while the card runs. Read the [source and integration notes](/examples/course-workspace) after trying the five tasks.
+Both examples include full source and integration notes on the [example page](/examples/course-workspace-vue3).
 
-The course-creation demo follows the business page more closely: it opens the existing “Create a course” form, and the assistant carries the task in chat. A person can describe the whole course in one sentence; the model understands the fields and calls `pling_update_task`, the page validates them and writes the accepted values into the original form, and the assistant asks only for what is still missing. An unknown teacher, an invalid difficulty, or a cover that must be uploaded by hand is located on the original form. This example deliberately sets `task-placement="none"` to hide the built-in task card and field rail: the course form is already continuous, so a second rail above the conversation would create a parallel path to the same job. Field gaps, suggestions, locating, and review actions live in the action row at the end of the conversation. Once the values are complete, the conversation shows a read-only review and a confirm action, then reads the result back from the catalogue. `examples/shared/course-create/guide.ts` owns the guide copy, field state, and page commands; `CourseWorkspace.vue` remains the only source of business input. `legacy-intake.ts` is a historical snapshot of the earlier deterministic parser and is no longer imported by the live demo.
+## Checklist
 
-## Verification checklist
-
-- The user can start a task without writing a prompt; a task appears only when its route and scope match.
-- Every field corresponds to a decision the user can make.
+- A person can start without writing a prompt; a goal appears only where route and scope allow.
+- Starting a goal does not open a dialog, fill a field or save.
+- Every field maps to a real action a person can perform.
+- Custom controls use real clicks or parameterised actions, not a second form.
 - Duplicate lookup results require an explicit choice.
-- The server validates the selected reference and its shop/session scope.
-- A row-level task receives its record through a binding, not a hidden text field.
-- Each step calls the existing action or business service; the assistant may choose a registered task but cannot invent an id or field.
-- The interface distinguishes success, failure, cancellation, and skipped optional work.
-- `planned`, `running`, and `verifying` are not collapsed into one label.
-- A write is verified after execution, not inferred from a successful request.
+- Row tasks get the record from a binding, not a hidden input.
+- Every write goes through the existing executor and a read-back check.
+- The UI distinguishes success, failure, cancellation and human waiting.
+- The page satisfies all success criteria before a goal is completed.
 - Raw action ids and arguments appear only in diagnostics.
-
