@@ -90,6 +90,7 @@ function coverageSummary(): string {
     declared: report.declared,
     derived: report.derived,
     grouped: report.grouped,
+    locatable: report.locatable,
     missing: report.missing,
   })}`;
 }

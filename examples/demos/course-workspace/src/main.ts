@@ -5,6 +5,7 @@ import {
   courseQuickPrompts,
   createCourseTaskView,
   createCourseTaskRuntime,
+  decorateCourseDock,
   describeCourseState,
   registerCourseActions,
   type CourseTaskRuntime,
@@ -301,4 +302,10 @@ render();
 window.setTimeout(() => {
   dock?.open();
   openTaskInChat("course.create");
+  decorateCourseDock(locale, {
+    runtime: taskRuntime,
+    onOpenDock: () => dock?.open(),
+    onOpenTask: openTaskInChat,
+    onReset: () => taskRuntime?.guide?.reset(),
+  });
 }, 60);

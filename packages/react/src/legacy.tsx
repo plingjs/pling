@@ -204,16 +204,18 @@ export function PlingTask(props: PlingTaskProps): React.ReactElement {
 
 export interface PlingGuideTargetProps {
   id: string;
+  label?: string;
+  description?: string;
   children: (ref: RefCallback) => React.ReactNode;
 }
 
-/** Mark a handoff guide target without registering an action. */
+/** Register a locate-only target without registering an executable action. */
 export function PlingGuideTarget(props: PlingGuideTargetProps): React.ReactElement {
   return withPling((pling) =>
     React.createElement(ElementBinding, {
       pling,
-      deps: [props.id],
-      bind: (current, element) => current.guideTarget(element, props.id),
+      deps: [props.id, props.label, props.description],
+      bind: (current, element) => current.guideTarget(element, props.id, { label: props.label, description: props.description }),
       children: props.children,
     }),
   );

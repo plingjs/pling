@@ -4,7 +4,7 @@
   "page": "vanilla",
   "route": "/zh/reference/api/vanilla",
   "package": "@plingjs/vanilla",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "compatibility": null,
@@ -250,7 +250,7 @@
           "imports": [
             "@plingjs/vanilla"
           ],
-          "signature": "interface VanillaPling extends VanillaHost {\n  feedback: FeedbackCollector;\n  page: PageTracker;\n  task: PlingTaskController;\n  ask(prompt: string, options?: PlingAskOptions): Promise<void>;\n  tool(element: Element, options: ToolOptions): () => void;\n  action(options: ActionOptions): () => void;\n  record(element: Element, value: RecordValue | null | undefined): () => void;\n  scope(element: Element, options: ScopeOptions): () => void;\n  state(key: string, source: StateSource, options?: StateOptions | string): () => void;\n  declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;\n  declareTask(element: HTMLElement, value: TaskValue): () => void;\n  guideTarget(element: Element, id: string): () => void;\n  setActiveScopes(scopes: Iterable<string>): void;\n  dock(options?: VanillaDockOptions): VanillaDock;\n  surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway;\n  inspectCoverage(root?: Element | null): CoverageReport;\n  derived(): DeriveController | null;\n  destroy(): void;\n}",
+          "signature": "interface VanillaPling extends VanillaHost {\n  feedback: FeedbackCollector;\n  page: PageTracker;\n  task: PlingTaskController;\n  ask(prompt: string, options?: PlingAskOptions): Promise<void>;\n  tool(element: Element, options: ToolOptions): () => void;\n  action(options: ActionOptions): () => void;\n  record(element: Element, value: RecordValue | null | undefined): () => void;\n  scope(element: Element, options: ScopeOptions): () => void;\n  state(key: string, source: StateSource, options?: StateOptions | string): () => void;\n  declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;\n  declareTask(element: HTMLElement, value: TaskValue): () => void;\n  guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void;\n  setActiveScopes(scopes: Iterable<string>): void;\n  dock(options?: VanillaDockOptions): VanillaDock;\n  surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway;\n  inspectCoverage(root?: Element | null): CoverageReport;\n  derived(): DeriveController | null;\n  destroy(): void;\n}",
           "parameters": [
             {
               "name": "feedback",
@@ -853,27 +853,27 @@
           "anchor": "api-guide-target",
           "name": "引导目标",
           "kind": "declaration",
-          "summary": "人工接力时高亮一个并非动作的目标元素。",
+          "summary": "登记只定位目标，助手可以指出位置，但不能通过该目标执行操作。",
           "imports": [
             "@plingjs/vanilla"
           ],
-          "signature": "pling.guideTarget(element: Element, id: string): () => void",
+          "signature": "pling.guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void",
           "parameters": [
             {
               "name": "element",
               "type": "Element",
               "required": true,
               "defaultValue": "",
-              "description": "Element to highlight during the handoff step.",
-              "descriptionZh": "人工接力步骤中要高亮的元素。"
+              "description": "Element to point out. It must remain mounted until the target is unregistered.",
+              "descriptionZh": "要指给用户看的元素。注销目标前，元素应保持挂载。"
             },
             {
-              "name": "id",
-              "type": "string",
-              "required": true,
+              "name": "metadata",
+              "type": "{ label?: string; description?: string }",
+              "required": false,
               "defaultValue": "",
-              "description": "Guide target id referenced by a HandoffStep.highlight value.",
-              "descriptionZh": "被 `HandoffStep.highlight` 引用的引导目标 id。"
+              "description": "Optional human-facing name and description.",
+              "descriptionZh": "可选的人类可读名称与用途说明。"
             }
           ],
           "definition": null,
@@ -881,16 +881,16 @@
           "defaults": [],
           "examples": [
             {
-              "title": "Highlight a handoff target",
-              "titleZh": "高亮人工接力目标",
-              "code": "pling.guideTarget(document.querySelector(\"#captcha\"), \"captcha\");",
+              "title": "Register a locate-only control",
+              "titleZh": "登记只定位控件",
+              "code": "const removeTarget = pling.guideTarget(addTeacherButton, \"teachers.add\", {\n  label: \"新增老师\",\n  description: \"打开老师档案表单\",\n});\n\n// When the button is removed:\nremoveTarget();",
               "lang": "ts"
             }
           ],
           "support": {
             "vue3": "native",
             "react": "native",
-            "vue2": "none",
+            "vue2": "native",
             "vanilla": "native"
           },
           "symbols": [
@@ -1406,6 +1406,22 @@
               "defaultValue": "",
               "description": "Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults.",
               "descriptionZh": "模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。"
+            },
+            {
+              "name": "context",
+              "type": "ContextOptions",
+              "required": false,
+              "defaultValue": "",
+              "description": "Bounds the page information included in model context, including the live clock.",
+              "descriptionZh": "设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。"
+            },
+            {
+              "name": "clock",
+              "type": "AgentClock",
+              "required": false,
+              "defaultValue": "",
+              "description": "Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes.",
+              "descriptionZh": "每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。"
             },
             {
               "name": "llm",
@@ -3346,7 +3362,7 @@
           "anchor": "api-inspectcoverage",
           "name": "inspectCoverage",
           "kind": "method",
-          "summary": "扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。",
+          "summary": "把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。",
           "imports": [
             "@plingjs/vanilla",
             "@plingjs/dom"
@@ -3366,8 +3382,8 @@
               "type": "number",
               "required": false,
               "defaultValue": "",
-              "description": "Recognized actionable controls in the root.",
-              "descriptionZh": "根元素内识别到的可操作控件总数。"
+              "description": "Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected.",
+              "descriptionZh": "识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。"
             },
             {
               "name": "return.declared",
@@ -3394,6 +3410,14 @@
               "descriptionZh": "由祖先声明覆盖的控件数。需要人工复核映射关系。"
             },
             {
+              "name": "return.locatable",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Controls registered for pointing and highlighting only; the user must operate them.",
+              "descriptionZh": "只登记了定位和高亮的控件数；仍由用户亲自操作。"
+            },
+            {
               "name": "return.missing",
               "type": "number",
               "required": false,
@@ -3406,16 +3430,16 @@
               "type": "number | null",
               "required": false,
               "defaultValue": "",
-              "description": "Covered controls divided by total; null when there are no controls.",
-              "descriptionZh": "覆盖控件数除以总数；没有控件时为 `null`。"
+              "description": "Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls.",
+              "descriptionZh": "有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。"
             },
             {
               "name": "return.targets",
               "type": "CoverageTarget[]",
               "required": false,
               "defaultValue": "",
-              "description": "Grouped and missing controls with labels and nearby action ids.",
-              "descriptionZh": "分组与缺失控件列表，包含标签和附近动作 id。"
+              "description": "Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids.",
+              "descriptionZh": "分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。"
             }
           ],
           "definition": null,
@@ -3432,7 +3456,7 @@
           "support": {
             "vue3": "native",
             "react": "native",
-            "vue2": "none",
+            "vue2": "native",
             "vanilla": "native"
           },
           "symbols": [

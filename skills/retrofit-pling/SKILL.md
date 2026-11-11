@@ -11,20 +11,55 @@ business capabilities while the application remains the execution authority.
 
 ## Non-negotiables
 
-1. **Baseline first.** Prove the application builds, tests, and works without
-   Pling before touching the integration.
-2. **No generic escape hatch.** Never add `click(selector)`, `eval`, arbitrary
+1. **Scanning is read-only by default.** Inspect the repository and report a
+   concrete plan without editing files, installing packages, changing env files,
+   or generating artifacts. Stop after the report unless the user explicitly
+   asks to apply it.
+2. **Baseline first.** Before an approved retrofit, prove the application builds,
+   tests, and works without Pling. Preserve that version as a separate entry,
+   branch, or copy-forward snapshot.
+3. **No generic escape hatch.** Never add `click(selector)`, `eval`, arbitrary
    script execution, or a tool that forwards raw DOM events.
-3. **One business operation, one tool.** Do not expose "open dialog, fill field,
+4. **One business operation, one tool.** Do not expose "open dialog, fill field,
    click Save" as three capabilities when the business operation is "set note".
-4. **Read only what the agent needs.** Records and state are allowlists, not a
+5. **Read only what the agent needs.** Records and state are allowlists, not a
    dump of the component, store, or API response.
-5. **No unattended rewrite.** A scanner may propose a plan. A human must approve
-   every id, scope, kind, parameter, and external exposure before code changes
-   are applied.
-6. **Stop on the dangerous boundary.** Authentication, authorization, personal
+6. **Review the contract before implementation.** A scanner may propose a plan.
+   The application owner must approve the capabilities, scopes, kinds,
+   parameters, confirmation rules, and any external exposure before code
+   changes. Do not infer approval from silence or a request to inspect the app.
+7. **Stop on the dangerous boundary.** Authentication, authorization, personal
    data, payment, approval, deletion, permission changes, and external exposure
    require explicit human review and a rollback point.
+
+## Operating modes
+
+### Scan mode (default)
+
+Read the app structure, existing business services, forms, routes, state, and
+tests. Record current verification evidence when it is available. Produce a
+capability inventory and a proposed integration diff map. Do not create a
+baseline copy or edit the project in this mode.
+
+The report must separate facts from proposals. For each proposed action, include
+the user goal, existing business function, required inputs, dynamic references,
+read/write risk, confirmation boundary, data returned to the model, and a way to
+verify success. Flag missing authorization checks and unknown business rules
+instead of filling them in by guess.
+
+### Apply mode (only after explicit approval)
+
+Work in the approved branch, worktree, or copy-forward snapshot. Keep the
+business service as the source of validation and persistence. Implement one
+workflow slice at a time, then compare it with the saved baseline. If an
+approved action requires a new permission, database migration, external
+allowlist, or broader data exposure than the reviewed plan, stop and present
+that change separately.
+
+Finish with an integration report that distinguishes unchanged business code
+from Pling declarations, lists touched files and verification results, and
+reports source line counts as code size rather than estimated effort. Include
+observed model failures, retries, ambiguous references, and untested workflows.
 
 ## Phase 0: establish the baseline
 
@@ -40,7 +75,7 @@ If the project uses another package manager, substitute its commands. Capture
 one browser smoke test of the main workflow. Do not "fix" unrelated failures;
 record them and decide whether they block the retrofit.
 
-Create a baseline page or a tag. The most useful fixture is two runnable entry
+In approved apply mode, create a baseline page or a tag before edits. The most useful fixture is two runnable entry
 points that share business functions and CSS:
 
 ```text
@@ -60,7 +95,9 @@ Read the pages and list five things separately:
 | State | filters, counts, pagination, selection, and other context that explains the view |
 | Sensitive data | credentials, tokens, payment data, identity data, internal scores, private notes |
 
-Write a provisional `retrofit/capabilities.json`. Do not edit templates yet.
+In scan mode, include a provisional capability manifest in the report only. Do
+not write `retrofit/capabilities.json` or edit templates. In approved apply
+mode, add the manifest as a reviewable artifact before implementing actions.
 
 ```json
 {
@@ -191,11 +228,11 @@ independent of that failure.
 
 ## Deliverables
 
-A complete retrofit leaves:
+A completed apply-mode retrofit leaves:
 
 - a runnable baseline;
 - a runnable integrated page;
-- `retrofit/capabilities.json` as the review contract;
+- `retrofit/capabilities.json` as the approved review contract;
 - tests for ids, records, preconditions, evidence, and external exposure;
 - a README with a change map, verification steps, rollback boundary, and known
   limits.

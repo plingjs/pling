@@ -13,6 +13,7 @@ import {
   courseQuickPrompts,
   createCourseTaskView,
   createCourseTaskRuntime,
+  decorateCourseDock,
   describeCourseState,
   registerCourseActions,
   type CourseTaskRuntime,
@@ -130,6 +131,12 @@ export function App({ locale }: { locale: Locale }) {
     const timer = window.setTimeout(() => {
       dock.current?.open();
       openTaskInChat("course.create");
+      decorateCourseDock(locale, {
+        runtime: taskRuntime.current ?? undefined,
+        onOpenDock: () => dock.current?.open(),
+        onOpenTask: openTaskInChat,
+        onReset: () => taskRuntime.current?.guide?.reset(),
+      });
     }, 0);
     return () => {
       window.clearTimeout(timer);

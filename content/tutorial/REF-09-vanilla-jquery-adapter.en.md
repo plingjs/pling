@@ -47,7 +47,7 @@ const dock = pling.dock({
 | `state(key, source, options?)` | unbind | Register a read-only view |
 | `declareFeedback(element, value)` | unbind | Declare page feedback |
 | `declareTask(element, value)` | unbind | Declare a human-facing task entrance without registering an action |
-| `guideTarget(element, id)` | unbind | Mark a target for a human handoff |
+| `guideTarget(element, id, metadata?)` | unbind | Add a non-executable element to the assistant's locate list |
 | `setActiveScopes(ids)` | - | Manual activation when the observer cannot infer the layout |
 | `dock(options?)` | `VanillaDock` | Mount the shared assistant |
 | `surfaceGateway(options)` | `VanillaSurfaceGateway` | Expose allowed capabilities to external Agents |
@@ -165,7 +165,7 @@ pling.declareTask(document.querySelector("#ask-assistant")!, {
 });
 ```
 
-`declareTask()` only sends a prompt to the mounted assistant, so it never appears in the action list. `guideTarget()` only marks the place a user should look during a handoff; it also does not create an action.
+`declareTask()` only sends a prompt to the mounted assistant, so it never appears in the action list. `guideTarget()` adds a non-executable target to the locate-only list. The assistant can reveal and highlight it with `pling_locate`, but cannot activate it through this declaration.
 
 ## Assistant, model settings, and debugging
 
@@ -255,7 +255,7 @@ Attach Pling after the element exists. If a plugin replaces the DOM node afterwa
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vanilla` `0.1.0-alpha.9` |
+| Applies to | `@plingjs/vanilla` `0.1.0-alpha.10` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for builds |
 | Peer dependencies | None; jQuery is optional |

@@ -16,9 +16,9 @@ This page covers public APIs in `@plingjs/core`, `@plingjs/agent`, `@plingjs/dom
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.9` |
+| `@plingjs/core` | — | `0.1.0-alpha.10` |
 
-The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.10`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -462,6 +462,8 @@ Model configuration, sessions, approval and handoff, hooks, tracing, and shared 
 | API | Kind | Reference |
 | --- | --- | --- |
 | [AgentRuntimeOptions](#api-agentruntimeoptions) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
+| [AgentClock](#api-agentclock) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
+| [ContextOptions](#api-contextoptions) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
 | [AgentConfigOverrides](#api-agentconfigoverrides) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
 | [HookRegistry](#api-hookregistry) | Class | [Reference](/reference/agent-runtime-sessions-context-limits) |
 | [SessionEvent](#api-sessionevent) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
@@ -486,6 +488,9 @@ The runtime contract behind AgentSetup: config, registry, model, events, hooks, 
 interface AgentRuntimeOptions {
   config: AgentConfig;
   registry?: Registry;
+  taskCatalog?: TaskCatalog;
+  context?: ContextOptions;
+  clock?: AgentClock;
   llm?: Llm;
   responseLocale?: string | (() => string);
   telemetry?: Telemetry;
@@ -512,6 +517,8 @@ interface AgentRuntimeOptions {
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfig` | Yes | — | Fully resolved model and runtime configuration. |
 | `registry` | `Registry` | No | — | Page capability registry. Omit it for a chat-only runtime. |
+| `context` | `ContextOptions` | No | — | Bounds the page information included in model context, including the live clock. |
+| `clock` | `AgentClock` | No | — | Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes. |
 | `llm` | `Llm` | No | — | Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport. |
 | `responseLocale` | `string \| (() => string)` | No | — | Locale used when composing the response-language instruction. A function is re-read before each model request. |
 | `telemetry` | `Telemetry` | No | — | Collects token, duration, cost, and retry metrics for the current runtime. |
@@ -538,6 +545,112 @@ const runtime = createAgentRuntime({
   registry: pling.registry,
   hooks,
   trace: true,
+});
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/agent-runtime-sessions-context-limits)
+
+
+<a id="api-agentclock"></a>
+
+### `AgentClock`
+
+Live time and timezone context included with every model request. It does not replace business-service validation.
+
+**Imports**
+
+`@plingjs/agent`
+
+**Signature**
+
+```ts
+// Shared package
+interface AgentClock {
+  now?: () => Date;
+  viewerTimeZone?: string | (() => string);
+  businessTimeZone?: string | (() => string);
+}
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `now` | `() => Date` | No | — | Returns a valid current instant. Re-read before each model request; defaults to the runtime clock. An invalid Date fails before the model request. |
+| `viewerTimeZone` | `string \| (() => string)` | No | — | IANA timezone used to render the viewer's local time. Defaults to the runtime timezone; server runtimes should supply the authenticated user's timezone. |
+| `businessTimeZone` | `string \| (() => string)` | No | — | IANA timezone used for business dates such as class schedules. Defaults to viewerTimeZone. |
+
+**Example 1 · Configure the shop timezone**
+
+```ts
+createPling({
+  agent: {
+    clock: {
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
+});
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/agent-runtime-sessions-context-limits)
+
+
+<a id="api-contextoptions"></a>
+
+### `ContextOptions`
+
+Bounds the page context sent to the model and optionally provides a per-request clock.
+
+**Imports**
+
+`@plingjs/agent`
+
+**Signature**
+
+```ts
+// Shared package
+interface ContextOptions {
+  maxActions?: number;
+  maxRecords?: number;
+  includeState?: boolean;
+  maxIdsInHint?: number;
+  maxUnavailable?: number;
+  maxStateChars?: number;
+  maxRecordChars?: number;
+  maxScopes?: number;
+  maxFeedback?: number;
+  maxFeedbackChars?: number;
+  maxPageChars?: number;
+  clock?: AgentClock;
+}
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `maxActions` | `number` | No | — | Maximum actions rendered in the current page context. |
+| `maxRecords` | `number` | No | — | Maximum record rows rendered in the current page context. |
+| `includeState` | `boolean` | No | — | Whether read-only page state is included. |
+| `maxUnavailable` | `number` | No | — | Maximum unavailable actions rendered in context. |
+| `clock` | `AgentClock` | No | — | Live time and timezone context. When configured here, it is used for each model request. |
+
+**Example 1 · Provide a per-request clock**
+
+```ts
+createAgentRuntime({
+  config,
+  registry,
+  context: {
+    clock: {
+      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
 });
 ```
 
@@ -1187,7 +1300,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.
+Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.
 
 **Imports**
 
@@ -1205,13 +1318,14 @@ inspectCoverage(root: Element | null): CoverageReport
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | No | — | Application root to scan. Vue uses its mount root; React and DOM callers may pass any root. |
-| `return.total` | `number` | No | — | Recognized actionable controls in the root. |
+| `return.total` | `number` | No | — | Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected. |
 | `return.declared` | `number` | No | — | Controls with a direct declaration. |
 | `return.derived` | `number` | No | — | Controls produced by optional L1 derivation. |
 | `return.grouped` | `number` | No | — | Controls covered by a declaration on an ancestor. Review these manually. |
+| `return.locatable` | `number` | No | — | Controls registered for pointing and highlighting only; the user must operate them. |
 | `return.missing` | `number` | No | — | Actionable controls with no declaration in their ancestry. |
-| `return.coveragePercent` | `number \| null` | No | — | Covered controls divided by total; null when there are no controls. |
-| `return.targets` | `CoverageTarget[]` | No | — | Grouped and missing controls with labels and nearby action ids. |
+| `return.coveragePercent` | `number \| null` | No | — | Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls. |
+| `return.targets` | `CoverageTarget[]` | No | — | Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids. |
 
 **Example 1 · Inspect a DOM root**
 
@@ -3401,7 +3515,7 @@ createAgentLoop(options: LoopOptions): AgentLoop
 | `handoff` | `HandoffGate` | No | — | Human-handoff gate. Omit it to fail handoff tools rather than simulate them. |
 | `systemPrompt` | `string` | No | — | Additional system instructions. Framework rules remain in force. |
 | `responseLocale` | `string \| (() => string)` | No | — | Response-language hint; a function is re-read each turn. |
-| `context` | `ContextOptions` | No | — | Bounds for actions, records, state, scopes, feedback, and page identity in model context. |
+| `context` | `ContextOptions` | No | — | Bounds page context and may configure the live clock used before each model request. |
 | `history` | `HistoryOptions` | No | — | Context budget, compaction threshold, recent retention, and tool-result cap. |
 | `historyState` | `HistorySnapshot` | No | — | Restores a summary and message list from a checkpoint. System context is rebuilt for the current page. |
 | `hooks` | `HookRegistry` | No | — | Tool lifecycle hooks. |
@@ -3502,6 +3616,7 @@ renderPageContext(snapshot: Snapshot, options?: ContextOptions): string
 | `options.maxFeedback` | `number` | No | `8` | Maximum feedback entries listed, default 8. |
 | `options.maxFeedbackChars` | `number` | No | `800` | Character budget for feedback, default 800. |
 | `options.maxPageChars` | `number` | No | `500` | Character budget for page identity, default 500. |
+| `options.clock` | `AgentClock` | No | — | Adds the current instant and viewer/business local times to this page context. |
 
 **Example 1 · Render a smaller context**
 
@@ -3754,10 +3869,10 @@ const config = resolveAgentConfig({
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |

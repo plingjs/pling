@@ -16,9 +16,9 @@ Vue 2.7 适配器沿用 DOM 运行时，提供指令与共享的 DOM 问答入�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.9` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.10` |
 
-当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.10`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -273,6 +273,7 @@ beforeDestroy() {
 | [记录](#api-record) | 声明 | [参考](/zh/reference/core-declarations-actions-records-regions-state) |
 | [只读状态](#api-state) | 声明 | [参考](/zh/reference/core-declarations-actions-records-regions-state) |
 | [Store 状态](#api-store-state) | 声明 | [参考](/zh/reference/vue-2-adapter) |
+| [引导目标](#api-guide-target) | 声明 | [参考](/zh/reference/vue-2-adapter) |
 | [sensitive](#api-sensitive) | 函数 | [参考](/zh/reference/core-declarations-actions-records-regions-state) |
 
 <a id="api-element-action"></a>
@@ -482,6 +483,40 @@ useAgentStoreState<S extends object>(key: string, store: S, read: AgentStoreRead
 ```ts
 const cart = this.$store.state.cart;
 useAgentStoreState("cart", cart, ["count", "total"], "购物车件数与小计");
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/vue-2-adapter)
+
+
+<a id="api-guide-target"></a>
+
+### `引导目标`
+
+登记只定位目标，助手可以指出位置，但不能通过该目标执行操作。
+
+**导入**
+
+`@plingjs/vue2`
+
+**调用方式**
+
+```ts
+// Vue 2.7
+v-guide-target="string | { id: string; label?: string; description?: string }"
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `value` | `string \| { id: string; label?: string; description?: string }` | 是 | — | 把元素登记为只定位目标。省略 `label` 时，Vue 2 会尝试读取元素的无障碍名称。 |
+
+**示例 1 · 登记只定位控件**
+
+```ts
+<button v-guide-target="{ id: 'teachers.add', label: '新增老师' }">新增老师</button>
 ```
 
 **精确契约**
@@ -787,6 +822,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | 否 | — | 模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。 |
+| `context` | `ContextOptions` | 否 | — | 设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。 |
 | `llm` | `Llm` | 否 | — | 注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。 |
 | `telemetry` | `Telemetry` | 否 | — | 收集当前运行时的 token、耗时、成本与重试指标。 |
@@ -1211,6 +1248,56 @@ const dock = pling.dock({
 dock.open();
 // On teardown:
 dock.destroy();
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/vue-2-adapter)
+
+
+## 页面身份与连续性
+
+读取页面身份、在同源框架间共享运行时，并检查声明覆盖率。
+
+| API | 类型 | 参考 |
+| --- | --- | --- |
+| [inspectCoverage](#api-inspectcoverage) | 方法 | [参考](/zh/reference/vue-2-adapter) |
+
+<a id="api-inspectcoverage"></a>
+
+### `inspectCoverage`
+
+把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。
+
+**导入**
+
+`@plingjs/dom` · `@plingjs/vue2`
+
+**调用方式**
+
+```ts
+// Vue 2.7
+pling.inspectCoverage(root?: Element | null): CoverageReport
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `root` | `Element \| null` | 否 | — | 要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。 |
+| `return.total` | `number` | 否 | — | 识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。 |
+| `return.declared` | `number` | 否 | — | 有直接声明的控件数。 |
+| `return.derived` | `number` | 否 | — | 由可选 L1 派生生成的动作数。 |
+| `return.grouped` | `number` | 否 | — | 由祖先声明覆盖的控件数。需要人工复核映射关系。 |
+| `return.locatable` | `number` | 否 | — | 只登记了定位和高亮的控件数；仍由用户亲自操作。 |
+| `return.missing` | `number` | 否 | — | 祖先链上没有任何声明的可操作控件数。 |
+| `return.coveragePercent` | `number \| null` | 否 | — | 有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。 |
+| `return.targets` | `CoverageTarget[]` | 否 | — | 分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。 |
+
+**示例 1 · 检查 DOM 根元素**
+
+```ts
+const report = inspectCoverage(document.querySelector("#app"));
 ```
 
 **精确契约**
@@ -3182,10 +3269,10 @@ interface GuideActionItem {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |

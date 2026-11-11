@@ -647,9 +647,9 @@ Unknown task ids, unknown fields, duplicate definitions, a missing bound record,
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.9` |
+| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.10` |
 | Introduced | `0.1.0-alpha.6` |
-| `goal()` introduced | `0.1.0-alpha.9` (unreleased) |
+| `goal()` introduced | `0.1.0-alpha.9` |
 | Runtime | Browsers with ES2022 modules; the task controller runs in Node.js 20 or later |
 | Peer dependencies | None |
 | Stability | Experimental; snapshots may add fields without changing existing meanings |

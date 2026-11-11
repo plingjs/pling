@@ -179,7 +179,7 @@ for (const name of names) {
     fail(manifestPath, "example must mount an assistant entry");
   }
   if (
-    !/(?:v-tool\b|v-record\b|usePlingTool\b|usePlingRecord\b|<Pling(?:Tool|Record)\b|\bpling\.(?:tool|record)\s*\(|name:\s*["'](?:tool|record)["'])/.test(
+    !/(?:v-tool\b|v-record\b|usePlingTool\b|usePlingRecord\b|useAgentTool\b|<Pling(?:Tool|Record)\b|\bpling\.(?:tool|record)\s*\(|name:\s*["'](?:tool|record)["'])/.test(
       source,
     )
   ) {

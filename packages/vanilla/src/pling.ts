@@ -9,8 +9,12 @@ import {
   createScopeController,
   createTaskController,
   inspectCoverage,
+  GUIDE_TARGET_ATTR,
+  isElementInViewport,
+  labelOf,
   nearestScope,
   normalizeFeedbackValue,
+  scrollElementIntoView,
   toFeedbackDeclaration,
   type DeriveController,
   markExplicit,
@@ -288,15 +292,24 @@ export function createPling(options: VanillaPlingOptions = {}): VanillaPling {
         };
       });
     },
-    guideTarget(element, id) {
+    guideTarget(element, id, metadata = {}) {
       if (destroyed) throw new Error("pling 已 destroy，不能再声明指引目标");
       return declareElement(guideStates, element, () => {
         const targetId = String(id ?? "").trim();
         if (!targetId) return () => {};
+        const label = metadata.label?.trim() || labelOf(element) || targetId;
+        element.setAttribute(GUIDE_TARGET_ATTR, targetId);
         const off = registry.declareGuideTarget(targetId, {
+          label,
+          ...(metadata.description?.trim() ? { description: metadata.description.trim() } : {}),
+          isVisible: () => isElementInViewport(element),
+          reveal: () => scrollElementIntoView(element),
           presence: (state) => presence?.mark(element, state),
         });
-        return off;
+        return () => {
+          off();
+          if (element.getAttribute(GUIDE_TARGET_ATTR) === targetId) element.removeAttribute(GUIDE_TARGET_ATTR);
+        };
       });
     },
     setActiveScopes(ids) {

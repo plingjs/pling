@@ -104,7 +104,7 @@ function classify(line: string): DemoCodeLine["kind"] | undefined {
   if (!value) return undefined;
   if (/^import\b.*@plingjs\//.test(value) || /\bfrom\s+["']@plingjs\//.test(value)) return "import";
   if (/\bcreatePling\b|\.use\(pling\.plugin\)/.test(value)) return "setup";
-  if (/\bv-(tool|record|scope|task)\b|<Pling(?:Tool|Record|Scope|Task|State|Action)\b/.test(value)) return "declare";
+  if (/\bv-(tool|record|scope|task)\b|\buseAgentTool\s*\(|<Pling(?:Tool|Record|Scope|Task|State|Action)\b/.test(value)) return "declare";
   if (/<Agent(?:Dock|Inline)\b/.test(value)) return "entry";
   return undefined;
 }

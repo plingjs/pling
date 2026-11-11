@@ -13,6 +13,7 @@ describe("开发期交互覆盖率扫描", () => {
       defineComponent({
         template: `<main>
           <button id="declared" v-tool="{ id: 'save', desc: '保存' }">保存</button>
+          <button id="locatable" v-guide-target="{ id: 'teacher.create', label: '新增老师' }">新增老师</button>
           <input id="search" aria-label="搜索订单" />
           <button id="disabled" disabled>禁用</button>
           <div role="button" id="aria-disabled" aria-disabled="true">ARIA 禁用</div>
@@ -32,16 +33,18 @@ describe("开发期交互覆盖率扫描", () => {
       const report = pi.inspectCoverage();
 
       expect(report).toMatchObject({
-        total: 4,
+        total: 5,
         declared: 1,
         derived: 0,
         grouped: 1,
+        locatable: 1,
         missing: 2,
-        coveragePercent: 50,
+        coveragePercent: 60,
       });
       expect(report.targets).toEqual(
         expect.arrayContaining([
           { element: "input#search", label: "搜索订单", status: "missing" },
+          { element: "button#locatable", label: "新增老师", status: "locatable", guideTargetId: "teacher.create" },
           { element: "button#grouped", label: "容器声明下的操作", status: "grouped", actions: ["toolbar_action"] },
           { element: "div#custom", label: "自定义按钮", status: "missing" },
         ]),

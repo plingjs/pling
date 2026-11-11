@@ -116,14 +116,16 @@ const codeTargetRef = usePlingGuideTarget<HTMLInputElement>("verification_code")
 />
 ```
 
-The field now has a stable target for visual guidance. It is not in the action list. The model can see that a person must use it through the handoff instructions, but it cannot fill or click it.
+The field now has a stable target in a separate locate-only list. The assistant can point it out with `pling_locate`, but it cannot fill or click it through this declaration.
 
 This distinction matters in both directions:
 
 - a control the agent may operate should be declared as an action;
 - a control reserved for a person may be a guide target.
 
-`usePlingGuideTarget` changes presentation, not authority. It creates no permission, business operation, or tool schema entry.
+`usePlingGuideTarget` makes the target available for locating, not execution. It creates no permission or business operation and does not add an executable tool schema.
+
+When the user asks where the verification field is, the assistant calls `pling_locate` with `targetId: "verification_code"`. The framework scrolls to the field when possible and highlights it. It does not type a value or open another control.
 
 ## Put the human step in the action
 

@@ -45,16 +45,20 @@ export const PLING_LOCATE_TOOL = {
   function: {
     name: LOCATE_ACTION_ID,
     description:
-      "Highlight an existing page target without executing it. Use this when the user asks where to click, find, fill, upload, or change something, or before asking the user to complete a human step. Pass an exact action id from the current action list. This tool never clicks, types, uploads, navigates, submits, or changes data.",
+      "Highlight an existing page target without executing it. Use this when the user asks where to click, find, fill, upload, or change something, or before asking the user to complete a human step. Set targetId to an exact id from the locate-only target list or the current action list. This tool never clicks, types, uploads, navigates, submits, or changes data.",
     parameters: {
       type: "object" as const,
       properties: {
+        targetId: {
+          type: "string",
+          description: "Exact target id from the current locate-only targets list.",
+        },
         actionId: {
           type: "string",
-          description: "Exact action id from the current page action list. Do not invent an id.",
+          description: "Backward-compatible: exact action id from the current page action list.",
         },
       },
-      required: ["actionId"],
+      required: ["targetId"],
     },
   },
 };
@@ -108,9 +112,9 @@ export function buildProtocol(snapshot: Snapshot): ToolProtocol {
     });
   }
 
-  // Only advertise locate when there is at least one actionable target. A page
-  // with records but no actions cannot be pointed at, so the tool would be noise.
-  if (tools.length > 0) tools.push(PLING_LOCATE_TOOL);
+  // A locate-only control is a real visual target even though it is deliberately
+  // absent from the executable action list.
+  if (tools.length > 0 || (snapshot.guideTargets?.length ?? 0) > 0) tools.push(PLING_LOCATE_TOOL);
 
   return { tools, nameToId, idToName, templates };
 }

@@ -16,7 +16,7 @@ A similar gap appears when a person must complete a step. If the assistant says 
 This chapter adds three connected mechanisms:
 
 - `v-feedback` turns a page-level error or status into structured context.
-- `v-guide-target` marks an element that should be shown to the user without becoming an agent action.
+- `v-guide-target` adds a human-operated element to the locate-only list without making it an agent action.
 - `presence` draws attention to the element that is currently being operated or handed to the user.
 
 ## Why a visible error is not always readable context
@@ -101,18 +101,18 @@ Explicit `v-feedback` is preferable when the business meaning is richer than the
 
 The verification-code input in this example is completed only by a person. Registering it as a tool would invite the model to fill a value it should not know. Leaving it completely invisible makes the handoff difficult to follow.
 
-`v-guide-target` provides the middle ground:
+`v-guide-target` registers a target the assistant may point out, while keeping execution with the user:
 
 ```vue{7}
 <input
   v-model="code"
   data-pling-field="verification_code"
   autocomplete="off"
-  v-guide-target="'verification_code'"
+  v-guide-target="{ id: 'verification_code', label: 'Verification code', description: 'Enter the code shown in the image' }"
 />
 ```
 
-The field has an id for highlighting, but it does not appear in the action list. A handoff step can refer to that id:
+The target appears in a separate locate-only list in the model context. It does not appear in the executable action list. A handoff step can refer to the same id:
 
 ```ts
 handoff: {
@@ -152,15 +152,19 @@ Presence follows the element the executor actually targets. When an action is ru
 
 ### Mark the target when the user asks where it is
 
-Whenever a page declares actions, the framework gives the model a read-only tool named `pling_locate`. When the user asks “where do I upload the cover?” or “where is Save?”, the model passes the exact action id:
+Whenever a page declares an action or a locate-only target, the framework gives the model a read-only tool named `pling_locate`. When the user asks where to upload the cover, the model passes the exact target id:
 
 ```json
-{ "actionId": "course_cover" }
+{ "targetId": "course_cover" }
 ```
 
-The framework scrolls the target into view and applies a stronger focus highlight. It does not execute the action: no click, no typing, no file picker, no submit. The page does not need one custom “point at this control” tool per element.
+The framework reveals the target when possible and applies a stronger focus highlight. It does not execute the action: no click, no typing, no file picker, no submit. The page does not need one custom “point at this control” tool per element. Action ids are valid `targetId` values too. Older clients may pass `actionId` for an action.
 
-`pling_locate` is advertised only when the page has actions. The target must be a declared action; a business function with no visual carrier cannot be highlighted.
+`pling_locate` is advertised when the page has actions or locate-only targets. Use `v-tool` when the agent should operate a control. Use `v-guide-target` when the user must operate it or asks where it is. A business function without a mounted visual element cannot be highlighted.
+
+## Audit interactive controls
+
+`pling.inspectCoverage()` classifies mounted controls as directly declared, derived, grouped under a parent declaration, locate-only, or missing. A locate-only control is accounted for, but it is not executable; `coveragePercent` measures declaration coverage, not executable coverage. The scan recognizes native controls and supported interactive ARIA roles. It cannot detect arbitrary event listeners on non-semantic elements, canvas controls, or custom widgets without roles. Prefer native buttons and links, give custom controls correct ARIA semantics, and review them separately. Review `grouped` controls to confirm the parent declaration gives the model enough context. Add an action for controls the agent may operate, or a guide target for controls that remain with the user. The scan reports gaps; it never creates actions automatically.
 
 The overlay uses `pointer-events: none` and is marked as Pling UI, so it cannot intercept clicks and does not become part of the page snapshot. Reduced-motion preferences disable animation while keeping a static outline.
 
@@ -176,7 +180,7 @@ The three mechanisms answer different questions:
 | Presence | Which element is the agent touching or waiting on? |
 | Handoff | Which step must a person perform? |
 
-Do not use feedback as approval. A message saying “this action is dangerous” does not replace `confirm` or `handoff`. Do not use highlighting as permission. Marking an element with `v-guide-target` does not allow the model to operate it.
+Do not use feedback as approval. A message saying “this action is dangerous” does not replace `confirm` or `handoff`. Do not use highlighting as permission. Marking an element with `v-guide-target` lets the model locate it, but does not let the model operate it.
 
 ## Verify the page
 

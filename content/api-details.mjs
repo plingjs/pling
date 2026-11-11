@@ -68,6 +68,8 @@ const agentSetupCommon = [
     "Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults.",
     "模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。",
   ),
+  p("agent.context", "ContextOptions", "Bounds the page information included in model context, including the live clock.", "设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。"),
+  p("agent.clock", "AgentClock", "Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes.", "每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。"),
   p("agent.llm", "Llm", "Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport.", "注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。"),
   p("agent.responseLocale", "string | (() => string)", "Locale used when composing the response-language instruction. A function is re-read before each model request.", "拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。"),
   p("agent.telemetry", "Telemetry", "Collects token, duration, cost, and retry metrics for the current runtime.", "收集当前运行时的 token、耗时、成本与重试指标。"),
@@ -581,13 +583,24 @@ return <button ref={addRef}>添加</button>;`, "tsx"),
 
   "guide-target": {
     parameters: {
-      all: [p("id", "string", "Guide target id referenced by a HandoffStep.highlight value.", "被 `HandoffStep.highlight` 引用的引导目标 id。", { required: true })],
-      vanilla: [p("element", "Element", "Element to highlight during the handoff step.", "人工接力步骤中要高亮的元素。", { required: true }), p("id", "string", "Guide target id referenced by a HandoffStep.highlight value.", "被 `HandoffStep.highlight` 引用的引导目标 id。", { required: true })],
+      all: [
+        p("id", "string", "Stable target id passed to pling_locate or HandoffStep.highlight. It does not create an executable action.", "稳定的目标 id，可交给 `pling_locate` 或 `HandoffStep.highlight`。它不会创建可执行动作。", { required: true }),
+        p("label", "string", "Short human-facing name shown in the locate-only target list.", "出现在只定位目标清单中的简短名称。"),
+        p("description", "string", "Explains what the target is for; shown to the model as context.", "说明目标的用途，会作为上下文提供给模型。"),
+      ],
+      vue3: [p("value", "string | { id: string; label?: string; description?: string }", "Registers the element as a locate-only target. Vue uses its accessible label when label is omitted.", "把元素登记为只定位目标。省略 `label` 时，Vue 会尝试读取元素的无障碍名称。", { required: true })],
+      react: [p("metadata", "{ label?: string; description?: string }", "Optional target name and description. The target id is passed separately.", "可选的目标名称与说明。目标 id 单独传入。")],
+      vue2: [p("value", "string | { id: string; label?: string; description?: string }", "Registers the element as a locate-only target. Vue 2 uses its accessible label when label is omitted.", "把元素登记为只定位目标。省略 `label` 时，Vue 2 会尝试读取元素的无障碍名称。", { required: true })],
+      vanilla: [
+        p("element", "Element", "Element to point out. It must remain mounted until the target is unregistered.", "要指给用户看的元素。注销目标前，元素应保持挂载。", { required: true }),
+        p("metadata", "{ label?: string; description?: string }", "Optional human-facing name and description.", "可选的人类可读名称与用途说明。"),
+      ],
     },
     examples: {
-      vue3: [ex("Highlight a handoff target", "高亮人工接力目标", `<input v-guide-target="'captcha'" />`)],
-      react: [ex("Highlight a handoff target", "高亮人工接力目标", `const captchaRef = usePlingGuideTarget<HTMLInputElement>("captcha");\n\nreturn <input ref={captchaRef} />;`, "tsx")],
-      vanilla: [ex("Highlight a handoff target", "高亮人工接力目标", `pling.guideTarget(document.querySelector("#captcha"), "captcha");`)],
+      vue3: [ex("Register a locate-only control", "登记只定位控件", `<button v-guide-target="{ id: 'teachers.add', label: '新增老师', description: '打开老师档案表单' }">新增老师</button>\n\n<!-- The assistant can locate this button, but cannot click it through the guide target. -->`)],
+      react: [ex("Register a locate-only control", "登记只定位控件", `const addTeacherRef = usePlingGuideTarget<HTMLButtonElement>("teachers.add", {\n  label: "新增老师",\n  description: "打开老师档案表单",\n});\n\nreturn <button ref={addTeacherRef}>新增老师</button>;`, "tsx")],
+      vue2: [ex("Register a locate-only control", "登记只定位控件", `<button v-guide-target="{ id: 'teachers.add', label: '新增老师' }">新增老师</button>`) ],
+      vanilla: [ex("Register a locate-only control", "登记只定位控件", `const removeTarget = pling.guideTarget(addTeacherButton, "teachers.add", {\n  label: "新增老师",\n  description: "打开老师档案表单",\n});\n\n// When the button is removed:\nremoveTarget();`)],
     },
   },
 
@@ -826,6 +839,34 @@ return <button ref={addRef}>添加</button>;`, "tsx"),
     },
     examples: {
       core: [ex("Create a page-operating runtime", "创建可操作页面的运行时", `const runtime = createAgentRuntime({\n  config: resolveAgentConfig({ config: { model: "gpt-4.1-mini" } }),\n  registry: pling.registry,\n  hooks,\n  trace: true,\n});`)],
+    },
+  },
+
+  AgentClock: {
+    parameters: {
+      core: [
+        p("now", "() => Date", "Returns a valid current instant. Re-read before each model request; defaults to the runtime clock. An invalid Date fails before the model request.", "返回有效的当前时刻。每次模型请求前重新读取；默认使用运行环境的时钟。无效日期会阻止模型请求。"),
+        p("viewerTimeZone", "string | (() => string)", "IANA timezone used to render the viewer's local time. Defaults to the runtime timezone; server runtimes should supply the authenticated user's timezone.", "用于显示用户本地时间的 IANA 时区。默认使用运行环境时区；服务端应传入已认证用户的时区。"),
+        p("businessTimeZone", "string | (() => string)", "IANA timezone used for business dates such as class schedules. Defaults to viewerTimeZone.", "用于排课等业务日期的 IANA 时区。默认沿用 `viewerTimeZone`。"),
+      ],
+    },
+    examples: {
+      core: [ex("Configure the shop timezone", "配置门店时区", `createPling({\n  agent: {\n    clock: {\n      businessTimeZone: "Asia/Shanghai",\n    },\n  },\n});`) ],
+    },
+  },
+
+  ContextOptions: {
+    parameters: {
+      core: [
+        p("maxActions", "number", "Maximum actions rendered in the current page context.", "当前页面上下文中最多列出的动作数。"),
+        p("maxRecords", "number", "Maximum record rows rendered in the current page context.", "当前页面上下文中最多列出的记录行数。"),
+        p("includeState", "boolean", "Whether read-only page state is included.", "是否附带只读页面状态。"),
+        p("maxUnavailable", "number", "Maximum unavailable actions rendered in context.", "上下文中最多列出的不可用动作数。"),
+        p("clock", "AgentClock", "Live time and timezone context. When configured here, it is used for each model request.", "每次模型请求使用的实时时间及时区上下文。"),
+      ],
+    },
+    examples: {
+      core: [ex("Provide a per-request clock", "为每次请求提供时钟", `createAgentRuntime({\n  config,\n  registry,\n  context: {\n    clock: {\n      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,\n      businessTimeZone: "Asia/Shanghai",\n    },\n  },\n});`) ],
     },
   },
 
@@ -1367,13 +1408,14 @@ return <button ref={addRef}>添加</button>;`, "tsx"),
     parameters: {
       all: [
         p("root", "Element | null", "Application root to scan. Vue uses its mount root; React and DOM callers may pass any root.", "要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。"),
-        p("return.total", "number", "Recognized actionable controls in the root.", "根元素内识别到的可操作控件总数。"),
+        p("return.total", "number", "Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected.", "识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。"),
         p("return.declared", "number", "Controls with a direct declaration.", "有直接声明的控件数。"),
         p("return.derived", "number", "Controls produced by optional L1 derivation.", "由可选 L1 派生生成的动作数。"),
         p("return.grouped", "number", "Controls covered by a declaration on an ancestor. Review these manually.", "由祖先声明覆盖的控件数。需要人工复核映射关系。"),
+        p("return.locatable", "number", "Controls registered for pointing and highlighting only; the user must operate them.", "只登记了定位和高亮的控件数；仍由用户亲自操作。"),
         p("return.missing", "number", "Actionable controls with no declaration in their ancestry.", "祖先链上没有任何声明的可操作控件数。"),
-        p("return.coveragePercent", "number | null", "Covered controls divided by total; null when there are no controls.", "覆盖控件数除以总数；没有控件时为 `null`。"),
-        p("return.targets", "CoverageTarget[]", "Grouped and missing controls with labels and nearby action ids.", "分组与缺失控件列表，包含标签和附近动作 id。"),
+        p("return.coveragePercent", "number | null", "Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls.", "有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。"),
+        p("return.targets", "CoverageTarget[]", "Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids.", "分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。"),
       ],
     },
     examples: {
@@ -1441,7 +1483,7 @@ return <button ref={addRef}>添加</button>;`, "tsx"),
         p("handoff", "HandoffGate", "Human-handoff gate. Omit it to fail handoff tools rather than simulate them.", "人工接力通道。省略时人工接力工具会失败，而不是被模拟执行。"),
         p("systemPrompt", "string", "Additional system instructions. Framework rules remain in force.", "附加系统说明。框架规则仍然有效。"),
         p("responseLocale", "string | (() => string)", "Response-language hint; a function is re-read each turn.", "回答语言提示；传函数时每轮重新读取。"),
-        p("context", "ContextOptions", "Bounds for actions, records, state, scopes, feedback, and page identity in model context.", "模型上下文中动作、记录、状态、区域、反馈与页面身份的有界设置。"),
+        p("context", "ContextOptions", "Bounds page context and may configure the live clock used before each model request.", "设置页面上下文范围，也可配置每次模型请求前使用的实时时钟。"),
         p("history", "HistoryOptions", "Context budget, compaction threshold, recent retention, and tool-result cap.", "上下文预算、压缩水位、最近条目保留数与工具结果上限。"),
         p("historyState", "HistorySnapshot", "Restores a summary and message list from a checkpoint. System context is rebuilt for the current page.", "从检查点恢复摘要与消息；系统上下文会按当前页面重建。"),
         p("hooks", "HookRegistry", "Tool lifecycle hooks.", "工具生命周期钩子。"),
@@ -1488,6 +1530,7 @@ return <button ref={addRef}>添加</button>;`, "tsx"),
         p("options.maxFeedback", "number", "Maximum feedback entries listed, default 8.", "最多列出的反馈条目数，默认 8。", { defaultValue: "8" }),
         p("options.maxFeedbackChars", "number", "Character budget for feedback, default 800.", "反馈段的字符预算，默认 800。", { defaultValue: "800" }),
         p("options.maxPageChars", "number", "Character budget for page identity, default 500.", "页面身份段的字符预算，默认 500。", { defaultValue: "500" }),
+        p("options.clock", "AgentClock", "Adds the current instant and viewer/business local times to this page context.", "在页面上下文中加入当前时刻、用户本地时间和业务本地时间。"),
       ],
     },
     examples: {

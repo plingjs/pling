@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "categories": [
@@ -228,7 +228,7 @@
             "@plingjs/vue2"
           ],
           "signatures": {
-            "vanilla": "interface VanillaPling extends VanillaHost {\n  feedback: FeedbackCollector;\n  page: PageTracker;\n  task: PlingTaskController;\n  ask(prompt: string, options?: PlingAskOptions): Promise<void>;\n  tool(element: Element, options: ToolOptions): () => void;\n  action(options: ActionOptions): () => void;\n  record(element: Element, value: RecordValue | null | undefined): () => void;\n  scope(element: Element, options: ScopeOptions): () => void;\n  state(key: string, source: StateSource, options?: StateOptions | string): () => void;\n  declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;\n  declareTask(element: HTMLElement, value: TaskValue): () => void;\n  guideTarget(element: Element, id: string): () => void;\n  setActiveScopes(scopes: Iterable<string>): void;\n  dock(options?: VanillaDockOptions): VanillaDock;\n  surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway;\n  inspectCoverage(root?: Element | null): CoverageReport;\n  derived(): DeriveController | null;\n  destroy(): void;\n}",
+            "vanilla": "interface VanillaPling extends VanillaHost {\n  feedback: FeedbackCollector;\n  page: PageTracker;\n  task: PlingTaskController;\n  ask(prompt: string, options?: PlingAskOptions): Promise<void>;\n  tool(element: Element, options: ToolOptions): () => void;\n  action(options: ActionOptions): () => void;\n  record(element: Element, value: RecordValue | null | undefined): () => void;\n  scope(element: Element, options: ScopeOptions): () => void;\n  state(key: string, source: StateSource, options?: StateOptions | string): () => void;\n  declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;\n  declareTask(element: HTMLElement, value: TaskValue): () => void;\n  guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void;\n  setActiveScopes(scopes: Iterable<string>): void;\n  dock(options?: VanillaDockOptions): VanillaDock;\n  surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway;\n  inspectCoverage(root?: Element | null): CoverageReport;\n  derived(): DeriveController | null;\n  destroy(): void;\n}",
             "vue2": "interface Vue2Pling extends VanillaPling {\n  plugin: { install(Vue: VueConstructor): void };\n}"
           },
           "support": {
@@ -592,22 +592,24 @@
           "name": "Guide target",
           "nameZh": "引导目标",
           "kind": "declaration",
-          "summary": "Highlights a non-action target while a person completes a handoff step.",
-          "summaryZh": "人工接力时高亮一个并非动作的目标元素。",
+          "summary": "Registers a locate-only visual target that the assistant can point out but cannot execute.",
+          "summaryZh": "登记只定位目标，助手可以指出位置，但不能通过该目标执行操作。",
           "imports": [
             "@plingjs/vue",
             "@plingjs/react",
-            "@plingjs/vanilla"
+            "@plingjs/vanilla",
+            "@plingjs/vue2"
           ],
           "signatures": {
-            "vue3": "v-guide-target=\"string\"",
-            "react": "usePlingGuideTarget<T extends Element = HTMLElement>(id: string): RefCallback<T>",
-            "vanilla": "pling.guideTarget(element: Element, id: string): () => void"
+            "vue3": "v-guide-target=\"string | { id: string; label?: string; description?: string }\"",
+            "react": "usePlingGuideTarget<T extends Element = HTMLElement>(id: string, metadata?: { label?: string; description?: string }): RefCallback<T>",
+            "vue2": "v-guide-target=\"string | { id: string; label?: string; description?: string }\"",
+            "vanilla": "pling.guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void"
           },
           "support": {
             "vue3": "native",
             "react": "native",
-            "vue2": "none",
+            "vue2": "native",
             "vanilla": "native"
           },
           "symbols": [
@@ -1188,7 +1190,7 @@
             "@plingjs/agent"
           ],
           "signatures": {
-            "core": "interface AgentRuntimeOptions {\n  config: AgentConfig;\n  registry?: Registry;\n  llm?: Llm;\n  responseLocale?: string | (() => string);\n  telemetry?: Telemetry;\n  trace?: boolean | AgentTraceOptions;\n  settle?: () => Promise<void>;\n  hooks?: HookRegistry;\n  onEvent?: SessionEventListener;\n  onApproval?: (pending: PendingApproval | null) => void;\n  onHandoff?: (pending: PendingHandoff | null) => void;\n  gate?: () => boolean;\n  policy?: ConfirmGate;\n  approvalTimeoutMs?: number;\n  handoffTimeoutMs?: number;\n  handoff?: HandoffGate;\n  id?: string;\n  onLeaseLost?: () => void;\n  continuity?: ContinuitySetting;\n}"
+            "core": "interface AgentRuntimeOptions {\n  config: AgentConfig;\n  registry?: Registry;\n  taskCatalog?: TaskCatalog;\n  context?: ContextOptions;\n  clock?: AgentClock;\n  llm?: Llm;\n  responseLocale?: string | (() => string);\n  telemetry?: Telemetry;\n  trace?: boolean | AgentTraceOptions;\n  settle?: () => Promise<void>;\n  hooks?: HookRegistry;\n  onEvent?: SessionEventListener;\n  onApproval?: (pending: PendingApproval | null) => void;\n  onHandoff?: (pending: PendingHandoff | null) => void;\n  gate?: () => boolean;\n  policy?: ConfirmGate;\n  approvalTimeoutMs?: number;\n  handoffTimeoutMs?: number;\n  handoff?: HandoffGate;\n  id?: string;\n  onLeaseLost?: () => void;\n  continuity?: ContinuitySetting;\n}"
           },
           "support": {
             "vue3": "core",
@@ -1200,6 +1202,60 @@
             {
               "package": "@plingjs/agent",
               "name": "AgentRuntimeOptions"
+            }
+          ],
+          "ref": "/reference/agent-runtime-sessions-context-limits"
+        },
+        {
+          "id": "AgentClock",
+          "anchor": "agentclock",
+          "name": "AgentClock",
+          "kind": "type",
+          "summary": "Live time and timezone context included with every model request. It does not replace business-service validation.",
+          "summaryZh": "每次模型请求附带的实时时间及时区上下文，不替代业务服务校验。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface AgentClock {\n  now?: () => Date;\n  viewerTimeZone?: string | (() => string);\n  businessTimeZone?: string | (() => string);\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "AgentClock"
+            }
+          ],
+          "ref": "/reference/agent-runtime-sessions-context-limits"
+        },
+        {
+          "id": "ContextOptions",
+          "anchor": "contextoptions",
+          "name": "ContextOptions",
+          "kind": "type",
+          "summary": "Bounds the page context sent to the model and optionally provides a per-request clock.",
+          "summaryZh": "设置发给模型的页面上下文范围，也可配置每轮请求使用的时钟。",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signatures": {
+            "core": "interface ContextOptions {\n  maxActions?: number;\n  maxRecords?: number;\n  includeState?: boolean;\n  maxIdsInHint?: number;\n  maxUnavailable?: number;\n  maxStateChars?: number;\n  maxRecordChars?: number;\n  maxScopes?: number;\n  maxFeedback?: number;\n  maxFeedbackChars?: number;\n  maxPageChars?: number;\n  clock?: AgentClock;\n}"
+          },
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "ContextOptions"
             }
           ],
           "ref": "/reference/agent-runtime-sessions-context-limits"
@@ -2077,24 +2133,26 @@
           "anchor": "inspectcoverage",
           "name": "inspectCoverage",
           "kind": "method",
-          "summary": "Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.",
-          "summaryZh": "扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。",
+          "summary": "Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.",
+          "summaryZh": "把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。",
           "imports": [
             "@plingjs/vue",
             "@plingjs/react",
             "@plingjs/vanilla",
-            "@plingjs/dom"
+            "@plingjs/dom",
+            "@plingjs/vue2"
           ],
           "signatures": {
             "vue3": "pling.inspectCoverage(): CoverageReport",
             "react": "pling.inspectCoverage(root?: Element | null): CoverageReport",
             "vanilla": "pling.inspectCoverage(root?: Element | null): CoverageReport",
+            "vue2": "pling.inspectCoverage(root?: Element | null): CoverageReport",
             "core": "inspectCoverage(root: Element | null): CoverageReport"
           },
           "support": {
             "vue3": "native",
             "react": "native",
-            "vue2": "none",
+            "vue2": "native",
             "vanilla": "native"
           },
           "symbols": [

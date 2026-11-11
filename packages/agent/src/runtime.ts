@@ -26,6 +26,7 @@ import {
   type ConfigReadiness,
 } from "./config";
 import { DEFAULT_CHAT_SYSTEM_PROMPT, DEFAULT_SYSTEM_PROMPT } from "./prompt";
+import type { AgentClock, ContextOptions } from "./prompt";
 import { HookRegistry } from "./hooks";
 import { createAgentTrace, type AgentTraceOptions, type AgentTraceRecorder } from "./trace";
 import type { SessionEventListener } from "./types";
@@ -40,6 +41,10 @@ export interface AgentRuntimeOptions {
   registry?: Registry;
   /** Page-declared guided tasks; the model may start only these tasks. */
   taskCatalog?: TaskCatalog;
+  /** Page context rendering options (including the live per-turn clock). */
+  context?: ContextOptions;
+  /** Convenient clock override; merged into `context.clock`. */
+  clock?: AgentClock;
   /** 注入模型：测试用脚本模型；上线换成走薄 Node 层的实现，其余不用动 */
   llm?: Llm;
   /** 应用界面当前语言；回调会在每轮请求前重新读取。 */
@@ -148,9 +153,17 @@ export function createAgentRuntime(options: AgentRuntimeOptions): AgentRuntime {
    */
   const basePrompt = options.registry ? DEFAULT_SYSTEM_PROMPT : DEFAULT_CHAT_SYSTEM_PROMPT;
   const role = config.systemPrompt.trim();
+  const contextClock = options.context?.clock;
+  const clock = contextClock || options.clock
+    ? { ...(contextClock ?? {}), ...(options.clock ?? {}) }
+    : undefined;
 
   const session = createLocalSession({
     ...options,
+    context: {
+      ...(options.context ?? {}),
+      ...(clock ? { clock } : {}),
+    },
     ...(options.id ? { id: options.id } : {}),
     llm,
     telemetry,

@@ -1,6 +1,6 @@
 {
   "name": "@plingjs/surface-browser",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "private": false,
   "type": "module",
   "description": "Browser runtime for Pling Agent Surface: page sessions, WebSocket transport, bridge, and reconnect lifecycle.",

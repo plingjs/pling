@@ -24,13 +24,18 @@ export const COVERAGE_SELECTOR = [
   ].map((role) => `[role="${role}"]`),
 ].join(", ");
 
-export type CoverageStatus = "declared" | "derived" | "grouped" | "missing";
+/** Marker used by adapters for controls that can be highlighted but not executed. */
+export const GUIDE_TARGET_ATTR = "data-pling-guide-target";
+
+export type CoverageStatus = "declared" | "derived" | "grouped" | "locatable" | "missing";
 
 export interface CoverageTarget {
   /** Useful for finding the control in the component tree; not an execution selector. */
   element: string;
   label: string;
   status: CoverageStatus;
+  /** Stable locate-only target id when `status` is `locatable`. */
+  guideTargetId?: string;
   /** Action ids declared on this element or its nearest explicitly declared ancestor. */
   actions?: string[];
 }
@@ -44,9 +49,11 @@ export interface CoverageReport {
   derived: number;
   /** Controls under a declaration on an ancestor; verify the mapping manually. */
   grouped: number;
+  /** Controls registered as locate-only targets; the user must complete them. */
+  locatable: number;
   /** Recognized controls without a direct, derived, or ancestor declaration. */
   missing: number;
-  /** `declared + derived + grouped`, divided by `total`; null when there are no controls. */
+  /** `declared + derived + grouped + locatable`, divided by `total`; null when there are no controls. */
   coveragePercent: number | null;
   /** Candidate controls that need attention, including grouped declarations for review. */
   targets: CoverageTarget[];
@@ -82,12 +89,12 @@ function targetOf(el: Element, status: CoverageStatus, actions?: string[]): Cove
 }
 
 /**
- * Scan a mounted application for actionable controls that have no declaration.
+ * Scan a mounted application for interactive controls and classify their Pling coverage.
  * The report is diagnostic only: it never registers actions or enters agent context.
  */
 export function inspectCoverage(root: Element | null): CoverageReport {
   if (!root || !root.isConnected) {
-    return { total: 0, declared: 0, derived: 0, grouped: 0, missing: 0, coveragePercent: null, targets: [] };
+    return { total: 0, declared: 0, derived: 0, grouped: 0, locatable: 0, missing: 0, coveragePercent: null, targets: [] };
   }
 
   const candidates = [
@@ -97,6 +104,7 @@ export function inspectCoverage(root: Element | null): CoverageReport {
   let declared = 0;
   let derived = 0;
   let grouped = 0;
+  let locatable = 0;
   let missing = 0;
   const targets: CoverageTarget[] = [];
 
@@ -114,6 +122,12 @@ export function inspectCoverage(root: Element | null): CoverageReport {
       continue;
     }
 
+    if (el.hasAttribute(GUIDE_TARGET_ATTR)) {
+      locatable += 1;
+      targets.push({ ...targetOf(el, "locatable"), guideTargetId: el.getAttribute(GUIDE_TARGET_ATTR) ?? "" });
+      continue;
+    }
+
     const ancestor = nearestDeclaredAncestor(el, root);
     if (ancestor) {
       grouped += 1;
@@ -125,13 +139,16 @@ export function inspectCoverage(root: Element | null): CoverageReport {
     targets.push(targetOf(el, "missing"));
   }
 
-  const total = declared + derived + grouped + missing;
-  const covered = declared + derived + grouped;
+  const total = declared + derived + grouped + locatable + missing;
+  // Coverage means Pling has an explicit, reviewable treatment for the control.
+  // A locate-only declaration is accounted separately and does not imply execution.
+  const covered = declared + derived + grouped + locatable;
   return {
     total,
     declared,
     derived,
     grouped,
+    locatable,
     missing,
     coveragePercent: total === 0 ? null : Math.round((covered / total) * 100),
     targets,

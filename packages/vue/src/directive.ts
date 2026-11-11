@@ -24,7 +24,14 @@ import {
   type AgentRuntimeOptions,
   type TaskCatalog,
 } from "@plingjs/agent";
-import { createActionNamespace, getRegistryNamespace, queryAllComposed, type PlingPage } from "@plingjs/dom";
+import {
+  createActionNamespace,
+  getRegistryNamespace,
+  isElementInViewport,
+  labelOf,
+  queryAllComposed,
+  type PlingPage,
+} from "@plingjs/dom";
 import { readViteEnv } from "./env";
 import { normalizeRecordValue, recordSignature, rewireFields, toDeclaration, type RecordValue } from "./record";
 import {
@@ -970,25 +977,40 @@ export function createPling(
     },
   };
 
-  /** 指引目标（S17）：只负责在接力时被圈出来，不是动作、不进快照。 */
+  /** 只定位目标：可由助手指给用户看，但不会成为可执行动作。 */
   interface RegisteredGuideTarget {
     id: string;
+    signature: string;
     off: () => void;
   }
   const guideTargetStates = new WeakMap<Element, RegisteredGuideTarget>();
 
   function registerGuideTarget(el: HTMLElement, value: unknown): void {
-    const id = typeof value === "string" ? value.trim() : "";
+    const normalized = typeof value === "string"
+      ? { id: value }
+      : value && typeof value === "object" && "id" in value
+        ? value as { id: unknown; label?: unknown; description?: unknown }
+        : { id: "" };
+    const id = typeof normalized.id === "string" ? normalized.id.trim() : "";
+    const label = typeof normalized.label === "string" && normalized.label.trim() ? normalized.label.trim() : labelOf(el);
+    const description = typeof normalized.description === "string" ? normalized.description.trim() : "";
+    const signature = JSON.stringify([id, label, description]);
     const current = guideTargetStates.get(el);
-    if (current?.id === id) return;
+    if (current?.signature === signature) return;
     current?.off();
     guideTargetStates.delete(el);
+    el.removeAttribute("data-pling-guide-target");
     if (!id) return;
     try {
       const off = registry.declareGuideTarget(id, {
+        label: label || id,
+        ...(description ? { description } : {}),
+        isVisible: () => isElementInViewport(el),
+        reveal: () => scrollElementIntoView(el),
         presence: (state) => presence?.mark(el, state),
       });
-      guideTargetStates.set(el, { id, off });
+      el.setAttribute("data-pling-guide-target", id);
+      guideTargetStates.set(el, { id, signature, off });
     } catch (error) {
       warn(error instanceof Error ? error.message : String(error));
     }
@@ -998,10 +1020,11 @@ export function createPling(
     const current = guideTargetStates.get(el);
     if (!current) return;
     current.off();
+    el.removeAttribute("data-pling-guide-target");
     guideTargetStates.delete(el);
   }
 
-  const guideTargetDirective: Directive<HTMLElement, string> = {
+  const guideTargetDirective: Directive<HTMLElement, unknown> = {
     mounted(el, binding) {
       registerGuideTarget(el, binding.value);
     },

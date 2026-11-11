@@ -81,6 +81,42 @@ describe("@plingjs/vue2", () => {
     pling.destroy();
   });
 
+  it("v-guide-target 将元素加入只定位清单，但不注册可执行动作", () => {
+    const { pling, vm, host } = mount((h) => h("button", {
+      attrs: { "aria-label": "新增老师" },
+      directives: [{ name: "guide-target", value: { id: "teachers.add", label: "新增老师", description: "打开老师档案表单" } }],
+    }, "新增老师"));
+
+    expect(pling.registry.snapshot().actions).toEqual([]);
+    expect(pling.registry.snapshot().guideTargets).toMatchObject([
+      { id: "teachers.add", label: "新增老师", description: "打开老师档案表单", canReveal: true },
+    ]);
+    expect((vm.$el as Element).getAttribute("data-pling-guide-target")).toBe("teachers.add");
+
+    vm.$destroy();
+    expect(pling.registry.snapshot().guideTargets).toEqual([]);
+    pling.destroy();
+  });
+
+  it("通过共享 vanilla runtime 扫描可操作控件覆盖情况", () => {
+    const { pling, vm, host } = mount((h) => h("main", [
+      h("button", { attrs: { "aria-label": "刷新" } }, "刷新"),
+      h("button", {
+        directives: [{ name: "guide-target", value: { id: "teachers.add", label: "新增老师" } }],
+      }, "新增老师"),
+    ]));
+
+    expect(pling.inspectCoverage(vm.$el as Element)).toMatchObject({
+      total: 2,
+      missing: 1,
+      locatable: 1,
+      coveragePercent: 50,
+    });
+
+    vm.$destroy();
+    pling.destroy();
+  });
+
   it("Vue 2.7 插件可以做普通 Vue.use() 安装", () => {
     const pling = createPling({ presence: false, onWarn: () => {} });
     expect(() => Vue.use(pling.plugin)).not.toThrow();

@@ -62,7 +62,7 @@ createApp(App).use(pling.plugin).mount("#app");
 | `v-record` | 行数据或完整记录对象 | 声明一行记录 |
 | `v-task` | 字符串或 `{ prompt, surface?, disabled? }` | 人的任务入口；不是 agent 动作 |
 | `v-feedback` | 字符串、数组或反馈对象 | 让模型看到页面反馈 |
-| `v-guide-target` | `{ id, label?, description? }` | 人工接力时高亮非动作目标 |
+| `v-guide-target` | `{ id, label?, description? }` | 把不可执行目标加入助手的定位清单 |
 
 ```vue
 <template>

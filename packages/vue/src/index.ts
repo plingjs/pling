@@ -9,7 +9,7 @@
  *   usePling()            → 组件内取用
  *   v-tool / v-scope        → 元素级 / 容器级声明
  *   createPling({ derive })    → L1 自动派生（不声明也有一批动作，标 source: derived）
- *   pi.inspectCoverage()    → 开发期只读扫描交互声明覆盖率
+ *   pling.inspectCoverage() → 开发期只读扫描交互声明覆盖率
  *   useAgentState()         → 状态暴露（只读视图，随组件生命周期注销）
  *   <AgentPanel>            → 通用调试面板（把快照渲染成人能看的东西）
  *   <AgentChat>             → 问答入口（渲染会话事件流 + 确认闸门，纯展示）

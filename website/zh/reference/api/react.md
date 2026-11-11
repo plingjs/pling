@@ -16,11 +16,11 @@ React Hooks 的完整 API：Provider、声明 Hook、组件，以及它们使用
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.9` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.10` |
 
 本页的 Hooks API 要求 React 16.8+。React 16.3–16.7 使用 `@plingjs/react/legacy`，这是一套 class/render-prop 入口，详见 [React 适配器参考](/zh/reference/react-adapter#react-163-167-legacy-entry)。
 
-当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.10`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -665,7 +665,7 @@ await pling.ask("整理今天的待办并标出最紧急的一项", { surface: "
 
 ### `引导目标`
 
-人工接力时高亮一个并非动作的目标元素。
+登记只定位目标，助手可以指出位置，但不能通过该目标执行操作。
 
 **导入**
 
@@ -675,21 +675,24 @@ await pling.ask("整理今天的待办并标出最紧急的一项", { surface: "
 
 ```ts
 // React
-usePlingGuideTarget<T extends Element = HTMLElement>(id: string): RefCallback<T>
+usePlingGuideTarget<T extends Element = HTMLElement>(id: string, metadata?: { label?: string; description?: string }): RefCallback<T>
 ```
 
 **参数与选项**
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
-| `id` | `string` | 是 | — | 被 `HandoffStep.highlight` 引用的引导目标 id。 |
+| `metadata` | `{ label?: string; description?: string }` | 否 | — | 可选的目标名称与说明。目标 id 单独传入。 |
 
-**示例 1 · 高亮人工接力目标**
+**示例 1 · 登记只定位控件**
 
 ```tsx
-const captchaRef = usePlingGuideTarget<HTMLInputElement>("captcha");
+const addTeacherRef = usePlingGuideTarget<HTMLButtonElement>("teachers.add", {
+  label: "新增老师",
+  description: "打开老师档案表单",
+});
 
-return <input ref={captchaRef} />;
+return <button ref={addTeacherRef}>新增老师</button>;
 ```
 
 **精确契约**
@@ -996,6 +999,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | 否 | — | 模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。 |
+| `context` | `ContextOptions` | 否 | — | 设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。 |
 | `llm` | `Llm` | 否 | — | 注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。 |
 | `telemetry` | `Telemetry` | 否 | — | 收集当前运行时的 token、耗时、成本与重试指标。 |
@@ -1851,7 +1856,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。
+把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。
 
 **导入**
 
@@ -1869,13 +1874,14 @@ pling.inspectCoverage(root?: Element | null): CoverageReport
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | 否 | — | 要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。 |
-| `return.total` | `number` | 否 | — | 根元素内识别到的可操作控件总数。 |
+| `return.total` | `number` | 否 | — | 识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。 |
 | `return.declared` | `number` | 否 | — | 有直接声明的控件数。 |
 | `return.derived` | `number` | 否 | — | 由可选 L1 派生生成的动作数。 |
 | `return.grouped` | `number` | 否 | — | 由祖先声明覆盖的控件数。需要人工复核映射关系。 |
+| `return.locatable` | `number` | 否 | — | 只登记了定位和高亮的控件数；仍由用户亲自操作。 |
 | `return.missing` | `number` | 否 | — | 祖先链上没有任何声明的可操作控件数。 |
-| `return.coveragePercent` | `number \| null` | 否 | — | 覆盖控件数除以总数；没有控件时为 `null`。 |
-| `return.targets` | `CoverageTarget[]` | 否 | — | 分组与缺失控件列表，包含标签和附近动作 id。 |
+| `return.coveragePercent` | `number \| null` | 否 | — | 有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。 |
+| `return.targets` | `CoverageTarget[]` | 否 | — | 分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。 |
 
 **示例 1 · 检查 React 覆盖率**
 
@@ -3991,10 +3997,10 @@ card.current?.open("lesson.note", {}, {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |

@@ -136,6 +136,13 @@ describe("模型协议层：id ↔ function name", () => {
     expect(buildProtocol(snapshotOf([])).tools).toEqual([]);
   });
 
+  it("有仅可定位目标时也提供定位工具", () => {
+    const snapshot = { ...snapshotOf([]), guideTargets: [{ id: "teacher.create", label: "新增老师", canReveal: true }] };
+    const protocol = buildProtocol(snapshot);
+    expect(protocol.tools.map((tool) => tool.function.name)).toEqual(["pling_locate"]);
+    expect(protocol.tools[0]?.function.parameters).toMatchObject({ required: ["targetId"] });
+  });
+
   it("页面动作叫 pling_locate 时让出内建工具名，但原动作仍可执行", () => {
     const protocol = buildProtocol(snapshotOf([action("pling_locate")]));
     expect(protocol.tools.map((tool) => tool.function.name)).toEqual(["pling_locate_2", "pling_locate"]);

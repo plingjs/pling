@@ -75,6 +75,18 @@ const COPY: Record<string, { en: DemoCopy; zh: DemoCopy }> = {
       summary: "一个真实页面只做一件事：一句话填写可推断的字段，助手只追问真正的缺口；长推荐保持单行预览，保存后回读课程列表。",
     },
   },
+  "bingcao-merchant-workflows-vue3": {
+    en: {
+      eyebrow: "Merchant workflows",
+      title: "Example 08: A merchant workspace with visible outcomes",
+      summary: "Compare a simulated studio admin with and without Pling: student lookup, course changes, schedule previews, and visible control highlighting.",
+    },
+    zh: {
+      eyebrow: "商家业务流程",
+      title: "案例08：冰草商家工作台",
+      summary: "对比接入前后的模拟商家后台：查询学员、创建课程、预览排课，并定位页面控件。",
+    },
+  },
   "course-workspace-react": {
     en: {
       eyebrow: "React 19 · Guided workflow",
@@ -149,7 +161,7 @@ const cards = computed<FlagshipCard[]>(() => {
       detailHref: hrefFor(example),
     };
   });
-  const ordered = ["quickstart", "orders", "vue3-spa-routing", "multi-page-continuity", "external-agent-surface", "course-workspace-vue3"];
+  const ordered = ["quickstart", "orders", "vue3-spa-routing", "multi-page-continuity", "external-agent-surface", "course-workspace-vue3", "course-create-directives-vue3", "bingcao-merchant-workflows-vue3"];
   if (props.group === "recipes") {
     return all
       .filter((card) => card.id.startsWith("recipe-"))

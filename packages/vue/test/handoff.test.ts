@@ -68,13 +68,17 @@ describe("v-tool：handoff", () => {
   });
 
   it("v-guide-target：只登记高亮目标，不产生动作", () => {
-    const pi = createPling(undefined, { onWarn: () => {} });
+    const warnings: string[] = [];
+    const pi = createPling(undefined, { onWarn: (message) => warnings.push(message) });
     const Host = defineComponent({
-      template: `<div><input v-guide-target="'captcha_input'" /><button v-tool="'提交'">提交</button></div>`,
+      template: `<div><input v-guide-target="{ id: 'captcha_input', label: '验证码', description: '填写图片验证码' }" /><button v-tool="'提交'">提交</button></div>`,
     });
     const wrapper = mount(Host, { attachTo: document.body, global: { plugins: [pi.plugin] } });
 
     expect(pi.registry.snapshot().actions).toHaveLength(1);
+    expect(pi.registry.getGuideTarget("captcha_input")).toBeDefined();
+    expect(pi.registry.snapshot().guideTargets).toContainEqual(expect.objectContaining({ id: "captcha_input", label: "验证码", description: "填写图片验证码" }));
+    expect(wrapper.find("input").attributes("data-pling-guide-target")).toBe("captcha_input");
     expect(pi.registry.markGuideTarget("captcha_input", "waiting")).toBe(true);
     expect(pi.registry.markGuideTarget("captcha_input", "idle")).toBe(true);
 

@@ -62,7 +62,7 @@ Peer range: Vue 3. The adapter does not depend on Vue Router or Pinia. Router su
 | `v-record` | `data` or a full record object | Declare a row |
 | `v-task` | `string` or `{ prompt, surface?, disabled? }` | Human task entrance; never an agent action |
 | `v-feedback` | String, array, or feedback object | Page feedback visible to the model |
-| `v-guide-target` | `{ id, label?, description? }` | Highlight a non-action target during handoff |
+| `v-guide-target` | `{ id, label?, description? }` | Add a non-executable target to the assistant's locate list |
 
 ```vue
 <template>

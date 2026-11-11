@@ -59,15 +59,35 @@ Explicit values win per field. Nested `limits` and `retry` values are merged ins
 
 An injected `llm` is sufficient for a deterministic test or a custom gateway client. In that case `baseUrl` and `apiKey` are not required for readiness. The runtime still checks limits and retry values.
 
+## Live time and timezone
+
+Every model request receives the current instant, the viewer's local time, and the business-local time. Defaults use the runtime clock and timezone; in a browser this is the visitor's device timezone. A server runtime cannot infer a remote user's timezone, so pass it from a trusted user profile or request context. Set the business timezone from the store, office, or account configuration:
+
+```ts
+const pling = createPling({
+  agent: {
+    clock: {
+      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
+});
+```
+
+`now`, `viewerTimeZone`, and `businessTimeZone` may be functions. Pling reads them again before every model request, so a long-running session does not keep yesterday's date. `now` defaults to `new Date()`; inject a fixed function in deterministic tests. An invalid clock or configured timezone fails before the model request instead of silently falling back to a different date. This context helps the model interpret phrases such as “next Tuesday”. The business service must still calculate dates and validate writes using its own trusted clock and timezone.
+
 ## Built-in locate tool
 
-When the current page has at least one action, the runtime appends `pling_locate` to the tool list. It has one parameter, `actionId`, and accepts only an exact id from the current page action list. It bypasses the approval gate, does not call the action's `run`, and cannot write business data.
+When the current page has an executable action or a locate-only target, the runtime appends `pling_locate` to the tool list. Its required `targetId` must exactly match an id in the current action list or locate-only target list. Older clients may still pass `actionId`. The tool bypasses the approval gate, does not call an action's `run`, and cannot write business data.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `actionId` | `string` | Yes | Exact id from the current action list |
+| `targetId` | `string` | Yes | Exact id from the current action or locate-only target list |
+| `actionId` | `string` | No | Compatibility alias accepted by the runtime for an action id |
 
-The executor scrolls the target into view and highlights it in the `locate` state. The highlight lasts 6 seconds by default. Set `locateDurationMs` when creating the executor to change it; `0` keeps the highlight until the next action or page unmount. An unknown id or an action without a DOM target returns `ACTION_NOT_FOUND` or `ACTION_UNAVAILABLE`.
+The executor reveals an off-screen target when the adapter supports it, then highlights the element in the `locate` state. The highlight lasts 6 seconds by default. Set `locateDurationMs` when creating the executor to change it; `0` keeps the highlight until the next action or page unmount. An unknown id or a target without a DOM element returns `ACTION_NOT_FOUND` or `ACTION_UNAVAILABLE`.
+
+Use a locate-only target for an element the user must operate, such as a file picker, a verification field, or an unregistered navigation control. It appears in model context but not in the executable action list. For a control the agent may operate, declare an action instead.
 
 The page does not declare a separate location action. If a developer action already uses the name `pling_locate`, the protocol gives that action `pling_locate_2`; the built-in tool keeps the original name.
 

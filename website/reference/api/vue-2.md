@@ -16,9 +16,9 @@ This page lists only `@plingjs/vue2` entry points, plus the shared-package types
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.9` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.10` |
 
-The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.10`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -273,6 +273,7 @@ Declare actions, records, regions, state, feedback, task entrances, and sensitiv
 | [Record](#api-record) | Declaration | [Reference](/reference/core-declarations-actions-records-regions-state) |
 | [Read-only state](#api-state) | Declaration | [Reference](/reference/core-declarations-actions-records-regions-state) |
 | [Store state](#api-store-state) | Declaration | [Reference](/reference/vue-2-adapter) |
+| [Guide target](#api-guide-target) | Declaration | [Reference](/reference/vue-2-adapter) |
 | [sensitive](#api-sensitive) | Function | [Reference](/reference/core-declarations-actions-records-regions-state) |
 
 <a id="api-element-action"></a>
@@ -482,6 +483,40 @@ useAgentStoreState<S extends object>(key: string, store: S, read: AgentStoreRead
 ```ts
 const cart = this.$store.state.cart;
 useAgentStoreState("cart", cart, ["count", "total"], "购物车件数与小计");
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/vue-2-adapter)
+
+
+<a id="api-guide-target"></a>
+
+### `Guide target`
+
+Registers a locate-only visual target that the assistant can point out but cannot execute.
+
+**Imports**
+
+`@plingjs/vue2`
+
+**Signature**
+
+```ts
+// Vue 2.7
+v-guide-target="string | { id: string; label?: string; description?: string }"
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `value` | `string \| { id: string; label?: string; description?: string }` | Yes | — | Registers the element as a locate-only target. Vue 2 uses its accessible label when label is omitted. |
+
+**Example 1 · Register a locate-only control**
+
+```ts
+<button v-guide-target="{ id: 'teachers.add', label: '新增老师' }">新增老师</button>
 ```
 
 **Canonical reference**
@@ -787,6 +822,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | No | — | Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults. |
+| `context` | `ContextOptions` | No | — | Bounds the page information included in model context, including the live clock. |
+| `clock` | `AgentClock` | No | — | Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes. |
 | `llm` | `Llm` | No | — | Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport. |
 | `responseLocale` | `string \| (() => string)` | No | — | Locale used when composing the response-language instruction. A function is re-read before each model request. |
 | `telemetry` | `Telemetry` | No | — | Collects token, duration, cost, and retry metrics for the current runtime. |
@@ -1211,6 +1248,56 @@ const dock = pling.dock({
 dock.open();
 // On teardown:
 dock.destroy();
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/vue-2-adapter)
+
+
+## Page identity and continuity
+
+Read page identity, share a runtime across frames, and inspect declared coverage.
+
+| API | Kind | Reference |
+| --- | --- | --- |
+| [inspectCoverage](#api-inspectcoverage) | Method | [Reference](/reference/vue-2-adapter) |
+
+<a id="api-inspectcoverage"></a>
+
+### `inspectCoverage`
+
+Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.
+
+**Imports**
+
+`@plingjs/dom` · `@plingjs/vue2`
+
+**Signature**
+
+```ts
+// Vue 2.7
+pling.inspectCoverage(root?: Element | null): CoverageReport
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `root` | `Element \| null` | No | — | Application root to scan. Vue uses its mount root; React and DOM callers may pass any root. |
+| `return.total` | `number` | No | — | Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected. |
+| `return.declared` | `number` | No | — | Controls with a direct declaration. |
+| `return.derived` | `number` | No | — | Controls produced by optional L1 derivation. |
+| `return.grouped` | `number` | No | — | Controls covered by a declaration on an ancestor. Review these manually. |
+| `return.locatable` | `number` | No | — | Controls registered for pointing and highlighting only; the user must operate them. |
+| `return.missing` | `number` | No | — | Actionable controls with no declaration in their ancestry. |
+| `return.coveragePercent` | `number \| null` | No | — | Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls. |
+| `return.targets` | `CoverageTarget[]` | No | — | Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids. |
+
+**Example 1 · Inspect a DOM root**
+
+```ts
+const report = inspectCoverage(document.querySelector("#app"));
 ```
 
 **Canonical reference**
@@ -3182,10 +3269,10 @@ interface GuideActionItem {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |

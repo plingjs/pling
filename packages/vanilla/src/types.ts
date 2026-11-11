@@ -280,8 +280,8 @@ export interface VanillaPling extends VanillaHost {
   declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;
   /** Turn an element into a human-facing task entrance; returns a disposer. */
   declareTask(element: HTMLElement, value: TaskValue): () => void;
-  /** Mark a handoff guide target without registering it as an action. */
-  guideTarget(element: Element, id: string): () => void;
+  /** Register a locate-only target without adding an executable action. */
+  guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void;
   /** 手动声明活跃区域（自动判定之外的后门）。 */
   setActiveScopes(scopes: Iterable<string>): void;
   /** 挂一个原生浮动问答入口；返回控制器。 */

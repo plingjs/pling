@@ -20,6 +20,7 @@ Examples show complete applications; task recipes address reusable interface bou
 - [Example 05: Expose capabilities](/examples/external-agent-surface) exposes named capabilities to an agent outside the page.
 - [Example 06: A persistent goal — create a course](/examples/course-workspace-vue3) adds one goal to the same course page. The agent opens the real dialog, operates real controls, asks the person to upload the cover, saves, and reads the catalogue back.
 - [Example 07: Directives only — create a course](/examples/course-create-directives-vue3) completes the same flow with `v-scope`, `v-record`, and `v-tool`, without a task layer. Use it for one stable single-page form.
+- [Example 08: A merchant workspace with visible outcomes](/examples/bingcao-merchant-workflows-vue3) compares the ordinary business UI with Pling-assisted lookup, course creation, schedule preview, and control highlighting.
 
 Every example page includes an operable preview, marked source, and integration notes. Model requests go through a server-side gateway; the browser does not hold a provider key.
 

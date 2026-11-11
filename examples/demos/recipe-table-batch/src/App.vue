@@ -54,47 +54,6 @@ useAgentState("order_selection", () => ({
   lastBatch: lastBatch.value || null,
 }), { description: "Selected order ids, visible/open counts, current filter, and last batch result" });
 
-useAgentState("visible_orders", () => visible.value.map((order) => ({
-  id: order.id,
-  customer: order.customer,
-  amount: order.amount,
-  region: order.region,
-  status: order.status,
-})), { description: "Visible order identities and business labels for resolving user references" });
-
-useAgentTool({
-  id: "select_orders_for_batch",
-  desc: bilingual(
-    "Select visible open orders by customer name or order id for a later batch action. This only checks rows; it does not approve or reject them.",
-    "按客户名或订单号选中当前可见的待处理订单，供后续批量操作使用。此动作只勾选行，不会通过或驳回订单。",
-  ),
-  kind: "read",
-  params: [{ name: "orders", label: "Customer names or order ids, comma-separated", maxLength: 300 }],
-  run: (args) => {
-    const references = String(args.orders ?? "").split(",").map((value) => value.trim()).filter(Boolean);
-    if (references.length === 0) throw new Error(bilingual("Name at least one customer or order id.", "请提供至少一个客户名或订单号。"));
-
-    const next: string[] = [];
-    for (const reference of references) {
-      const normalized = reference.toLocaleLowerCase();
-      const matches = visible.value.filter((order) =>
-        order.status === "open" &&
-        (order.id.toLocaleLowerCase() === normalized || order.customer.toLocaleLowerCase() === normalized),
-      );
-      if (matches.length !== 1) {
-        throw new Error(bilingual(
-          `Could not resolve “${reference}” to one visible open order.`,
-          `无法将“${reference}”唯一匹配到当前可见的待处理订单。`,
-        ));
-      }
-      if (!next.includes(matches[0]!.id)) next.push(matches[0]!.id);
-    }
-
-    selected.value = next;
-    return { selected: next, count: next.length };
-  },
-});
-
 useAgentTool({
   id: "approve_selected_orders",
   desc: bilingual("Approve all selected open orders; stale ids are ignored", "批量通过所有已选且仍处于待处理的订单；失效 id 会被忽略"),

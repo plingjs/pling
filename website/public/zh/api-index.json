@@ -1,7 +1,7 @@
 {
   "title": "Pling API 参考",
   "locale": "zh",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "pages": [
@@ -27,7 +27,7 @@
       "route": "/zh/reference/api/vue-2",
       "json": "/zh/api-index/vue-2.json",
       "package": "@plingjs/vue2",
-      "entries": 60
+      "entries": 62
     },
     {
       "id": "vanilla",
@@ -43,7 +43,7 @@
       "route": "/zh/reference/api/shared",
       "json": "/zh/api-index/shared.json",
       "package": "@plingjs/core",
-      "entries": 71
+      "entries": 73
     }
   ]
 }

@@ -32,6 +32,7 @@ export function createPling(options: Vue2PlingOptions = {}): Vue2Pling {
         Vue.directive("tool", directives.tool);
         Vue.directive("scope", directives.scope);
         Vue.directive("record", directives.record);
+        Vue.directive("guide-target", directives.guideTarget);
       },
     },
   }) as Vue2Pling;

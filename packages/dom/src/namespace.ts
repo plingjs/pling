@@ -204,6 +204,21 @@ export function createActionNamespace(registry: Registry, namespace?: string): R
         return (id: string, state: Parameters<Registry["markGuideTarget"]>[1]) =>
           target.markGuideTarget(ids.guide(id), state);
       }
+      if (property === "getGuideTarget") {
+        return (id: string) => target.getGuideTarget(ids.guide(id));
+      }
+      if (property === "guideTargetViews") {
+        return () => target.guideTargetViews().map((view) => ({ ...view, id: ids.guide(view.id) }));
+      }
+      if (property === "snapshot") {
+        return (options?: Parameters<Registry["snapshot"]>[0]) => {
+          const snapshot = target.snapshot(options);
+          return {
+            ...snapshot,
+            guideTargets: snapshot.guideTargets?.map((view) => ({ ...view, id: ids.guide(view.id) })),
+          };
+        };
+      }
       if (property === "isScopeActive") {
         return (scope: string) => target.isScopeActive(ids.scope(scope));
       }

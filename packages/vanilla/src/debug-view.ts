@@ -329,6 +329,7 @@ export function createDebugInspector(options: {
               declared: report.declared,
               derived: report.derived,
               grouped: report.grouped,
+              locatable: report.locatable,
               missing: report.missing,
             })}`,
       ),

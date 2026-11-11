@@ -57,6 +57,7 @@ function refreshCoverage(): void {
 
 function coverageStatus(target: CoverageTarget): string {
   if (target.status === "missing") return t("panel.coverage.missing");
+  if (target.status === "locatable") return t("panel.coverage.locatable");
   if (target.status === "grouped") {
     return target.actions?.length
       ? t("panel.coverage.groupedActions", { actions: target.actions.join(" / ") })
@@ -116,6 +117,7 @@ async function run(id: string, primitive: Primitive): Promise<void> {
             declared: coverage.declared,
             derived: coverage.derived,
             grouped: coverage.grouped,
+            locatable: coverage.locatable,
             missing: coverage.missing,
           }) }}</span>
         </p>

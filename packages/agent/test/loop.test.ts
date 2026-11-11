@@ -222,6 +222,48 @@ describe("循环：协议层（id ↔ function name）", () => {
       result: { ok: true, executed: false, located: { id: "upload_cover" } },
     });
   });
+
+  it("pling_locate 可使用独立 targetId，且不要求目标注册成动作", async () => {
+    const registry = makeRegistry([]);
+    const marks: string[] = [];
+    registry.declareGuideTarget("teacher.create", {
+      label: "新增老师",
+      description: "打开新增老师档案表单",
+      presence: (state) => marks.push(state),
+    });
+    expect(registry.snapshot().guideTargets).toHaveLength(1);
+    const llm = createReplayLlm([
+      { calls: [{ tool: "pling_locate", args: { targetId: "teacher.create" } }] },
+      { content: "我已标出新增老师的入口。" },
+    ]);
+    const loop = createAgentLoop({ registry, policy: allowAll, llm, settle: noSettle, locateDurationMs: 0 });
+
+    await loop.run("定位新增老师");
+    expect(llm.toolsSeen[0]?.map((tool) => tool.function.name)).toEqual(["pling_locate"]);
+    expect(marks).toEqual(["locate"]);
+    expect(JSON.parse(toolMessages(loop)[0]!.content)).toMatchObject({ result: { located: { id: "teacher.create", label: "新增老师" } } });
+  });
+
+  it("每轮都用最新的时间和时区构造页面上下文", async () => {
+    let tick = 0;
+    const { loop, llm } = setup(
+      [{ calls: [{ tool: "read_page" }] }, { content: "已核对。" }],
+      [{ id: "read_page", primitive: "call", kind: "read" }],
+      {
+        context: {
+          clock: {
+            now: () => new Date(Date.UTC(2026, 10, 11, 4, 0, tick++)),
+            viewerTimeZone: "America/Los_Angeles",
+            businessTimeZone: "Asia/Shanghai",
+          },
+        },
+      },
+    );
+    await loop.run("查看排课");
+    const prompts = llm.received.map((messages) => messages.find((message) => message.role === "system")?.content ?? "");
+    expect(prompts[0]).toContain("Business local time: 2026-11-11 12:00:00 (Asia/Shanghai)");
+    expect(prompts[1]).toContain("Business local time: 2026-11-11 12:00:01 (Asia/Shanghai)");
+  });
 });
 
 describe("循环：错误要可行动（模型靠它自救）", () => {

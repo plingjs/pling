@@ -21,7 +21,6 @@ const previewModel = process.env.VITE_AGENT_MODEL?.trim() || readRootModel();
 
 export default defineConfig({
   base: "/demos/course-workspace-react/",
-  resolve: { dedupe: ["react", "react-dom"] },
   define: previewModel ? { "import.meta.env.VITE_AGENT_MODEL": JSON.stringify(previewModel) } : undefined,
   envDir: "../../",
   esbuild: {

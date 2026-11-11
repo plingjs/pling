@@ -1,0 +1,77 @@
+{
+  "id": "bingcao-merchant-workflows-vue3",
+  "title": "Case 08: A merchant workspace with visible outcomes (Vue 3)",
+  "titleZh": "案例08：冰草商家工作台（Vue 3）",
+  "eyebrow": "Merchant workflows",
+  "eyebrowZh": "商家业务流程",
+  "summary": "A simulated studio admin with separate business screens. Compare the ordinary UI with Pling-assisted student lookup, course creation, schedule preview, and control highlighting.",
+  "summaryZh": "一套模拟瑜伽商家后台，列表、详情和创建页面分开。可对比普通页面与 Pling 接入后的学员查询、课程创建、排课预览和控件定位。",
+  "url": "/demos/bingcao-merchant-workflows-vue3/",
+  "run": "pnpm dev:examples",
+  "open": "src/components/IntegratedAgent.vue",
+  "files": [
+    { "path": "demo/main.ts", "label": "main.ts", "role": "Vue and Pling setup, including the shop timezone", "roleZh": "Vue 与 Pling 初始化，并配置门店时区", "lang": "ts" },
+    { "path": "demo/App.vue", "label": "App.vue", "role": "The existing merchant UI and business flow entry points", "roleZh": "原有商家页面与业务流程入口", "lang": "vue" },
+    { "path": "src/components/IntegratedAgent.vue", "label": "IntegratedAgent.vue", "role": "Narrow business actions, task context, lookup, and result navigation", "roleZh": "窄业务动作、任务上下文、查找与结果页面切换", "lang": "vue" },
+    { "path": "src/domain/mock-api.ts", "label": "mock-api.ts", "role": "Simulated business API, persistence, and conflict validation", "roleZh": "模拟业务 API、持久化与冲突校验", "lang": "ts" },
+    { "path": "src/domain/calendar.ts", "label": "calendar.ts", "role": "Calendar calculations in the shop timezone", "roleZh": "按门店时区计算业务日期", "lang": "ts" },
+    { "path": "demo/style.css", "label": "style.css", "role": "Merchant workspace styling", "roleZh": "商家工作台样式", "lang": "css" },
+    { "path": "README.md", "label": "README.md", "role": "What the page already does, what Pling adds, and how to run it", "roleZh": "原页面已有功能、Pling 增加的能力与本地运行方式", "lang": "markdown" },
+    { "path": "index.html", "label": "index.html", "role": "Vite entry", "roleZh": "Vite 入口", "lang": "html" }
+  ],
+  "focus": {
+    "shop-clock": { "selector": "demo/main.ts", "match": "businessTimeZone: \"Asia/Shanghai\"" },
+    "student-lookup": { "selector": "src/components/IntegratedAgent.vue", "match": "id: \"merchant.get_student_cards\"" },
+    "series-preview": { "selector": "src/components/IntegratedAgent.vue", "match": "id: \"merchant.preview_group_lesson_series\"" },
+    "locate-teacher": { "selector": "demo/App.vue", "match": "id: 'teachers.add'" },
+    "atomic-write": { "selector": "src/domain/mock-api.ts", "match": "const preview = previewLessonSeriesNow(input)" }
+  },
+  "guide": {
+    "title": "Follow one merchant task",
+    "titleZh": "跟着一个商家任务走一遍",
+    "intro": [
+      "Start in the ordinary workspace, then switch on Pling and ask for the same work. The simulation keeps the original pages and handlers; Pling adds a narrow assistant layer.",
+      "Try a student lookup, ask where to add a teacher, or request the next three Tuesdays at 13:00."
+    ],
+    "introZh": [
+      "先在普通工作台里看看页面，再切换到 Pling 接入版提出同样的需求。业务页面和处理函数保持原样，Pling 增加的是一层受限的助手能力。",
+      "可以查询学员、询问新增老师入口，或要求安排接下来三周周二 13:00 的团课。"
+    ],
+    "steps": [
+      {
+        "title": "See the existing business screens",
+        "titleZh": "先看页面本来就有的业务界面",
+        "body": "The course catalogue, separate detail and editor screens, teacher list, scheduling dialogs, students, and membership cards belong to the ordinary application.",
+        "bodyZh": "课程列表、独立详情与编辑页、老师列表、排课弹窗、学员和会员卡都属于原有应用。",
+        "file": "demo/App.vue",
+        "match": "const navGroups"
+      },
+      {
+        "title": "Look up a student without exposing an ID",
+        "titleZh": "按姓名查学员，不要求用户提供 ID",
+        "body": "The assistant uses the same narrow business API as the page. Duplicate names are returned as masked candidates for the user to disambiguate.",
+        "bodyZh": "助手调用页面共用的窄业务 API。遇到重名时返回脱敏候选，由用户确认具体学员。",
+        "file": "src/components/IntegratedAgent.vue",
+        "match": "id: \"merchant.get_student_cards\""
+      },
+      {
+        "title": "Preview a repeating schedule before writing",
+        "titleZh": "重复排课先预览，再写入",
+        "body": "The preview computes dates in Asia/Shanghai and checks teacher and room conflicts. The confirmed write recalculates and validates the whole series again.",
+        "bodyZh": "预览按 Asia/Shanghai 计算日期并检查老师、教室冲突；用户确认后，写入操作会重新计算并复核整组排期。",
+        "file": "src/components/IntegratedAgent.vue",
+        "match": "id: \"merchant.preview_group_lesson_series\""
+      },
+      {
+        "title": "Ask where to add a teacher",
+        "titleZh": "问新增老师入口在哪里",
+        "body": "The assistant highlights the real button. The locate-only declaration does not click it or submit the form.",
+        "bodyZh": "助手会高亮页面上的真实按钮。只定位声明不会替用户点击或提交表单。",
+        "file": "demo/App.vue",
+        "match": "id: 'teachers.add'"
+      }
+    ],
+    "note": "This is a simulated business API, not a live connection to Icegrass. Replace the mock service with the application's existing authenticated API before using the integration pattern in production.",
+    "noteZh": "这是模拟业务 API，并未连接真实冰草系统。生产接入时，应替换为应用已有的、经过身份校验的业务 API。"
+  }
+}

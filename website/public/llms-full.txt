@@ -9917,14 +9917,16 @@ const codeTargetRef = usePlingGuideTarget<HTMLInputElement>("verification_code")
 />
 ```
 
-The field now has a stable target for visual guidance. It is not in the action list. The model can see that a person must use it through the handoff instructions, but it cannot fill or click it.
+The field now has a stable target in a separate locate-only list. The assistant can point it out with `pling_locate`, but it cannot fill or click it through this declaration.
 
 This distinction matters in both directions:
 
 - a control the agent may operate should be declared as an action;
 - a control reserved for a person may be a guide target.
 
-`usePlingGuideTarget` changes presentation, not authority. It creates no permission, business operation, or tool schema entry.
+`usePlingGuideTarget` makes the target available for locating, not execution. It creates no permission or business operation and does not add an executable tool schema.
+
+When the user asks where the verification field is, the assistant calls `pling_locate` with `targetId: "verification_code"`. The framework scrolls to the field when possible and highlights it. It does not type a value or open another control.
 
 ## Put the human step in the action
 
@@ -19225,15 +19227,35 @@ Explicit values win per field. Nested `limits` and `retry` values are merged ins
 
 An injected `llm` is sufficient for a deterministic test or a custom gateway client. In that case `baseUrl` and `apiKey` are not required for readiness. The runtime still checks limits and retry values.
 
+## Live time and timezone
+
+Every model request receives the current instant, the viewer's local time, and the business-local time. Defaults use the runtime clock and timezone; in a browser this is the visitor's device timezone. A server runtime cannot infer a remote user's timezone, so pass it from a trusted user profile or request context. Set the business timezone from the store, office, or account configuration:
+
+```ts
+const pling = createPling({
+  agent: {
+    clock: {
+      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
+});
+```
+
+`now`, `viewerTimeZone`, and `businessTimeZone` may be functions. Pling reads them again before every model request, so a long-running session does not keep yesterday's date. `now` defaults to `new Date()`; inject a fixed function in deterministic tests. An invalid clock or configured timezone fails before the model request instead of silently falling back to a different date. This context helps the model interpret phrases such as “next Tuesday”. The business service must still calculate dates and validate writes using its own trusted clock and timezone.
+
 ## Built-in locate tool
 
-When the current page has at least one action, the runtime appends `pling_locate` to the tool list. It has one parameter, `actionId`, and accepts only an exact id from the current page action list. It bypasses the approval gate, does not call the action's `run`, and cannot write business data.
+When the current page has an executable action or a locate-only target, the runtime appends `pling_locate` to the tool list. Its required `targetId` must exactly match an id in the current action list or locate-only target list. Older clients may still pass `actionId`. The tool bypasses the approval gate, does not call an action's `run`, and cannot write business data.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `actionId` | `string` | Yes | Exact id from the current action list |
+| `targetId` | `string` | Yes | Exact id from the current action or locate-only target list |
+| `actionId` | `string` | No | Compatibility alias accepted by the runtime for an action id |
 
-The executor scrolls the target into view and highlights it in the `locate` state. The highlight lasts 6 seconds by default. Set `locateDurationMs` when creating the executor to change it; `0` keeps the highlight until the next action or page unmount. An unknown id or an action without a DOM target returns `ACTION_NOT_FOUND` or `ACTION_UNAVAILABLE`.
+The executor reveals an off-screen target when the adapter supports it, then highlights the element in the `locate` state. The highlight lasts 6 seconds by default. Set `locateDurationMs` when creating the executor to change it; `0` keeps the highlight until the next action or page unmount. An unknown id or a target without a DOM element returns `ACTION_NOT_FOUND` or `ACTION_UNAVAILABLE`.
+
+Use a locate-only target for an element the user must operate, such as a file picker, a verification field, or an unregistered navigation control. It appears in model context but not in the executable action list. For a control the agent may operate, declare an action instead.
 
 The page does not declare a separate location action. If a developer action already uses the name `pling_locate`, the protocol gives that action `pling_locate_2`; the built-in tool keeps the original name.
 
@@ -20183,7 +20205,7 @@ Peer range: Vue 3. The adapter does not depend on Vue Router or Pinia. Router su
 | `v-record` | `data` or a full record object | Declare a row |
 | `v-task` | `string` or `{ prompt, surface?, disabled? }` | Human task entrance; never an agent action |
 | `v-feedback` | String, array, or feedback object | Page feedback visible to the model |
-| `v-guide-target` | `{ id, label?, description? }` | Highlight a non-action target during handoff |
+| `v-guide-target` | `{ id, label?, description? }` | Add a non-executable target to the assistant's locate list |
 
 ```vue
 <template>
@@ -20430,7 +20452,7 @@ class App extends React.Component {
 ReactDOM.render(<App />, document.getElementById("root"));
 ```
 
-The legacy entry uses render props instead of Hooks. `PlingTool`, `PlingScope`, `PlingRecord`, `PlingFeedback`, `PlingTask`, and `PlingGuideTarget` pass a ref callback as their only child. `PlingState` and `PlingAction` render nothing and register themselves on mount. `AgentDock` and `AgentInline` mount the shared DOM assistant; a ref to `AgentDock` exposes `open()`, `close()`, `toggle()`, `isOpen()`, and `destroy()`.
+The legacy entry uses render props instead of Hooks. `PlingTool`, `PlingScope`, `PlingRecord`, `PlingFeedback`, `PlingTask`, and `PlingGuideTarget` pass a ref callback as their only child. `PlingGuideTarget` registers a locate-only element; the assistant may highlight it but cannot execute it. `PlingState` and `PlingAction` render nothing and register themselves on mount. `AgentDock` and `AgentInline` mount the shared DOM assistant; a ref to `AgentDock` exposes `open()`, `close()`, `toggle()`, `isOpen()`, and `destroy()`.
 
 The build uses the classic JSX transform and does not import `react/jsx-runtime`, so `react@16.3.0` is enough. The legacy assistant is the shared DOM dock, not a second React implementation; its Activity panel and optional debug/model settings therefore match the Vanilla adapter.
 
@@ -20541,7 +20563,7 @@ The legacy entry exposes feedback, guide targets, and task entrances through its
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/react` `0.1.0-alpha.9` |
+| Applies to | `@plingjs/react` `0.1.0-alpha.10` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | React 16.8+ for the Hooks entry; React 16.3+ for the legacy entry; browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
 | Peer dependencies | `react >=16.3` |
@@ -20593,7 +20615,7 @@ const dock = pling.dock({
 | `state(key, source, options?)` | unbind | Register a read-only view |
 | `declareFeedback(element, value)` | unbind | Declare page feedback |
 | `declareTask(element, value)` | unbind | Declare a human-facing task entrance without registering an action |
-| `guideTarget(element, id)` | unbind | Mark a target for a human handoff |
+| `guideTarget(element, id, metadata?)` | unbind | Add a non-executable element to the assistant's locate list |
 | `setActiveScopes(ids)` | - | Manual activation when the observer cannot infer the layout |
 | `dock(options?)` | `VanillaDock` | Mount the shared assistant |
 | `surfaceGateway(options)` | `VanillaSurfaceGateway` | Expose allowed capabilities to external Agents |
@@ -20711,7 +20733,7 @@ pling.declareTask(document.querySelector("#ask-assistant")!, {
 });
 ```
 
-`declareTask()` only sends a prompt to the mounted assistant, so it never appears in the action list. `guideTarget()` only marks the place a user should look during a handoff; it also does not create an action.
+`declareTask()` only sends a prompt to the mounted assistant, so it never appears in the action list. `guideTarget()` adds a non-executable target to the locate-only list. The assistant can reveal and highlight it with `pling_locate`, but cannot activate it through this declaration.
 
 ## Assistant, model settings, and debugging
 
@@ -20801,7 +20823,7 @@ Attach Pling after the element exists. If a plugin replaces the DOM node afterwa
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/vanilla` `0.1.0-alpha.9` |
+| Applies to | `@plingjs/vanilla` `0.1.0-alpha.10` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | Browsers with ES2022 modules; Node.js 20 or later for builds |
 | Peer dependencies | None; jQuery is optional |
@@ -20946,7 +20968,7 @@ The dock is the shared vanilla surface. It supports the same conversation, confi
 | `confirm` / `handoff` | Supported through tool options |
 | `derive` | Supported through vanilla options |
 | `v-feedback` | Missing |
-| `v-guide-target` | Missing |
+| `v-guide-target` | Supported: registers a locate-only target |
 | `v-task` | Missing |
 | Compound `steps` | Missing |
 | Model settings UI | Missing |
@@ -20961,7 +20983,7 @@ Do not infer Vue 3 parity from the shared directive names. Compare the [Vue 3 ad
 - `@plingjs/vue2` requires Vue 2.7. Upgrade 2.6 when possible; otherwise use the manual Vanilla path.
 - Install the plugin once, before the root component is created.
 - State and tools that rely on component lifecycle should be declared in `setup()`, not in a detached helper.
-- `v-feedback`, guide targets, task entrances, and compound flows require either a Vue 3 move or a new Vue 2 implementation.
+- `v-guide-target` is supported for locate-only targets. `v-feedback`, task entrances, and compound flows still require either a Vue 3 move or a separate Vue 2 implementation.
 - The adapter shares the vanilla dock, so styling is controlled through the shared `ui` options rather than Vue 3 component slots.
 
 ## Failure modes
@@ -22216,9 +22238,9 @@ Unknown task ids, unknown fields, duplicate definitions, a missing bound record,
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.9` |
+| Applies to | `@plingjs/agent`, `@plingjs/vanilla`, `@plingjs/surface` `0.1.0-alpha.10` |
 | Introduced | `0.1.0-alpha.6` |
-| `goal()` introduced | `0.1.0-alpha.9` (unreleased) |
+| `goal()` introduced | `0.1.0-alpha.9` |
 | Runtime | Browsers with ES2022 modules; the task controller runs in Node.js 20 or later |
 | Peer dependencies | None |
 | Stability | Experimental; snapshots may add fields without changing existing meanings |
@@ -22923,7 +22945,7 @@ Every tutorial chapter also has a complete runnable page. To inspect the result 
 
 ## Classic examples and one comparison
 
-The first six cover the product from different angles: the smallest working integration, a business workspace, a task that crosses client-side routes, a task that survives a full page navigation, a capability surface for an agent outside the page, and a guided task that completes a real create flow. The seventh rebuilds that same create flow with nothing but `v-scope`, `v-record`, and `v-tool`, so the trade-off is visible side by side.
+The first six cover the product from different angles: the smallest working integration, a business workspace, a task that crosses client-side routes, a task that survives a full page navigation, a capability surface for an agent outside the page, and a guided task that completes a real create flow. The seventh is a directives-only comparison of that course flow. The eighth is a larger simulated merchant admin, with visible results across student, course, teacher, membership, and scheduling workflows.
 
 <DemoGallery />
 
@@ -22978,6 +23000,7 @@ Examples show complete applications; task recipes address reusable interface bou
 - [Example 05: Expose capabilities](/examples/external-agent-surface) exposes named capabilities to an agent outside the page.
 - [Example 06: A persistent goal — create a course](/examples/course-workspace-vue3) adds one goal to the same course page. The agent opens the real dialog, operates real controls, asks the person to upload the cover, saves, and reads the catalogue back.
 - [Example 07: Directives only — create a course](/examples/course-create-directives-vue3) completes the same flow with `v-scope`, `v-record`, and `v-tool`, without a task layer. Use it for one stable single-page form.
+- [Example 08: A merchant workspace with visible outcomes](/examples/bingcao-merchant-workflows-vue3) compares the ordinary business UI with Pling-assisted lookup, course creation, schedule preview, and control highlighting.
 
 Every example page includes an operable preview, marked source, and integration notes. Model requests go through a server-side gateway; the browser does not hold a provider key.
 
@@ -23377,7 +23400,7 @@ Choose the framework you are integrating. Each page contains only that framework
 
 The parameter tables are the main contract here. Look up a field's type, required status, default, and applicable scenario on the current framework page; follow the linked reference only when you need field-level semantics or error codes.
 
-There are **5** API pages covering **10** capability groups; the current version is `0.1.0-alpha.9` with **preview** stability.
+There are **5** API pages covering **10** capability groups; the current version is `0.1.0-alpha.10` with **preview** stability.
 
 ## Choose by framework
 
@@ -23385,12 +23408,12 @@ There are **5** API pages covering **10** capability groups; the current version
 | --- | --- | --- | --- |
 | **Vue 3 API** | `@plingjs/vue` | 81 | [Open](/reference/api/vue-3) |
 | **React API** | `@plingjs/react` | 77 | [Open](/reference/api/react) |
-| **Vue 2.7 API** | `@plingjs/vue2` | 60 | [Open](/reference/api/vue-2) |
+| **Vue 2.7 API** | `@plingjs/vue2` | 62 | [Open](/reference/api/vue-2) |
 | **Vanilla JS API** | `@plingjs/vanilla` | 80 | [Open](/reference/api/vanilla) |
 
 ## Shared package API
 
-Runtime, page continuity, testing, and diagnostic APIs share one implementation: **71** entries.
+Runtime, page continuity, testing, and diagnostic APIs share one implementation: **73** entries.
 
 [Open the shared package API](/reference/api/shared)
 
@@ -23398,10 +23421,10 @@ Runtime, page continuity, testing, and diagnostic APIs share one implementation:
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |
@@ -23438,9 +23461,9 @@ This page lists only `@plingjs/vue` entry points, plus the shared-package types 
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.9` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.10` |
 
-The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.10`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -24042,7 +24065,7 @@ pling.ask(prompt: string, options?: PlingAskOptions): Promise<void>
 
 ### `Guide target`
 
-Highlights a non-action target while a person completes a handoff step.
+Registers a locate-only visual target that the assistant can point out but cannot execute.
 
 **Imports**
 
@@ -24052,19 +24075,21 @@ Highlights a non-action target while a person completes a handoff step.
 
 ```ts
 // Vue 3
-v-guide-target="string"
+v-guide-target="string | { id: string; label?: string; description?: string }"
 ```
 
 **Parameters and options**
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `id` | `string` | Yes | — | Guide target id referenced by a HandoffStep.highlight value. |
+| `value` | `string \| { id: string; label?: string; description?: string }` | Yes | — | Registers the element as a locate-only target. Vue uses its accessible label when label is omitted. |
 
-**Example 1 · Highlight a handoff target**
+**Example 1 · Register a locate-only control**
 
 ```ts
-<input v-guide-target="'captcha'" />
+<button v-guide-target="{ id: 'teachers.add', label: '新增老师', description: '打开老师档案表单' }">新增老师</button>
+
+<!-- The assistant can locate this button, but cannot click it through the guide target. -->
 ```
 
 **Canonical reference**
@@ -24376,6 +24401,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | No | — | Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults. |
+| `context` | `ContextOptions` | No | — | Bounds the page information included in model context, including the live clock. |
+| `clock` | `AgentClock` | No | — | Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes. |
 | `llm` | `Llm` | No | — | Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport. |
 | `responseLocale` | `string \| (() => string)` | No | — | Locale used when composing the response-language instruction. A function is re-read before each model request. |
 | `telemetry` | `Telemetry` | No | — | Collects token, duration, cost, and retry metrics for the current runtime. |
@@ -25500,7 +25527,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.
+Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.
 
 **Imports**
 
@@ -25518,13 +25545,14 @@ pling.inspectCoverage(): CoverageReport
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | No | — | Application root to scan. Vue uses its mount root; React and DOM callers may pass any root. |
-| `return.total` | `number` | No | — | Recognized actionable controls in the root. |
+| `return.total` | `number` | No | — | Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected. |
 | `return.declared` | `number` | No | — | Controls with a direct declaration. |
 | `return.derived` | `number` | No | — | Controls produced by optional L1 derivation. |
 | `return.grouped` | `number` | No | — | Controls covered by a declaration on an ancestor. Review these manually. |
+| `return.locatable` | `number` | No | — | Controls registered for pointing and highlighting only; the user must operate them. |
 | `return.missing` | `number` | No | — | Actionable controls with no declaration in their ancestry. |
-| `return.coveragePercent` | `number \| null` | No | — | Covered controls divided by total; null when there are no controls. |
-| `return.targets` | `CoverageTarget[]` | No | — | Grouped and missing controls with labels and nearby action ids. |
+| `return.coveragePercent` | `number \| null` | No | — | Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls. |
+| `return.targets` | `CoverageTarget[]` | No | — | Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids. |
 
 **Example 1 · Inspect Vue coverage**
 
@@ -27652,10 +27680,10 @@ interface GuideActionItem {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |
@@ -27681,11 +27709,11 @@ This page lists only `@plingjs/react` entry points, plus the shared-package type
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.9` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.10` |
 
 The Hooks API on this page requires React 16.8+. React 16.3–16.7 use `@plingjs/react/legacy`, a class/render-prop entry documented in the [React adapter reference](/reference/react-adapter#react-163-167-legacy-entry).
 
-The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.10`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -28330,7 +28358,7 @@ await pling.ask("整理今天的待办并标出最紧急的一项", { surface: "
 
 ### `Guide target`
 
-Highlights a non-action target while a person completes a handoff step.
+Registers a locate-only visual target that the assistant can point out but cannot execute.
 
 **Imports**
 
@@ -28340,21 +28368,24 @@ Highlights a non-action target while a person completes a handoff step.
 
 ```ts
 // React
-usePlingGuideTarget<T extends Element = HTMLElement>(id: string): RefCallback<T>
+usePlingGuideTarget<T extends Element = HTMLElement>(id: string, metadata?: { label?: string; description?: string }): RefCallback<T>
 ```
 
 **Parameters and options**
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `id` | `string` | Yes | — | Guide target id referenced by a HandoffStep.highlight value. |
+| `metadata` | `{ label?: string; description?: string }` | No | — | Optional target name and description. The target id is passed separately. |
 
-**Example 1 · Highlight a handoff target**
+**Example 1 · Register a locate-only control**
 
 ```tsx
-const captchaRef = usePlingGuideTarget<HTMLInputElement>("captcha");
+const addTeacherRef = usePlingGuideTarget<HTMLButtonElement>("teachers.add", {
+  label: "新增老师",
+  description: "打开老师档案表单",
+});
 
-return <input ref={captchaRef} />;
+return <button ref={addTeacherRef}>新增老师</button>;
 ```
 
 **Canonical reference**
@@ -28661,6 +28692,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | No | — | Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults. |
+| `context` | `ContextOptions` | No | — | Bounds the page information included in model context, including the live clock. |
+| `clock` | `AgentClock` | No | — | Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes. |
 | `llm` | `Llm` | No | — | Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport. |
 | `responseLocale` | `string \| (() => string)` | No | — | Locale used when composing the response-language instruction. A function is re-read before each model request. |
 | `telemetry` | `Telemetry` | No | — | Collects token, duration, cost, and retry metrics for the current runtime. |
@@ -29516,7 +29549,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.
+Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.
 
 **Imports**
 
@@ -29534,13 +29567,14 @@ pling.inspectCoverage(root?: Element | null): CoverageReport
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | No | — | Application root to scan. Vue uses its mount root; React and DOM callers may pass any root. |
-| `return.total` | `number` | No | — | Recognized actionable controls in the root. |
+| `return.total` | `number` | No | — | Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected. |
 | `return.declared` | `number` | No | — | Controls with a direct declaration. |
 | `return.derived` | `number` | No | — | Controls produced by optional L1 derivation. |
 | `return.grouped` | `number` | No | — | Controls covered by a declaration on an ancestor. Review these manually. |
+| `return.locatable` | `number` | No | — | Controls registered for pointing and highlighting only; the user must operate them. |
 | `return.missing` | `number` | No | — | Actionable controls with no declaration in their ancestry. |
-| `return.coveragePercent` | `number \| null` | No | — | Covered controls divided by total; null when there are no controls. |
-| `return.targets` | `CoverageTarget[]` | No | — | Grouped and missing controls with labels and nearby action ids. |
+| `return.coveragePercent` | `number \| null` | No | — | Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls. |
+| `return.targets` | `CoverageTarget[]` | No | — | Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids. |
 
 **Example 1 · Inspect React coverage**
 
@@ -31656,10 +31690,10 @@ card.current?.open("lesson.note", {}, {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |
@@ -31685,9 +31719,9 @@ This page lists only `@plingjs/vue2` entry points, plus the shared-package types
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.9` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.10` |
 
-The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.10`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -31942,6 +31976,7 @@ Declare actions, records, regions, state, feedback, task entrances, and sensitiv
 | [Record](#api-record) | Declaration | [Reference](/reference/core-declarations-actions-records-regions-state) |
 | [Read-only state](#api-state) | Declaration | [Reference](/reference/core-declarations-actions-records-regions-state) |
 | [Store state](#api-store-state) | Declaration | [Reference](/reference/vue-2-adapter) |
+| [Guide target](#api-guide-target) | Declaration | [Reference](/reference/vue-2-adapter) |
 | [sensitive](#api-sensitive) | Function | [Reference](/reference/core-declarations-actions-records-regions-state) |
 
 <a id="api-element-action"></a>
@@ -32151,6 +32186,40 @@ useAgentStoreState<S extends object>(key: string, store: S, read: AgentStoreRead
 ```ts
 const cart = this.$store.state.cart;
 useAgentStoreState("cart", cart, ["count", "total"], "购物车件数与小计");
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/vue-2-adapter)
+
+
+<a id="api-guide-target"></a>
+
+### `Guide target`
+
+Registers a locate-only visual target that the assistant can point out but cannot execute.
+
+**Imports**
+
+`@plingjs/vue2`
+
+**Signature**
+
+```ts
+// Vue 2.7
+v-guide-target="string | { id: string; label?: string; description?: string }"
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `value` | `string \| { id: string; label?: string; description?: string }` | Yes | — | Registers the element as a locate-only target. Vue 2 uses its accessible label when label is omitted. |
+
+**Example 1 · Register a locate-only control**
+
+```ts
+<button v-guide-target="{ id: 'teachers.add', label: '新增老师' }">新增老师</button>
 ```
 
 **Canonical reference**
@@ -32456,6 +32525,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | No | — | Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults. |
+| `context` | `ContextOptions` | No | — | Bounds the page information included in model context, including the live clock. |
+| `clock` | `AgentClock` | No | — | Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes. |
 | `llm` | `Llm` | No | — | Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport. |
 | `responseLocale` | `string \| (() => string)` | No | — | Locale used when composing the response-language instruction. A function is re-read before each model request. |
 | `telemetry` | `Telemetry` | No | — | Collects token, duration, cost, and retry metrics for the current runtime. |
@@ -32880,6 +32951,56 @@ const dock = pling.dock({
 dock.open();
 // On teardown:
 dock.destroy();
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/vue-2-adapter)
+
+
+## Page identity and continuity
+
+Read page identity, share a runtime across frames, and inspect declared coverage.
+
+| API | Kind | Reference |
+| --- | --- | --- |
+| [inspectCoverage](#api-inspectcoverage) | Method | [Reference](/reference/vue-2-adapter) |
+
+<a id="api-inspectcoverage"></a>
+
+### `inspectCoverage`
+
+Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.
+
+**Imports**
+
+`@plingjs/dom` · `@plingjs/vue2`
+
+**Signature**
+
+```ts
+// Vue 2.7
+pling.inspectCoverage(root?: Element | null): CoverageReport
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `root` | `Element \| null` | No | — | Application root to scan. Vue uses its mount root; React and DOM callers may pass any root. |
+| `return.total` | `number` | No | — | Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected. |
+| `return.declared` | `number` | No | — | Controls with a direct declaration. |
+| `return.derived` | `number` | No | — | Controls produced by optional L1 derivation. |
+| `return.grouped` | `number` | No | — | Controls covered by a declaration on an ancestor. Review these manually. |
+| `return.locatable` | `number` | No | — | Controls registered for pointing and highlighting only; the user must operate them. |
+| `return.missing` | `number` | No | — | Actionable controls with no declaration in their ancestry. |
+| `return.coveragePercent` | `number \| null` | No | — | Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls. |
+| `return.targets` | `CoverageTarget[]` | No | — | Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids. |
+
+**Example 1 · Inspect a DOM root**
+
+```ts
+const report = inspectCoverage(document.querySelector("#app"));
 ```
 
 **Canonical reference**
@@ -34851,10 +34972,10 @@ interface GuideActionItem {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |
@@ -34880,9 +35001,9 @@ This page lists only `@plingjs/vanilla` entry points, plus the shared-package ty
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.9` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.10` |
 
-The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.10`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -35017,7 +35138,7 @@ interface VanillaPling extends VanillaHost {
   state(key: string, source: StateSource, options?: StateOptions | string): () => void;
   declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;
   declareTask(element: HTMLElement, value: TaskValue): () => void;
-  guideTarget(element: Element, id: string): () => void;
+  guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void;
   setActiveScopes(scopes: Iterable<string>): void;
   dock(options?: VanillaDockOptions): VanillaDock;
   surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway;
@@ -35397,7 +35518,7 @@ pling.declareTask(document.querySelector("#ask"), {
 
 ### `Guide target`
 
-Highlights a non-action target while a person completes a handoff step.
+Registers a locate-only visual target that the assistant can point out but cannot execute.
 
 **Imports**
 
@@ -35407,20 +35528,26 @@ Highlights a non-action target while a person completes a handoff step.
 
 ```ts
 // Vanilla JS
-pling.guideTarget(element: Element, id: string): () => void
+pling.guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void
 ```
 
 **Parameters and options**
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `element` | `Element` | Yes | — | Element to highlight during the handoff step. |
-| `id` | `string` | Yes | — | Guide target id referenced by a HandoffStep.highlight value. |
+| `element` | `Element` | Yes | — | Element to point out. It must remain mounted until the target is unregistered. |
+| `metadata` | `{ label?: string; description?: string }` | No | — | Optional human-facing name and description. |
 
-**Example 1 · Highlight a handoff target**
+**Example 1 · Register a locate-only control**
 
 ```ts
-pling.guideTarget(document.querySelector("#captcha"), "captcha");
+const removeTarget = pling.guideTarget(addTeacherButton, "teachers.add", {
+  label: "新增老师",
+  description: "打开老师档案表单",
+});
+
+// When the button is removed:
+removeTarget();
 ```
 
 **Canonical reference**
@@ -35727,6 +35854,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | No | — | Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults. |
+| `context` | `ContextOptions` | No | — | Bounds the page information included in model context, including the live clock. |
+| `clock` | `AgentClock` | No | — | Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes. |
 | `llm` | `Llm` | No | — | Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport. |
 | `responseLocale` | `string \| (() => string)` | No | — | Locale used when composing the response-language instruction. A function is re-read before each model request. |
 | `telemetry` | `Telemetry` | No | — | Collects token, duration, cost, and retry metrics for the current runtime. |
@@ -36628,7 +36757,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.
+Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.
 
 **Imports**
 
@@ -36646,13 +36775,14 @@ pling.inspectCoverage(root?: Element | null): CoverageReport
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | No | — | Application root to scan. Vue uses its mount root; React and DOM callers may pass any root. |
-| `return.total` | `number` | No | — | Recognized actionable controls in the root. |
+| `return.total` | `number` | No | — | Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected. |
 | `return.declared` | `number` | No | — | Controls with a direct declaration. |
 | `return.derived` | `number` | No | — | Controls produced by optional L1 derivation. |
 | `return.grouped` | `number` | No | — | Controls covered by a declaration on an ancestor. Review these manually. |
+| `return.locatable` | `number` | No | — | Controls registered for pointing and highlighting only; the user must operate them. |
 | `return.missing` | `number` | No | — | Actionable controls with no declaration in their ancestry. |
-| `return.coveragePercent` | `number \| null` | No | — | Covered controls divided by total; null when there are no controls. |
-| `return.targets` | `CoverageTarget[]` | No | — | Grouped and missing controls with labels and nearby action ids. |
+| `return.coveragePercent` | `number \| null` | No | — | Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls. |
+| `return.targets` | `CoverageTarget[]` | No | — | Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids. |
 
 **Example 1 · Inspect Vanilla coverage**
 
@@ -39076,10 +39206,10 @@ panel.destroy();
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |
@@ -39105,9 +39235,9 @@ This page covers public APIs in `@plingjs/core`, `@plingjs/agent`, `@plingjs/dom
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.9` |
+| `@plingjs/core` | — | `0.1.0-alpha.10` |
 
-The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.10`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -39551,6 +39681,8 @@ Model configuration, sessions, approval and handoff, hooks, tracing, and shared 
 | API | Kind | Reference |
 | --- | --- | --- |
 | [AgentRuntimeOptions](#api-agentruntimeoptions) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
+| [AgentClock](#api-agentclock) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
+| [ContextOptions](#api-contextoptions) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
 | [AgentConfigOverrides](#api-agentconfigoverrides) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
 | [HookRegistry](#api-hookregistry) | Class | [Reference](/reference/agent-runtime-sessions-context-limits) |
 | [SessionEvent](#api-sessionevent) | Type | [Reference](/reference/agent-runtime-sessions-context-limits) |
@@ -39575,6 +39707,9 @@ The runtime contract behind AgentSetup: config, registry, model, events, hooks, 
 interface AgentRuntimeOptions {
   config: AgentConfig;
   registry?: Registry;
+  taskCatalog?: TaskCatalog;
+  context?: ContextOptions;
+  clock?: AgentClock;
   llm?: Llm;
   responseLocale?: string | (() => string);
   telemetry?: Telemetry;
@@ -39601,6 +39736,8 @@ interface AgentRuntimeOptions {
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfig` | Yes | — | Fully resolved model and runtime configuration. |
 | `registry` | `Registry` | No | — | Page capability registry. Omit it for a chat-only runtime. |
+| `context` | `ContextOptions` | No | — | Bounds the page information included in model context, including the live clock. |
+| `clock` | `AgentClock` | No | — | Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes. |
 | `llm` | `Llm` | No | — | Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport. |
 | `responseLocale` | `string \| (() => string)` | No | — | Locale used when composing the response-language instruction. A function is re-read before each model request. |
 | `telemetry` | `Telemetry` | No | — | Collects token, duration, cost, and retry metrics for the current runtime. |
@@ -39627,6 +39764,112 @@ const runtime = createAgentRuntime({
   registry: pling.registry,
   hooks,
   trace: true,
+});
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/agent-runtime-sessions-context-limits)
+
+
+<a id="api-agentclock"></a>
+
+### `AgentClock`
+
+Live time and timezone context included with every model request. It does not replace business-service validation.
+
+**Imports**
+
+`@plingjs/agent`
+
+**Signature**
+
+```ts
+// Shared package
+interface AgentClock {
+  now?: () => Date;
+  viewerTimeZone?: string | (() => string);
+  businessTimeZone?: string | (() => string);
+}
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `now` | `() => Date` | No | — | Returns a valid current instant. Re-read before each model request; defaults to the runtime clock. An invalid Date fails before the model request. |
+| `viewerTimeZone` | `string \| (() => string)` | No | — | IANA timezone used to render the viewer's local time. Defaults to the runtime timezone; server runtimes should supply the authenticated user's timezone. |
+| `businessTimeZone` | `string \| (() => string)` | No | — | IANA timezone used for business dates such as class schedules. Defaults to viewerTimeZone. |
+
+**Example 1 · Configure the shop timezone**
+
+```ts
+createPling({
+  agent: {
+    clock: {
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
+});
+```
+
+**Canonical reference**
+
+[Open the corresponding reference](/reference/agent-runtime-sessions-context-limits)
+
+
+<a id="api-contextoptions"></a>
+
+### `ContextOptions`
+
+Bounds the page context sent to the model and optionally provides a per-request clock.
+
+**Imports**
+
+`@plingjs/agent`
+
+**Signature**
+
+```ts
+// Shared package
+interface ContextOptions {
+  maxActions?: number;
+  maxRecords?: number;
+  includeState?: boolean;
+  maxIdsInHint?: number;
+  maxUnavailable?: number;
+  maxStateChars?: number;
+  maxRecordChars?: number;
+  maxScopes?: number;
+  maxFeedback?: number;
+  maxFeedbackChars?: number;
+  maxPageChars?: number;
+  clock?: AgentClock;
+}
+```
+
+**Parameters and options**
+
+| Parameter | Type | Required | Default | Description |
+| --- | --- | --- | --- | --- |
+| `maxActions` | `number` | No | — | Maximum actions rendered in the current page context. |
+| `maxRecords` | `number` | No | — | Maximum record rows rendered in the current page context. |
+| `includeState` | `boolean` | No | — | Whether read-only page state is included. |
+| `maxUnavailable` | `number` | No | — | Maximum unavailable actions rendered in context. |
+| `clock` | `AgentClock` | No | — | Live time and timezone context. When configured here, it is used for each model request. |
+
+**Example 1 · Provide a per-request clock**
+
+```ts
+createAgentRuntime({
+  config,
+  registry,
+  context: {
+    clock: {
+      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
 });
 ```
 
@@ -40276,7 +40519,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.
+Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.
 
 **Imports**
 
@@ -40294,13 +40537,14 @@ inspectCoverage(root: Element | null): CoverageReport
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | No | — | Application root to scan. Vue uses its mount root; React and DOM callers may pass any root. |
-| `return.total` | `number` | No | — | Recognized actionable controls in the root. |
+| `return.total` | `number` | No | — | Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected. |
 | `return.declared` | `number` | No | — | Controls with a direct declaration. |
 | `return.derived` | `number` | No | — | Controls produced by optional L1 derivation. |
 | `return.grouped` | `number` | No | — | Controls covered by a declaration on an ancestor. Review these manually. |
+| `return.locatable` | `number` | No | — | Controls registered for pointing and highlighting only; the user must operate them. |
 | `return.missing` | `number` | No | — | Actionable controls with no declaration in their ancestry. |
-| `return.coveragePercent` | `number \| null` | No | — | Covered controls divided by total; null when there are no controls. |
-| `return.targets` | `CoverageTarget[]` | No | — | Grouped and missing controls with labels and nearby action ids. |
+| `return.coveragePercent` | `number \| null` | No | — | Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls. |
+| `return.targets` | `CoverageTarget[]` | No | — | Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids. |
 
 **Example 1 · Inspect a DOM root**
 
@@ -42490,7 +42734,7 @@ createAgentLoop(options: LoopOptions): AgentLoop
 | `handoff` | `HandoffGate` | No | — | Human-handoff gate. Omit it to fail handoff tools rather than simulate them. |
 | `systemPrompt` | `string` | No | — | Additional system instructions. Framework rules remain in force. |
 | `responseLocale` | `string \| (() => string)` | No | — | Response-language hint; a function is re-read each turn. |
-| `context` | `ContextOptions` | No | — | Bounds for actions, records, state, scopes, feedback, and page identity in model context. |
+| `context` | `ContextOptions` | No | — | Bounds page context and may configure the live clock used before each model request. |
 | `history` | `HistoryOptions` | No | — | Context budget, compaction threshold, recent retention, and tool-result cap. |
 | `historyState` | `HistorySnapshot` | No | — | Restores a summary and message list from a checkpoint. System context is rebuilt for the current page. |
 | `hooks` | `HookRegistry` | No | — | Tool lifecycle hooks. |
@@ -42591,6 +42835,7 @@ renderPageContext(snapshot: Snapshot, options?: ContextOptions): string
 | `options.maxFeedback` | `number` | No | `8` | Maximum feedback entries listed, default 8. |
 | `options.maxFeedbackChars` | `number` | No | `800` | Character budget for feedback, default 800. |
 | `options.maxPageChars` | `number` | No | `500` | Character budget for page identity, default 500. |
+| `options.clock` | `AgentClock` | No | — | Adds the current instant and viewer/business local times to this page context. |
 
 **Example 1 · Render a smaller context**
 
@@ -42843,10 +43088,10 @@ const config = resolveAgentConfig({
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |

@@ -129,7 +129,10 @@ describe("React 页面反馈", () => {
     const pling = createPling({ namespace: "release", presence: false, onWarn: () => {} });
 
     function VerificationCode() {
-      const ref = usePlingGuideTarget<HTMLInputElement>("verification_code");
+      const ref = usePlingGuideTarget<HTMLInputElement>("verification_code", {
+        label: "发布验证码",
+        description: "由用户填写验证码",
+      });
       return <input ref={ref} aria-label="发布验证码" />;
     }
 
@@ -143,6 +146,9 @@ describe("React 页面反馈", () => {
 
     expect(pling.registry.markGuideTarget("verification_code", "waiting")).toBe(true);
     expect(pling.registry.snapshot().actions).toEqual([]);
+    expect(pling.registry.snapshot().guideTargets).toMatchObject([
+      { id: "release/verification_code", label: "发布验证码", description: "由用户填写验证码" },
+    ]);
     pling.destroy();
   });
 

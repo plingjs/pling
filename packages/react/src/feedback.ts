@@ -8,7 +8,10 @@ import {
 } from "react";
 import type { FeedbackSeverity } from "@plingjs/core";
 import {
+  GUIDE_TARGET_ATTR,
+  isElementInViewport,
   normalizeFeedbackValue,
+  scrollElementIntoView,
   type FeedbackValue,
   type NormalizedFeedback,
 } from "@plingjs/dom";
@@ -100,22 +103,35 @@ export function usePlingFeedback(value: PlingFeedbackInput, options: PlingFeedba
 }
 
 /**
- * Mark an element as a highlight target for human handoff steps.
+ * Register an element as a locate-only target for the assistant and human handoff steps.
  *
- * The element is not registered as an action. The returned ref only supplies a
- * visual target for `highlight` in a handoff step.
+ * The element is not registered as an executable action. The assistant can
+ * point to it with `pling_locate`, but cannot activate it through this target.
  */
-export function usePlingGuideTarget<T extends Element = HTMLElement>(id: string): RefCallback<T> {
+export function usePlingGuideTarget<T extends Element = HTMLElement>(
+  id: string,
+  metadata: { label?: string; description?: string } = {},
+): RefCallback<T> {
   const pling = usePling();
   const [element, setElement] = useState<T | null>(null);
 
   useIsomorphicLayoutEffect(() => {
     const targetId = id.trim();
     if (!element || !targetId) return;
-    return pling.registry.declareGuideTarget(targetId, {
+    const label = metadata.label?.trim() || element.getAttribute("aria-label")?.trim() || element.textContent?.trim() || targetId;
+    element.setAttribute(GUIDE_TARGET_ATTR, targetId);
+    const off = pling.registry.declareGuideTarget(targetId, {
+      label,
+      ...(metadata.description?.trim() ? { description: metadata.description.trim() } : {}),
+      isVisible: () => isElementInViewport(element),
+      reveal: () => scrollElementIntoView(element),
       presence: (state) => pling.presence?.mark(element, state),
     });
-  }, [element, id, pling]);
+    return () => {
+      off();
+      if (element.getAttribute(GUIDE_TARGET_ATTR) === targetId) element.removeAttribute(GUIDE_TARGET_ATTR);
+    };
+  }, [element, id, metadata.label, metadata.description, pling]);
 
   return useCallback<RefCallback<T>>((node) => setElement(node), []);
 }

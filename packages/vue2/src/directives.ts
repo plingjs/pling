@@ -17,6 +17,7 @@ type ScopeValue = string | {
   role?: RegionRole;
   parent?: string;
 };
+type GuideTargetValue = string | { id: string; label?: string; description?: string };
 
 interface BindingState {
   signature: string;
@@ -74,10 +75,12 @@ export function createDirectives(pling: Vue2Pling): {
   tool: DirectiveOptions;
   scope: DirectiveOptions;
   record: DirectiveOptions;
+  guideTarget: DirectiveOptions;
 } {
   const tools = new WeakMap<Element, BindingState>();
   const scopes = new WeakMap<Element, BindingState>();
   const records = new WeakMap<Element, BindingState>();
+  const guideTargets = new WeakMap<Element, BindingState>();
 
   const tool: DirectiveOptions = {
     inserted(el, binding) {
@@ -151,5 +154,32 @@ export function createDirectives(pling: Vue2Pling): {
     },
   };
 
-  return { tool, scope, record };
+  const guideTarget: DirectiveOptions = {
+    inserted(el, binding) {
+      const value = binding.value as GuideTargetValue;
+      const normalized = typeof value === "string" ? { id: value } : value;
+      const signature = JSON.stringify([normalized.id, normalized.label, normalized.description]);
+      guideTargets.set(el, {
+        signature,
+        unbind: pling.guideTarget(el, normalized.id, { label: normalized.label, description: normalized.description }),
+      });
+    },
+    update(el, binding) {
+      const value = binding.value as GuideTargetValue;
+      const normalized = typeof value === "string" ? { id: value } : value;
+      const signature = JSON.stringify([normalized.id, normalized.label, normalized.description]);
+      if (guideTargets.get(el)?.signature === signature) return;
+      guideTargets.get(el)?.unbind();
+      guideTargets.set(el, {
+        signature,
+        unbind: pling.guideTarget(el, normalized.id, { label: normalized.label, description: normalized.description }),
+      });
+    },
+    unbind(el) {
+      guideTargets.get(el)?.unbind();
+      guideTargets.delete(el);
+    },
+  };
+
+  return { tool, scope, record, guideTarget };
 }

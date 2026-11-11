@@ -47,7 +47,7 @@ const dock = pling.dock({
 | `state(key, source, options?)` | 解绑函数 | 注册只读视图 |
 | `declareFeedback(element, value)` | 解绑函数 | 声明页面反馈 |
 | `declareTask(element, value)` | 解绑函数 | 声明面向人的任务入口，不注册动作 |
-| `guideTarget(element, id)` | 解绑函数 | 标记人工接力的指引目标 |
+| `guideTarget(element, id, metadata?)` | 解绑函数 | 把不可执行元素加入助手的定位清单 |
 | `setActiveScopes(ids)` | — | 观察器无法推断布局时手动激活 |
 | `dock(options?)` | `VanillaDock` | 挂载共享助手 |
 | `surfaceGateway(options)` | `VanillaSurfaceGateway` | 把允许的能力开放给外部 Agent |
@@ -165,7 +165,7 @@ pling.declareTask(document.querySelector("#ask-assistant")!, {
 });
 ```
 
-`declareTask()` 只把一句话交给已挂载的助手，因此不会出现在动作清单里。`guideTarget()` 则只标记用户在人工接力时需要看的位置，同样不会生成动作。
+`declareTask()` 只把一句话交给已挂载的助手，因此不会出现在动作清单里。`guideTarget()` 会把不可执行目标加入定位清单。助手可以用 `pling_locate` 把它显示出来，但不能通过这项声明触发它。
 
 ## 助手、模型设置与调试
 
@@ -255,7 +255,7 @@ $("#add").on("click", addTask);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.9` |
+| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.10` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；jQuery 为可选项 |

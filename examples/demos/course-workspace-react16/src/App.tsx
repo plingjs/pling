@@ -14,6 +14,7 @@ import {
   courseQuickPrompts,
   createCourseTaskView,
   createCourseTaskRuntime,
+  decorateCourseDock,
   describeCourseState,
   registerCourseActions,
   type CourseTaskRuntime,
@@ -79,6 +80,12 @@ export class App extends React.Component<AppProps, AppState> {
     window.setTimeout(() => {
       this.dock?.open();
       this.openTaskInChat("course.create");
+      decorateCourseDock(this.props.locale, {
+        runtime: this.taskRuntime,
+        onOpenDock: () => this.dock?.open(),
+        onOpenTask: (taskId) => this.openTaskInChat(taskId),
+        onReset: () => this.taskRuntime.guide?.reset(),
+      });
     }, 0);
   }
 

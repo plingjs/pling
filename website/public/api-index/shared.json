@@ -4,7 +4,7 @@
   "page": "shared",
   "route": "/reference/api/shared",
   "package": "@plingjs/core",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "compatibility": null,
@@ -778,7 +778,7 @@
           "imports": [
             "@plingjs/agent"
           ],
-          "signature": "interface AgentRuntimeOptions {\n  config: AgentConfig;\n  registry?: Registry;\n  llm?: Llm;\n  responseLocale?: string | (() => string);\n  telemetry?: Telemetry;\n  trace?: boolean | AgentTraceOptions;\n  settle?: () => Promise<void>;\n  hooks?: HookRegistry;\n  onEvent?: SessionEventListener;\n  onApproval?: (pending: PendingApproval | null) => void;\n  onHandoff?: (pending: PendingHandoff | null) => void;\n  gate?: () => boolean;\n  policy?: ConfirmGate;\n  approvalTimeoutMs?: number;\n  handoffTimeoutMs?: number;\n  handoff?: HandoffGate;\n  id?: string;\n  onLeaseLost?: () => void;\n  continuity?: ContinuitySetting;\n}",
+          "signature": "interface AgentRuntimeOptions {\n  config: AgentConfig;\n  registry?: Registry;\n  taskCatalog?: TaskCatalog;\n  context?: ContextOptions;\n  clock?: AgentClock;\n  llm?: Llm;\n  responseLocale?: string | (() => string);\n  telemetry?: Telemetry;\n  trace?: boolean | AgentTraceOptions;\n  settle?: () => Promise<void>;\n  hooks?: HookRegistry;\n  onEvent?: SessionEventListener;\n  onApproval?: (pending: PendingApproval | null) => void;\n  onHandoff?: (pending: PendingHandoff | null) => void;\n  gate?: () => boolean;\n  policy?: ConfirmGate;\n  approvalTimeoutMs?: number;\n  handoffTimeoutMs?: number;\n  handoff?: HandoffGate;\n  id?: string;\n  onLeaseLost?: () => void;\n  continuity?: ContinuitySetting;\n}",
           "parameters": [
             {
               "name": "config",
@@ -795,6 +795,22 @@
               "defaultValue": "",
               "description": "Page capability registry. Omit it for a chat-only runtime.",
               "descriptionZh": "页面能力注册表。纯聊天运行时可省略。"
+            },
+            {
+              "name": "context",
+              "type": "ContextOptions",
+              "required": false,
+              "defaultValue": "",
+              "description": "Bounds the page information included in model context, including the live clock.",
+              "descriptionZh": "设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。"
+            },
+            {
+              "name": "clock",
+              "type": "AgentClock",
+              "required": false,
+              "defaultValue": "",
+              "description": "Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes.",
+              "descriptionZh": "每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。"
             },
             {
               "name": "llm",
@@ -954,6 +970,144 @@
             {
               "package": "@plingjs/agent",
               "name": "AgentRuntimeOptions"
+            }
+          ],
+          "reference": "/reference/agent-runtime-sessions-context-limits"
+        },
+        {
+          "id": "AgentClock",
+          "anchor": "api-agentclock",
+          "name": "AgentClock",
+          "kind": "type",
+          "summary": "Live time and timezone context included with every model request. It does not replace business-service validation.",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signature": "interface AgentClock {\n  now?: () => Date;\n  viewerTimeZone?: string | (() => string);\n  businessTimeZone?: string | (() => string);\n}",
+          "parameters": [
+            {
+              "name": "now",
+              "type": "() => Date",
+              "required": false,
+              "defaultValue": "",
+              "description": "Returns a valid current instant. Re-read before each model request; defaults to the runtime clock. An invalid Date fails before the model request.",
+              "descriptionZh": "返回有效的当前时刻。每次模型请求前重新读取；默认使用运行环境的时钟。无效日期会阻止模型请求。"
+            },
+            {
+              "name": "viewerTimeZone",
+              "type": "string | (() => string)",
+              "required": false,
+              "defaultValue": "",
+              "description": "IANA timezone used to render the viewer's local time. Defaults to the runtime timezone; server runtimes should supply the authenticated user's timezone.",
+              "descriptionZh": "用于显示用户本地时间的 IANA 时区。默认使用运行环境时区；服务端应传入已认证用户的时区。"
+            },
+            {
+              "name": "businessTimeZone",
+              "type": "string | (() => string)",
+              "required": false,
+              "defaultValue": "",
+              "description": "IANA timezone used for business dates such as class schedules. Defaults to viewerTimeZone.",
+              "descriptionZh": "用于排课等业务日期的 IANA 时区。默认沿用 `viewerTimeZone`。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Configure the shop timezone",
+              "titleZh": "配置门店时区",
+              "code": "createPling({\n  agent: {\n    clock: {\n      businessTimeZone: \"Asia/Shanghai\",\n    },\n  },\n});",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "AgentClock"
+            }
+          ],
+          "reference": "/reference/agent-runtime-sessions-context-limits"
+        },
+        {
+          "id": "ContextOptions",
+          "anchor": "api-contextoptions",
+          "name": "ContextOptions",
+          "kind": "type",
+          "summary": "Bounds the page context sent to the model and optionally provides a per-request clock.",
+          "imports": [
+            "@plingjs/agent"
+          ],
+          "signature": "interface ContextOptions {\n  maxActions?: number;\n  maxRecords?: number;\n  includeState?: boolean;\n  maxIdsInHint?: number;\n  maxUnavailable?: number;\n  maxStateChars?: number;\n  maxRecordChars?: number;\n  maxScopes?: number;\n  maxFeedback?: number;\n  maxFeedbackChars?: number;\n  maxPageChars?: number;\n  clock?: AgentClock;\n}",
+          "parameters": [
+            {
+              "name": "maxActions",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Maximum actions rendered in the current page context.",
+              "descriptionZh": "当前页面上下文中最多列出的动作数。"
+            },
+            {
+              "name": "maxRecords",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Maximum record rows rendered in the current page context.",
+              "descriptionZh": "当前页面上下文中最多列出的记录行数。"
+            },
+            {
+              "name": "includeState",
+              "type": "boolean",
+              "required": false,
+              "defaultValue": "",
+              "description": "Whether read-only page state is included.",
+              "descriptionZh": "是否附带只读页面状态。"
+            },
+            {
+              "name": "maxUnavailable",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Maximum unavailable actions rendered in context.",
+              "descriptionZh": "上下文中最多列出的不可用动作数。"
+            },
+            {
+              "name": "clock",
+              "type": "AgentClock",
+              "required": false,
+              "defaultValue": "",
+              "description": "Live time and timezone context. When configured here, it is used for each model request.",
+              "descriptionZh": "每次模型请求使用的实时时间及时区上下文。"
+            }
+          ],
+          "definition": null,
+          "returns": null,
+          "defaults": [],
+          "examples": [
+            {
+              "title": "Provide a per-request clock",
+              "titleZh": "为每次请求提供时钟",
+              "code": "createAgentRuntime({\n  config,\n  registry,\n  context: {\n    clock: {\n      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,\n      businessTimeZone: \"Asia/Shanghai\",\n    },\n  },\n});",
+              "lang": "ts"
+            }
+          ],
+          "support": {
+            "vue3": "core",
+            "react": "core",
+            "vue2": "core",
+            "vanilla": "core"
+          },
+          "symbols": [
+            {
+              "package": "@plingjs/agent",
+              "name": "ContextOptions"
             }
           ],
           "reference": "/reference/agent-runtime-sessions-context-limits"
@@ -2139,7 +2293,7 @@
           "anchor": "api-inspectcoverage",
           "name": "inspectCoverage",
           "kind": "method",
-          "summary": "Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.",
+          "summary": "Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.",
           "imports": [
             "@plingjs/dom"
           ],
@@ -2158,8 +2312,8 @@
               "type": "number",
               "required": false,
               "defaultValue": "",
-              "description": "Recognized actionable controls in the root.",
-              "descriptionZh": "根元素内识别到的可操作控件总数。"
+              "description": "Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected.",
+              "descriptionZh": "识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。"
             },
             {
               "name": "return.declared",
@@ -2186,6 +2340,14 @@
               "descriptionZh": "由祖先声明覆盖的控件数。需要人工复核映射关系。"
             },
             {
+              "name": "return.locatable",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Controls registered for pointing and highlighting only; the user must operate them.",
+              "descriptionZh": "只登记了定位和高亮的控件数；仍由用户亲自操作。"
+            },
+            {
               "name": "return.missing",
               "type": "number",
               "required": false,
@@ -2198,16 +2360,16 @@
               "type": "number | null",
               "required": false,
               "defaultValue": "",
-              "description": "Covered controls divided by total; null when there are no controls.",
-              "descriptionZh": "覆盖控件数除以总数；没有控件时为 `null`。"
+              "description": "Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls.",
+              "descriptionZh": "有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。"
             },
             {
               "name": "return.targets",
               "type": "CoverageTarget[]",
               "required": false,
               "defaultValue": "",
-              "description": "Grouped and missing controls with labels and nearby action ids.",
-              "descriptionZh": "分组与缺失控件列表，包含标签和附近动作 id。"
+              "description": "Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids.",
+              "descriptionZh": "分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。"
             }
           ],
           "definition": null,
@@ -2224,7 +2386,7 @@
           "support": {
             "vue3": "native",
             "react": "native",
-            "vue2": "none",
+            "vue2": "native",
             "vanilla": "native"
           },
           "symbols": [
@@ -5783,8 +5945,8 @@
               "type": "ContextOptions",
               "required": false,
               "defaultValue": "",
-              "description": "Bounds for actions, records, state, scopes, feedback, and page identity in model context.",
-              "descriptionZh": "模型上下文中动作、记录、状态、区域、反馈与页面身份的有界设置。"
+              "description": "Bounds page context and may configure the live clock used before each model request.",
+              "descriptionZh": "设置页面上下文范围，也可配置每次模型请求前使用的实时时钟。"
             },
             {
               "name": "history",
@@ -6094,6 +6256,14 @@
               "defaultValue": "500",
               "description": "Character budget for page identity, default 500.",
               "descriptionZh": "页面身份段的字符预算，默认 500。"
+            },
+            {
+              "name": "options.clock",
+              "type": "AgentClock",
+              "required": false,
+              "defaultValue": "",
+              "description": "Adds the current instant and viewer/business local times to this page context.",
+              "descriptionZh": "在页面上下文中加入当前时刻、用户本地时间和业务本地时间。"
             }
           ],
           "definition": null,

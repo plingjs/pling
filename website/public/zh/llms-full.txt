@@ -9857,14 +9857,16 @@ const codeTargetRef = usePlingGuideTarget<HTMLInputElement>("verification_code")
 />
 ```
 
-这个输入框有了稳定的视觉指引目标，但不会进入动作清单。模型可以从接力说明中知道必须由人填写，却不能自己填入或点击。
+这个输入框会进入独立的只定位目标清单。助手可以用 `pling_locate` 指出它的位置，但不能通过这项声明填写或点击。
 
 两个方向要分清：
 
 - 智能体可以操作的元素，应声明成动作；
 - 只由人查看或操作的控件，可以是指引目标。
 
-`usePlingGuideTarget` 只改变展示，不产生权限、业务操作或工具 schema。
+`usePlingGuideTarget` 只开放定位能力，不开放执行能力。它不会产生权限或业务操作，也不会创建可执行工具。
+
+用户问验证码输入框在哪里时，助手会用 `targetId: "verification_code"` 调用 `pling_locate`。框架会在适配器支持时滚到输入框并高亮，不会代替用户输入验证码。
 
 ## 把人工步骤写进动作声明
 
@@ -19158,15 +19160,35 @@ Canonical: https://plingjs.dev/zh/reference/agent-runtime-sessions-context-limit
 
 注入 `llm` 后，确定性测试或自定义网关客户端不需要 `baseUrl` 与 `apiKey` 才能就绪。运行时仍会检查限额与重试参数。
 
+## 实时时间与时区
+
+每次模型请求都会收到当前时刻、用户本地时间和业务本地时间。默认使用运行环境的时钟与时区；在浏览器里，这通常是访问者设备的时区。服务端无法推断远端用户的时区，应从可信的用户资料或请求上下文传入。业务时区应来自门店、办公室或账户配置：
+
+```ts
+const pling = createPling({
+  agent: {
+    clock: {
+      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
+});
+```
+
+`now`、`viewerTimeZone` 和 `businessTimeZone` 都可以传函数。Pling 会在每次模型请求前重新读取，长会话不会一直沿用旧日期。`now` 默认返回 `new Date()`；确定性测试可以注入固定时刻。无效时钟或时区会在请求模型前报错，不会静默改用另一个日期。时间上下文帮助模型理解“下周二”等说法。业务服务仍须用可信时钟和时区计算日期，并在写入前重新校验。
+
 ## 内建的定位工具
 
-当前页面至少有一个动作时，运行时会在工具清单末尾加入 `pling_locate`。它只有 `actionId` 一个参数，只接受页面当前可见的动作 id。它不经过确认闸门，不调用动作的 `run`，也不会产生业务写入。
+当前页面存在可执行动作或只定位目标时，运行时会在工具清单末尾加入 `pling_locate`。必填参数 `targetId` 必须精确匹配当前动作清单或只定位目标清单中的 id。为兼容旧客户端，运行时仍接受 `actionId`。定位不经过确认闸门，不调用动作的 `run`，也不会写入业务数据。
 
 | 参数 | 类型 | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `actionId` | `string` | 是 | 当前动作清单中的准确 id |
+| `targetId` | `string` | 是 | 当前动作或只定位目标清单中的准确 id |
+| `actionId` | `string` | 否 | 运行时仍接受的旧参数，仅用于动作 id |
 
-调用后，执行器会把目标滚进视口，并以 `locate` 状态高亮。定位高亮默认保持 6 秒，可通过创建执行器时的 `locateDurationMs` 调整；设为 `0` 时保持到下一次动作或页面卸载。动作 id 不存在，或动作没有 DOM 目标时，返回 `ACTION_NOT_FOUND` 或 `ACTION_UNAVAILABLE`。
+适配器支持时，执行器会先把视口外的目标滚进来，再以 `locate` 状态高亮。定位高亮默认保持 6 秒，可通过创建执行器时的 `locateDurationMs` 调整；设为 `0` 时保持到下一次动作或页面卸载。id 不存在或目标没有 DOM 元素时，分别返回 `ACTION_NOT_FOUND` 或 `ACTION_UNAVAILABLE`。
+
+文件选择器、验证码输入框、未登记成动作的导航入口等由用户亲自操作的控件，可以声明为只定位目标。目标会进入模型上下文，但不会进入可执行动作清单。允许 agent 操作的控件则应声明为动作。
 
 页面不需要额外声明定位动作。开发者动作如果占用了 `pling_locate` 这个名字，协议层会把它改成 `pling_locate_2`，内建工具仍保留原名。
 
@@ -20116,7 +20138,7 @@ createApp(App).use(pling.plugin).mount("#app");
 | `v-record` | 行数据或完整记录对象 | 声明一行记录 |
 | `v-task` | 字符串或 `{ prompt, surface?, disabled? }` | 人的任务入口；不是 agent 动作 |
 | `v-feedback` | 字符串、数组或反馈对象 | 让模型看到页面反馈 |
-| `v-guide-target` | `{ id, label?, description? }` | 人工接力时高亮非动作目标 |
+| `v-guide-target` | `{ id, label?, description? }` | 把不可执行目标加入助手的定位清单 |
 
 ```vue
 <template>
@@ -20470,7 +20492,7 @@ legacy 入口通过 render-prop 组件提供页面反馈、分步指引和任务
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/react` `0.1.0-alpha.9` |
+| 适用版本 | `@plingjs/react` `0.1.0-alpha.10` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | Hooks 入口要求 React 16.8+，legacy 入口支持 React 16.3+；浏览器需支持 ES2022 模块；SSR 与构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | `react >=16.3` |
@@ -20522,7 +20544,7 @@ const dock = pling.dock({
 | `state(key, source, options?)` | 解绑函数 | 注册只读视图 |
 | `declareFeedback(element, value)` | 解绑函数 | 声明页面反馈 |
 | `declareTask(element, value)` | 解绑函数 | 声明面向人的任务入口，不注册动作 |
-| `guideTarget(element, id)` | 解绑函数 | 标记人工接力的指引目标 |
+| `guideTarget(element, id, metadata?)` | 解绑函数 | 把不可执行元素加入助手的定位清单 |
 | `setActiveScopes(ids)` | — | 观察器无法推断布局时手动激活 |
 | `dock(options?)` | `VanillaDock` | 挂载共享助手 |
 | `surfaceGateway(options)` | `VanillaSurfaceGateway` | 把允许的能力开放给外部 Agent |
@@ -20640,7 +20662,7 @@ pling.declareTask(document.querySelector("#ask-assistant")!, {
 });
 ```
 
-`declareTask()` 只把一句话交给已挂载的助手，因此不会出现在动作清单里。`guideTarget()` 则只标记用户在人工接力时需要看的位置，同样不会生成动作。
+`declareTask()` 只把一句话交给已挂载的助手，因此不会出现在动作清单里。`guideTarget()` 会把不可执行目标加入定位清单。助手可以用 `pling_locate` 把它显示出来，但不能通过这项声明触发它。
 
 ## 助手、模型设置与调试
 
@@ -20730,7 +20752,7 @@ $("#add").on("click", addTask);
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.9` |
+| 适用版本 | `@plingjs/vanilla` `0.1.0-alpha.10` |
 | 引入版本 | `0.1.0-alpha.2`（首个发布的 alpha） |
 | 运行环境 | 支持 ES2022 模块的浏览器；构建需 Node.js 20 或更高版本 |
 | Peer 依赖 | 无；jQuery 为可选项 |
@@ -20877,7 +20899,7 @@ Dock 是共享的原生界面。它支持与其他适配器一致的会话、确
 | `confirm` / `handoff` | 通过工具选项支持 |
 | `derive` | 通过 vanilla 选项支持 |
 | `v-feedback` | 缺失 |
-| `v-guide-target` | 缺失 |
+| `v-guide-target` | 支持，只登记可定位目标 |
 | `v-task` | 缺失 |
 | 复合 `steps` | 缺失 |
 | 模型设置界面 | 缺失 |
@@ -20892,7 +20914,7 @@ Dock 是共享的原生界面。它支持与其他适配器一致的会话、确
 - `@plingjs/vue2` 的最低版本是 Vue 2.7；能升级时先升级 2.6，不能升级时使用 Vanilla 手动接入。
 - 插件必须在根组件创建前安装一次。
 - 依赖组件生命周期的状态与工具应写在 `setup()` 里，不要放在脱离组件的辅助函数中。
-- `v-feedback`、分步指引、任务入口与复合流程需要迁移到 Vue 3，或在 Vue 2 新增实现。
+- `v-guide-target` 已支持只定位目标。`v-feedback`、任务入口与复合流程仍需迁移到 Vue 3，或单独为 Vue 2 实现。
 - 适配器复用原生 Dock，样式通过共享 `ui` 选项控制，没有 Vue 3 的组件插槽。
 
 ## 常见失败
@@ -22147,9 +22169,9 @@ Surface 任务解释能力之间怎样配合。它不授予能力、不扩大会
 
 | 项目 | 取值 |
 | --- | --- |
-| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.9` |
+| 适用版本 | `@plingjs/agent`、`@plingjs/vanilla`、`@plingjs/surface` `0.1.0-alpha.10` |
 | 引入版本 | `0.1.0-alpha.6` |
-| `goal()` 引入版本 | `0.1.0-alpha.9`（待发布） |
+| `goal()` 引入版本 | `0.1.0-alpha.9` |
 | 运行环境 | 支持 ES2022 模块的浏览器；任务控制器在 Node.js 20 或更高版本可用 |
 | Peer 依赖 | 无 |
 | 稳定性 | 实验性；快照可能增加字段，但不会改变已有字段的含义 |
@@ -22866,7 +22888,7 @@ Canonical: https://plingjs.dev/zh/examples/
 
 ## 经典案例与对照示例
 
-前六个案例分别覆盖最小接入、真实业务工作台、Vue 3 单页内跨路由操作、整页导航后的任务连续性、向页面之外的 Agent 开放能力，以及用引导任务完成一次真实创建流程。第七个案例用 `v-scope`、`v-record`、`v-tool` 重做同一条创建流程，方便并排比较取舍。
+前六个案例分别覆盖最小接入、业务工作台、Vue 3 单页内跨路由操作、整页导航后的任务连续性、向页面之外的 Agent 开放能力，以及用引导任务完成一次创建流程。第七个案例是同一条课程流程的纯指令对照；第八个案例模拟更完整的商家后台，展示学员、课程、老师、会员卡与排课流程中的可见结果。
 
 <DemoGallery />
 
@@ -22921,6 +22943,7 @@ Canonical: https://plingjs.dev/zh/recipes/
 - [案例05：暴露能力给外部](/zh/examples/external-agent-surface)把具名能力暴露给页面之外的 Agent。
 - [案例06：持久目标创建课程](/zh/examples/course-workspace-vue3)在同一张课程页面上加一个目标。助手自己打开真实弹窗、操作真实控件、请用户上传封面，保存并回读课程库。
 - [案例07：只用指令创建课程](/zh/examples/course-create-directives-vue3)用 `v-scope`、`v-record`、`v-tool` 完成同样的创建流程，不引入任务层。适合一张稳定的单页表单。
+- [案例08：冰草商家工作台](/zh/examples/bingcao-merchant-workflows-vue3)对比普通业务页面与 Pling 接入后的学员查询、课程创建、排课预览和控件定位。
 
 每个案例页都提供可操作预览、带标记的源码与接入说明。模型请求通过服务端网关发出，浏览器不持有供应商密钥。
 
@@ -23320,7 +23343,7 @@ Canonical: https://plingjs.dev/zh/reference/api/
 
 参数表是这里的重点。遇到某个选项时，先查它在当前框架页中的类型、必填性、默认值与适用场景；需要字段级语义或错误码时，再进入对应参考页。
 
-共 **5** 个 API 页面，覆盖 **10** 类能力；当前版本 `0.1.0-alpha.9`，稳定性为 **preview**。
+共 **5** 个 API 页面，覆盖 **10** 类能力；当前版本 `0.1.0-alpha.10`，稳定性为 **preview**。
 
 ## 按框架查阅
 
@@ -23328,12 +23351,12 @@ Canonical: https://plingjs.dev/zh/reference/api/
 | --- | --- | --- | --- |
 | **Vue 3 API** | `@plingjs/vue` | 81 | [打开](/zh/reference/api/vue-3) |
 | **React API** | `@plingjs/react` | 77 | [打开](/zh/reference/api/react) |
-| **Vue 2.7 API** | `@plingjs/vue2` | 60 | [打开](/zh/reference/api/vue-2) |
+| **Vue 2.7 API** | `@plingjs/vue2` | 62 | [打开](/zh/reference/api/vue-2) |
 | **原生 JS API** | `@plingjs/vanilla` | 80 | [打开](/zh/reference/api/vanilla) |
 
 ## 共享包 API
 
-运行时、页面连续性、测试与诊断 API 共用一套实现，共 **71** 个条目。
+运行时、页面连续性、测试与诊断 API 共用一套实现，共 **73** 个条目。
 
 [打开共享包 API](/zh/reference/api/shared)
 
@@ -23341,10 +23364,10 @@ Canonical: https://plingjs.dev/zh/reference/api/
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -23381,9 +23404,9 @@ Vue 3 的完整 API：应用初始化、指令、组合式函数、组件，以�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.9` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.10` |
 
-当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.10`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -23985,7 +24008,7 @@ pling.ask(prompt: string, options?: PlingAskOptions): Promise<void>
 
 ### `引导目标`
 
-人工接力时高亮一个并非动作的目标元素。
+登记只定位目标，助手可以指出位置，但不能通过该目标执行操作。
 
 **导入**
 
@@ -23995,19 +24018,21 @@ pling.ask(prompt: string, options?: PlingAskOptions): Promise<void>
 
 ```ts
 // Vue 3
-v-guide-target="string"
+v-guide-target="string | { id: string; label?: string; description?: string }"
 ```
 
 **参数与选项**
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
-| `id` | `string` | 是 | — | 被 `HandoffStep.highlight` 引用的引导目标 id。 |
+| `value` | `string \| { id: string; label?: string; description?: string }` | 是 | — | 把元素登记为只定位目标。省略 `label` 时，Vue 会尝试读取元素的无障碍名称。 |
 
-**示例 1 · 高亮人工接力目标**
+**示例 1 · 登记只定位控件**
 
 ```ts
-<input v-guide-target="'captcha'" />
+<button v-guide-target="{ id: 'teachers.add', label: '新增老师', description: '打开老师档案表单' }">新增老师</button>
+
+<!-- The assistant can locate this button, but cannot click it through the guide target. -->
 ```
 
 **精确契约**
@@ -24319,6 +24344,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | 否 | — | 模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。 |
+| `context` | `ContextOptions` | 否 | — | 设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。 |
 | `llm` | `Llm` | 否 | — | 注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。 |
 | `telemetry` | `Telemetry` | 否 | — | 收集当前运行时的 token、耗时、成本与重试指标。 |
@@ -25443,7 +25470,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。
+把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。
 
 **导入**
 
@@ -25461,13 +25488,14 @@ pling.inspectCoverage(): CoverageReport
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | 否 | — | 要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。 |
-| `return.total` | `number` | 否 | — | 根元素内识别到的可操作控件总数。 |
+| `return.total` | `number` | 否 | — | 识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。 |
 | `return.declared` | `number` | 否 | — | 有直接声明的控件数。 |
 | `return.derived` | `number` | 否 | — | 由可选 L1 派生生成的动作数。 |
 | `return.grouped` | `number` | 否 | — | 由祖先声明覆盖的控件数。需要人工复核映射关系。 |
+| `return.locatable` | `number` | 否 | — | 只登记了定位和高亮的控件数；仍由用户亲自操作。 |
 | `return.missing` | `number` | 否 | — | 祖先链上没有任何声明的可操作控件数。 |
-| `return.coveragePercent` | `number \| null` | 否 | — | 覆盖控件数除以总数；没有控件时为 `null`。 |
-| `return.targets` | `CoverageTarget[]` | 否 | — | 分组与缺失控件列表，包含标签和附近动作 id。 |
+| `return.coveragePercent` | `number \| null` | 否 | — | 有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。 |
+| `return.targets` | `CoverageTarget[]` | 否 | — | 分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。 |
 
 **示例 1 · 检查 Vue 覆盖率**
 
@@ -27595,10 +27623,10 @@ interface GuideActionItem {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -27624,11 +27652,11 @@ React Hooks 的完整 API：Provider、声明 Hook、组件，以及它们使用
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.9` |
+| `@plingjs/react` | react >=16.3 | `0.1.0-alpha.10` |
 
 本页的 Hooks API 要求 React 16.8+。React 16.3–16.7 使用 `@plingjs/react/legacy`，这是一套 class/render-prop 入口，详见 [React 适配器参考](/zh/reference/react-adapter#react-163-167-legacy-entry)。
 
-当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.10`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -28273,7 +28301,7 @@ await pling.ask("整理今天的待办并标出最紧急的一项", { surface: "
 
 ### `引导目标`
 
-人工接力时高亮一个并非动作的目标元素。
+登记只定位目标，助手可以指出位置，但不能通过该目标执行操作。
 
 **导入**
 
@@ -28283,21 +28311,24 @@ await pling.ask("整理今天的待办并标出最紧急的一项", { surface: "
 
 ```ts
 // React
-usePlingGuideTarget<T extends Element = HTMLElement>(id: string): RefCallback<T>
+usePlingGuideTarget<T extends Element = HTMLElement>(id: string, metadata?: { label?: string; description?: string }): RefCallback<T>
 ```
 
 **参数与选项**
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
-| `id` | `string` | 是 | — | 被 `HandoffStep.highlight` 引用的引导目标 id。 |
+| `metadata` | `{ label?: string; description?: string }` | 否 | — | 可选的目标名称与说明。目标 id 单独传入。 |
 
-**示例 1 · 高亮人工接力目标**
+**示例 1 · 登记只定位控件**
 
 ```tsx
-const captchaRef = usePlingGuideTarget<HTMLInputElement>("captcha");
+const addTeacherRef = usePlingGuideTarget<HTMLButtonElement>("teachers.add", {
+  label: "新增老师",
+  description: "打开老师档案表单",
+});
 
-return <input ref={captchaRef} />;
+return <button ref={addTeacherRef}>新增老师</button>;
 ```
 
 **精确契约**
@@ -28604,6 +28635,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | 否 | — | 模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。 |
+| `context` | `ContextOptions` | 否 | — | 设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。 |
 | `llm` | `Llm` | 否 | — | 注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。 |
 | `telemetry` | `Telemetry` | 否 | — | 收集当前运行时的 token、耗时、成本与重试指标。 |
@@ -29459,7 +29492,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。
+把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。
 
 **导入**
 
@@ -29477,13 +29510,14 @@ pling.inspectCoverage(root?: Element | null): CoverageReport
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | 否 | — | 要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。 |
-| `return.total` | `number` | 否 | — | 根元素内识别到的可操作控件总数。 |
+| `return.total` | `number` | 否 | — | 识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。 |
 | `return.declared` | `number` | 否 | — | 有直接声明的控件数。 |
 | `return.derived` | `number` | 否 | — | 由可选 L1 派生生成的动作数。 |
 | `return.grouped` | `number` | 否 | — | 由祖先声明覆盖的控件数。需要人工复核映射关系。 |
+| `return.locatable` | `number` | 否 | — | 只登记了定位和高亮的控件数；仍由用户亲自操作。 |
 | `return.missing` | `number` | 否 | — | 祖先链上没有任何声明的可操作控件数。 |
-| `return.coveragePercent` | `number \| null` | 否 | — | 覆盖控件数除以总数；没有控件时为 `null`。 |
-| `return.targets` | `CoverageTarget[]` | 否 | — | 分组与缺失控件列表，包含标签和附近动作 id。 |
+| `return.coveragePercent` | `number \| null` | 否 | — | 有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。 |
+| `return.targets` | `CoverageTarget[]` | 否 | — | 分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。 |
 
 **示例 1 · 检查 React 覆盖率**
 
@@ -31599,10 +31633,10 @@ card.current?.open("lesson.note", {}, {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -31628,9 +31662,9 @@ Vue 2.7 适配器沿用 DOM 运行时，提供指令与共享的 DOM 问答入�
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.9` |
+| `@plingjs/vue2` | vue ^2.7.0 | `0.1.0-alpha.10` |
 
-当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.10`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -31885,6 +31919,7 @@ beforeDestroy() {
 | [记录](#api-record) | 声明 | [参考](/zh/reference/core-declarations-actions-records-regions-state) |
 | [只读状态](#api-state) | 声明 | [参考](/zh/reference/core-declarations-actions-records-regions-state) |
 | [Store 状态](#api-store-state) | 声明 | [参考](/zh/reference/vue-2-adapter) |
+| [引导目标](#api-guide-target) | 声明 | [参考](/zh/reference/vue-2-adapter) |
 | [sensitive](#api-sensitive) | 函数 | [参考](/zh/reference/core-declarations-actions-records-regions-state) |
 
 <a id="api-element-action"></a>
@@ -32094,6 +32129,40 @@ useAgentStoreState<S extends object>(key: string, store: S, read: AgentStoreRead
 ```ts
 const cart = this.$store.state.cart;
 useAgentStoreState("cart", cart, ["count", "total"], "购物车件数与小计");
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/vue-2-adapter)
+
+
+<a id="api-guide-target"></a>
+
+### `引导目标`
+
+登记只定位目标，助手可以指出位置，但不能通过该目标执行操作。
+
+**导入**
+
+`@plingjs/vue2`
+
+**调用方式**
+
+```ts
+// Vue 2.7
+v-guide-target="string | { id: string; label?: string; description?: string }"
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `value` | `string \| { id: string; label?: string; description?: string }` | 是 | — | 把元素登记为只定位目标。省略 `label` 时，Vue 2 会尝试读取元素的无障碍名称。 |
+
+**示例 1 · 登记只定位控件**
+
+```ts
+<button v-guide-target="{ id: 'teachers.add', label: '新增老师' }">新增老师</button>
 ```
 
 **精确契约**
@@ -32399,6 +32468,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | 否 | — | 模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。 |
+| `context` | `ContextOptions` | 否 | — | 设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。 |
 | `llm` | `Llm` | 否 | — | 注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。 |
 | `telemetry` | `Telemetry` | 否 | — | 收集当前运行时的 token、耗时、成本与重试指标。 |
@@ -32823,6 +32894,56 @@ const dock = pling.dock({
 dock.open();
 // On teardown:
 dock.destroy();
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/vue-2-adapter)
+
+
+## 页面身份与连续性
+
+读取页面身份、在同源框架间共享运行时，并检查声明覆盖率。
+
+| API | 类型 | 参考 |
+| --- | --- | --- |
+| [inspectCoverage](#api-inspectcoverage) | 方法 | [参考](/zh/reference/vue-2-adapter) |
+
+<a id="api-inspectcoverage"></a>
+
+### `inspectCoverage`
+
+把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。
+
+**导入**
+
+`@plingjs/dom` · `@plingjs/vue2`
+
+**调用方式**
+
+```ts
+// Vue 2.7
+pling.inspectCoverage(root?: Element | null): CoverageReport
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `root` | `Element \| null` | 否 | — | 要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。 |
+| `return.total` | `number` | 否 | — | 识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。 |
+| `return.declared` | `number` | 否 | — | 有直接声明的控件数。 |
+| `return.derived` | `number` | 否 | — | 由可选 L1 派生生成的动作数。 |
+| `return.grouped` | `number` | 否 | — | 由祖先声明覆盖的控件数。需要人工复核映射关系。 |
+| `return.locatable` | `number` | 否 | — | 只登记了定位和高亮的控件数；仍由用户亲自操作。 |
+| `return.missing` | `number` | 否 | — | 祖先链上没有任何声明的可操作控件数。 |
+| `return.coveragePercent` | `number \| null` | 否 | — | 有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。 |
+| `return.targets` | `CoverageTarget[]` | 否 | — | 分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。 |
+
+**示例 1 · 检查 DOM 根元素**
+
+```ts
+const report = inspectCoverage(document.querySelector("#app"));
 ```
 
 **精确契约**
@@ -34794,10 +34915,10 @@ interface GuideActionItem {
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -34823,9 +34944,9 @@ Canonical: https://plingjs.dev/zh/reference/api/vanilla
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/vanilla` | — | `0.1.0-alpha.9` |
+| `@plingjs/vanilla` | — | `0.1.0-alpha.10` |
 
-当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.10`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -34960,7 +35081,7 @@ interface VanillaPling extends VanillaHost {
   state(key: string, source: StateSource, options?: StateOptions | string): () => void;
   declareFeedback(element: Element, value: FeedbackValue | readonly FeedbackValue[]): () => void;
   declareTask(element: HTMLElement, value: TaskValue): () => void;
-  guideTarget(element: Element, id: string): () => void;
+  guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void;
   setActiveScopes(scopes: Iterable<string>): void;
   dock(options?: VanillaDockOptions): VanillaDock;
   surfaceGateway(options: VanillaSurfaceGatewayOptions): VanillaSurfaceGateway;
@@ -35340,7 +35461,7 @@ pling.declareTask(document.querySelector("#ask"), {
 
 ### `引导目标`
 
-人工接力时高亮一个并非动作的目标元素。
+登记只定位目标，助手可以指出位置，但不能通过该目标执行操作。
 
 **导入**
 
@@ -35350,20 +35471,26 @@ pling.declareTask(document.querySelector("#ask"), {
 
 ```ts
 // Vanilla JS
-pling.guideTarget(element: Element, id: string): () => void
+pling.guideTarget(element: Element, id: string, metadata?: { label?: string; description?: string }): () => void
 ```
 
 **参数与选项**
 
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
-| `element` | `Element` | 是 | — | 人工接力步骤中要高亮的元素。 |
-| `id` | `string` | 是 | — | 被 `HandoffStep.highlight` 引用的引导目标 id。 |
+| `element` | `Element` | 是 | — | 要指给用户看的元素。注销目标前，元素应保持挂载。 |
+| `metadata` | `{ label?: string; description?: string }` | 否 | — | 可选的人类可读名称与用途说明。 |
 
-**示例 1 · 高亮人工接力目标**
+**示例 1 · 登记只定位控件**
 
 ```ts
-pling.guideTarget(document.querySelector("#captcha"), "captcha");
+const removeTarget = pling.guideTarget(addTeacherButton, "teachers.add", {
+  label: "新增老师",
+  description: "打开老师档案表单",
+});
+
+// When the button is removed:
+removeTarget();
 ```
 
 **精确契约**
@@ -35670,6 +35797,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | 否 | — | 模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。 |
+| `context` | `ContextOptions` | 否 | — | 设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。 |
 | `llm` | `Llm` | 否 | — | 注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。 |
 | `telemetry` | `Telemetry` | 否 | — | 收集当前运行时的 token、耗时、成本与重试指标。 |
@@ -36571,7 +36700,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。
+把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。
 
 **导入**
 
@@ -36589,13 +36718,14 @@ pling.inspectCoverage(root?: Element | null): CoverageReport
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | 否 | — | 要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。 |
-| `return.total` | `number` | 否 | — | 根元素内识别到的可操作控件总数。 |
+| `return.total` | `number` | 否 | — | 识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。 |
 | `return.declared` | `number` | 否 | — | 有直接声明的控件数。 |
 | `return.derived` | `number` | 否 | — | 由可选 L1 派生生成的动作数。 |
 | `return.grouped` | `number` | 否 | — | 由祖先声明覆盖的控件数。需要人工复核映射关系。 |
+| `return.locatable` | `number` | 否 | — | 只登记了定位和高亮的控件数；仍由用户亲自操作。 |
 | `return.missing` | `number` | 否 | — | 祖先链上没有任何声明的可操作控件数。 |
-| `return.coveragePercent` | `number \| null` | 否 | — | 覆盖控件数除以总数；没有控件时为 `null`。 |
-| `return.targets` | `CoverageTarget[]` | 否 | — | 分组与缺失控件列表，包含标签和附近动作 id。 |
+| `return.coveragePercent` | `number \| null` | 否 | — | 有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。 |
+| `return.targets` | `CoverageTarget[]` | 否 | — | 分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。 |
 
 **示例 1 · 检查原生页面覆盖率**
 
@@ -39019,10 +39149,10 @@ panel.destroy();
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |
@@ -39048,9 +39178,9 @@ Canonical: https://plingjs.dev/zh/reference/api/shared
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.9` |
+| `@plingjs/core` | — | `0.1.0-alpha.10` |
 
-当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.10`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -39494,6 +39624,8 @@ const ui = {
 | API | 类型 | 参考 |
 | --- | --- | --- |
 | [AgentRuntimeOptions](#api-agentruntimeoptions) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
+| [AgentClock](#api-agentclock) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
+| [ContextOptions](#api-contextoptions) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
 | [AgentConfigOverrides](#api-agentconfigoverrides) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
 | [HookRegistry](#api-hookregistry) | 类 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
 | [SessionEvent](#api-sessionevent) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
@@ -39518,6 +39650,9 @@ AgentSetup 背后的运行时契约：配置、注册表、模型、事件、钩
 interface AgentRuntimeOptions {
   config: AgentConfig;
   registry?: Registry;
+  taskCatalog?: TaskCatalog;
+  context?: ContextOptions;
+  clock?: AgentClock;
   llm?: Llm;
   responseLocale?: string | (() => string);
   telemetry?: Telemetry;
@@ -39544,6 +39679,8 @@ interface AgentRuntimeOptions {
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfig` | 是 | — | 已经解析完成的模型与运行时配置。 |
 | `registry` | `Registry` | 否 | — | 页面能力注册表。纯聊天运行时可省略。 |
+| `context` | `ContextOptions` | 否 | — | 设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。 |
 | `llm` | `Llm` | 否 | — | 注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。 |
 | `telemetry` | `Telemetry` | 否 | — | 收集当前运行时的 token、耗时、成本与重试指标。 |
@@ -39570,6 +39707,112 @@ const runtime = createAgentRuntime({
   registry: pling.registry,
   hooks,
   trace: true,
+});
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/agent-runtime-sessions-context-limits)
+
+
+<a id="api-agentclock"></a>
+
+### `AgentClock`
+
+每次模型请求附带的实时时间及时区上下文，不替代业务服务校验。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// 共享包
+interface AgentClock {
+  now?: () => Date;
+  viewerTimeZone?: string | (() => string);
+  businessTimeZone?: string | (() => string);
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `now` | `() => Date` | 否 | — | 返回有效的当前时刻。每次模型请求前重新读取；默认使用运行环境的时钟。无效日期会阻止模型请求。 |
+| `viewerTimeZone` | `string \| (() => string)` | 否 | — | 用于显示用户本地时间的 IANA 时区。默认使用运行环境时区；服务端应传入已认证用户的时区。 |
+| `businessTimeZone` | `string \| (() => string)` | 否 | — | 用于排课等业务日期的 IANA 时区。默认沿用 `viewerTimeZone`。 |
+
+**示例 1 · 配置门店时区**
+
+```ts
+createPling({
+  agent: {
+    clock: {
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
+});
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/agent-runtime-sessions-context-limits)
+
+
+<a id="api-contextoptions"></a>
+
+### `ContextOptions`
+
+设置发给模型的页面上下文范围，也可配置每轮请求使用的时钟。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// 共享包
+interface ContextOptions {
+  maxActions?: number;
+  maxRecords?: number;
+  includeState?: boolean;
+  maxIdsInHint?: number;
+  maxUnavailable?: number;
+  maxStateChars?: number;
+  maxRecordChars?: number;
+  maxScopes?: number;
+  maxFeedback?: number;
+  maxFeedbackChars?: number;
+  maxPageChars?: number;
+  clock?: AgentClock;
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `maxActions` | `number` | 否 | — | 当前页面上下文中最多列出的动作数。 |
+| `maxRecords` | `number` | 否 | — | 当前页面上下文中最多列出的记录行数。 |
+| `includeState` | `boolean` | 否 | — | 是否附带只读页面状态。 |
+| `maxUnavailable` | `number` | 否 | — | 上下文中最多列出的不可用动作数。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求使用的实时时间及时区上下文。 |
+
+**示例 1 · 为每次请求提供时钟**
+
+```ts
+createAgentRuntime({
+  config,
+  registry,
+  context: {
+    clock: {
+      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
 });
 ```
 
@@ -40219,7 +40462,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。
+把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。
 
 **导入**
 
@@ -40237,13 +40480,14 @@ inspectCoverage(root: Element | null): CoverageReport
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | 否 | — | 要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。 |
-| `return.total` | `number` | 否 | — | 根元素内识别到的可操作控件总数。 |
+| `return.total` | `number` | 否 | — | 识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。 |
 | `return.declared` | `number` | 否 | — | 有直接声明的控件数。 |
 | `return.derived` | `number` | 否 | — | 由可选 L1 派生生成的动作数。 |
 | `return.grouped` | `number` | 否 | — | 由祖先声明覆盖的控件数。需要人工复核映射关系。 |
+| `return.locatable` | `number` | 否 | — | 只登记了定位和高亮的控件数；仍由用户亲自操作。 |
 | `return.missing` | `number` | 否 | — | 祖先链上没有任何声明的可操作控件数。 |
-| `return.coveragePercent` | `number \| null` | 否 | — | 覆盖控件数除以总数；没有控件时为 `null`。 |
-| `return.targets` | `CoverageTarget[]` | 否 | — | 分组与缺失控件列表，包含标签和附近动作 id。 |
+| `return.coveragePercent` | `number \| null` | 否 | — | 有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。 |
+| `return.targets` | `CoverageTarget[]` | 否 | — | 分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。 |
 
 **示例 1 · 检查 DOM 根元素**
 
@@ -42433,7 +42677,7 @@ createAgentLoop(options: LoopOptions): AgentLoop
 | `handoff` | `HandoffGate` | 否 | — | 人工接力通道。省略时人工接力工具会失败，而不是被模拟执行。 |
 | `systemPrompt` | `string` | 否 | — | 附加系统说明。框架规则仍然有效。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 回答语言提示；传函数时每轮重新读取。 |
-| `context` | `ContextOptions` | 否 | — | 模型上下文中动作、记录、状态、区域、反馈与页面身份的有界设置。 |
+| `context` | `ContextOptions` | 否 | — | 设置页面上下文范围，也可配置每次模型请求前使用的实时时钟。 |
 | `history` | `HistoryOptions` | 否 | — | 上下文预算、压缩水位、最近条目保留数与工具结果上限。 |
 | `historyState` | `HistorySnapshot` | 否 | — | 从检查点恢复摘要与消息；系统上下文会按当前页面重建。 |
 | `hooks` | `HookRegistry` | 否 | — | 工具生命周期钩子。 |
@@ -42534,6 +42778,7 @@ renderPageContext(snapshot: Snapshot, options?: ContextOptions): string
 | `options.maxFeedback` | `number` | 否 | `8` | 最多列出的反馈条目数，默认 8。 |
 | `options.maxFeedbackChars` | `number` | 否 | `800` | 反馈段的字符预算，默认 800。 |
 | `options.maxPageChars` | `number` | 否 | `500` | 页面身份段的字符预算，默认 500。 |
+| `options.clock` | `AgentClock` | 否 | — | 在页面上下文中加入当前时刻、用户本地时间和业务本地时间。 |
 
 **示例 1 · 渲染更小的上下文**
 
@@ -42786,10 +43031,10 @@ const config = resolveAgentConfig({
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |

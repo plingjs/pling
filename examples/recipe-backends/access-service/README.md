@@ -14,13 +14,6 @@ delegations, approvals, audit events, and uploaded file metadata.
 It listens on `127.0.0.1:5193` and exposes `/api/recipe/*` through the examples
 site's Vite proxy.
 
-For the hosted examples, run the service on the demo host behind the same-origin
-`/api/recipe/` reverse proxy. Set `RECIPE_API_HOST=0.0.0.0` inside its container
-and `RECIPE_COOKIE_SECURE=true`; the browser then receives the session cookie
-with the `Secure` attribute over HTTPS. Keep the service port bound to loopback
-on the host. The hosted fixture is intentionally in-memory and is reset when
-the service restarts.
-
 ## Run
 
 From the repository root:

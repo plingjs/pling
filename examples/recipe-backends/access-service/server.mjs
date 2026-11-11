@@ -11,8 +11,6 @@ import { createServer } from "node:http";
 
 const port = Number(process.env.RECIPE_API_PORT ?? 5193);
 const host = process.env.RECIPE_API_HOST?.trim() || "127.0.0.1";
-const secureCookies = process.env.RECIPE_COOKIE_SECURE === "true";
-const cookieSecureAttribute = secureCookies ? "; Secure" : "";
 const allowedOrigins = new Set([
   "http://127.0.0.1:5190",
   "http://localhost:5190",
@@ -231,7 +229,7 @@ const server = createServer(async (req, res) => {
         res,
         200,
         { user: { id: user.id, email: user.email, name: user.name }, expiresAt: session.expiresAt },
-        { "set-cookie": `recipe_session=${encodeURIComponent(sessionId)}; HttpOnly; SameSite=Lax; Path=/api/recipe; Max-Age=1800${cookieSecureAttribute}` },
+        { "set-cookie": `recipe_session=${encodeURIComponent(sessionId)}; HttpOnly; SameSite=Lax; Path=/api/recipe; Max-Age=1800` },
       );
       return;
     }
@@ -261,7 +259,7 @@ const server = createServer(async (req, res) => {
       if (!current) return;
       sessions.delete(current.session.id);
       auditEvent("session.logged_out", { actor: current.user.id, sessionId: current.session.id });
-      json(res, 200, { signedOut: true }, { "set-cookie": `recipe_session=; HttpOnly; SameSite=Lax; Path=/api/recipe; Max-Age=0${cookieSecureAttribute}` });
+      json(res, 200, { signedOut: true }, { "set-cookie": "recipe_session=; HttpOnly; SameSite=Lax; Path=/api/recipe; Max-Age=0" });
       return;
     }
 

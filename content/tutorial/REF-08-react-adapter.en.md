@@ -106,7 +106,7 @@ class App extends React.Component {
 ReactDOM.render(<App />, document.getElementById("root"));
 ```
 
-The legacy entry uses render props instead of Hooks. `PlingTool`, `PlingScope`, `PlingRecord`, `PlingFeedback`, `PlingTask`, and `PlingGuideTarget` pass a ref callback as their only child. `PlingState` and `PlingAction` render nothing and register themselves on mount. `AgentDock` and `AgentInline` mount the shared DOM assistant; a ref to `AgentDock` exposes `open()`, `close()`, `toggle()`, `isOpen()`, and `destroy()`.
+The legacy entry uses render props instead of Hooks. `PlingTool`, `PlingScope`, `PlingRecord`, `PlingFeedback`, `PlingTask`, and `PlingGuideTarget` pass a ref callback as their only child. `PlingGuideTarget` registers a locate-only element; the assistant may highlight it but cannot execute it. `PlingState` and `PlingAction` render nothing and register themselves on mount. `AgentDock` and `AgentInline` mount the shared DOM assistant; a ref to `AgentDock` exposes `open()`, `close()`, `toggle()`, `isOpen()`, and `destroy()`.
 
 The build uses the classic JSX transform and does not import `react/jsx-runtime`, so `react@16.3.0` is enough. The legacy assistant is the shared DOM dock, not a second React implementation; its Activity panel and optional debug/model settings therefore match the Vanilla adapter.
 
@@ -217,7 +217,7 @@ The legacy entry exposes feedback, guide targets, and task entrances through its
 
 | Item | Value |
 | --- | --- |
-| Applies to | `@plingjs/react` `0.1.0-alpha.9` |
+| Applies to | `@plingjs/react` `0.1.0-alpha.10` |
 | Introduced | `0.1.0-alpha.2` (first published alpha) |
 | Runtime | React 16.8+ for the Hooks entry; React 16.3+ for the legacy entry; browsers with ES2022 modules; Node.js 20 or later for SSR and builds |
 | Peer dependencies | `react >=16.3` |

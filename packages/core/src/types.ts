@@ -226,12 +226,20 @@ export interface HandoffStep {
 export type PresenceState = "acting" | "waiting" | "locate" | "idle";
 
 /**
- * 指引目标（S17）：只负责「被高亮」，不是可执行动作。
+ * 指引目标：只负责「被定位和高亮」，不是可执行动作。
  *
- * 典型写法是 Vue 的 `v-guide-target="'captcha_input'"`：验证码输入框不应该注册成
- * agent 动作（未注册不兜底），但用户接力时框架仍然需要圈出它。
+ * 典型场景包括文件上传区、只能由人确认的控件，以及用户询问位置的操作入口。
+ * 适配器可以为模型提供人类可读名称，并在目标位于视口外时滚动到目标。
  */
 export interface GuideTarget {
+  /** 人类可读名称，会显示在模型的定位目标目录中。 */
+  label?: string;
+  /** 控件用途说明；定位目标不能执行，也不会进入动作工具清单。 */
+  description?: string;
+  /** 目标当前是否位于视口内。适配器无法判断时可省略。 */
+  isVisible?(): boolean;
+  /** 目标在视口外时将其滚入视口，不触发控件。 */
+  reveal?(): void | Promise<void>;
   presence(state: PresenceState): void;
 }
 

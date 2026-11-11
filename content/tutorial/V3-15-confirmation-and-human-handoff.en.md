@@ -110,7 +110,7 @@ The two mechanisms are appropriate for different situations:
 | The agent may act, but a person should approve first | `confirm` |
 | The action is destructive and should always ask | `kind: 'danger'`, optionally `confirm: 'always'` |
 | Correct execution requires a person to enter information or use a device | `handoff` |
-| The page needs to show which field a person should operate | `v-guide-target` plus handoff steps |
+| The page needs to show which field a person should operate | `v-guide-target`; add handoff steps when the user must complete a multi-step task |
 
 If the agent must decide *what* to do, but a person must perform the final physical or legal step, use handoff. If the agent can perform everything and a person only needs to authorize it, use confirmation.
 

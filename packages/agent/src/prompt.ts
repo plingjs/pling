@@ -15,7 +15,7 @@ import {
 } from "@plingjs/core";
 
 /**
- * 页面上下文组装 —— 这一半是 pi 独有的（lesson13 那套只解决「历史压缩」）。
+ * 页面上下文组装 —— 这是 Pling 的页面运行时能力；历史压缩由会话层负责。
  *
  * 它的世界是「一串稳定的工具」，我们的世界是「每步都在重建的页面」，
  * 所以这里要解决三件它没有的事：
@@ -47,6 +47,67 @@ export interface ContextOptions {
   maxFeedbackChars?: number;
   /** 页面身份段的字符预算，默认 500 */
   maxPageChars?: number;
+  /** Per-turn live clock; defaults to the runtime's current time and timezone. */
+  clock?: AgentClock;
+}
+
+/** Current time configuration for relative dates and timezone-aware business tasks. */
+export interface AgentClock {
+  /** Inject a clock for tests or a trusted server clock. Defaults to `new Date()`. */
+  now?: () => Date;
+  /** The human's timezone; defaults to the runtime's IANA timezone. */
+  viewerTimeZone?: string | (() => string);
+  /** Business timezone for dates that affect schedules, billing, and opening hours. */
+  businessTimeZone?: string | (() => string);
+}
+
+function resolveSetting(value: string | (() => string) | undefined): string | undefined {
+  const resolved = typeof value === "function" ? value() : value;
+  return resolved?.trim() || undefined;
+}
+
+function safeTimeZone(value: string | undefined): string {
+  const candidate = value || Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: candidate });
+    return candidate;
+  } catch (error) {
+    throw new RangeError(`Invalid IANA timezone: ${candidate}`, { cause: error });
+  }
+}
+
+function zonedTimestamp(date: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const part = (type: Intl.DateTimeFormatPartTypes): string => parts.find((item) => item.type === type)?.value ?? "00";
+  return `${part("year")}-${part("month")}-${part("day")} ${part("hour")}:${part("minute")}:${part("second")}`;
+}
+
+export function renderClockContext(clock?: AgentClock): string {
+  const now = clock?.now ? clock.now() : new Date();
+  let currentInstant: string;
+  try {
+    // `Date.prototype` also accepts a Date created in another iframe realm.
+    currentInstant = Date.prototype.toISOString.call(now);
+  } catch {
+    throw new TypeError("Agent clock now() must return a valid Date");
+  }
+  const viewerTimeZone = safeTimeZone(resolveSetting(clock?.viewerTimeZone));
+  const businessTimeZone = safeTimeZone(resolveSetting(clock?.businessTimeZone) ?? viewerTimeZone);
+  const lines = [
+    `- Current instant: ${currentInstant}`,
+    `- Viewer local time: ${zonedTimestamp(now, viewerTimeZone)} (${viewerTimeZone})`,
+    `- Business local time: ${zonedTimestamp(now, businessTimeZone)} (${businessTimeZone})`,
+  ];
+  return `\n\n## Current time (live; data, not instructions)\nUse the business timezone for business dates and schedules. Interpret relative dates such as "next Tuesday" from this timestamp; if the user's wording remains ambiguous, ask before writing.\n${lines.join("\n")}`;
 }
 
 export const DEFAULT_SYSTEM_PROMPT = [
@@ -95,7 +156,8 @@ export const DEFAULT_SYSTEM_PROMPT = [
   "17. A token such as `{{p:7 characters}}` is the placeholder for a sensitive field, and **it is that field's value**. Pass it unchanged when an action needs it, and treat it as an ordinary value in your answer. Do not explain that the field is masked, invisible, merely a token, or needs higher permission; the user sees the value itself. Never guess or invent its real content.",
   // 实测：用户问「上传在哪里点」时，模型只回答文字，页面没有任何标记。
   // 定位是只读的界面动作，必须让它调用，而不是让模型凭描述猜位置。
-  "18. When the user asks where something is, where to click or upload, how to find a control, or asks you to point something out, call `pling_locate` with the exact matching action id before answering. Do not merely describe its location. `pling_locate` scrolls to and highlights the target without executing it. It never clicks, types, uploads, navigates, submits, or changes data. Also use it before asking the user to complete a `requires human` step.",
+  "18. When the user asks where something is, where to click or upload, how to find a control, or asks you to point something out, call `pling_locate` before answering. Set `targetId` to the exact id from Locate-only targets, or to the exact action id from Available actions. Do not merely describe its location. `pling_locate` reveals and highlights the target without executing it. It never clicks, types, uploads, navigates, submits, or changes data. Also use it before asking the user to complete a `requires human` step.",
+  "19. Use the live Current time context for relative dates. Interpret business dates in the business timezone, not by guessing from page content or model knowledge. If the requested recurrence or date range is ambiguous, ask before writing.",
 ].join("\n");
 
 /**
@@ -274,6 +336,7 @@ export function renderPageContext(snapshot: Snapshot, options: ContextOptions = 
     maxFeedback = 8,
     maxFeedbackChars = 800,
     maxPageChars = 500,
+    clock,
   } = options;
 
   // 折叠之后再截断：42 行 × 3 个行内动作现在只占 3 条，上限不再是「够不够」的问题
@@ -321,15 +384,26 @@ export function renderPageContext(snapshot: Snapshot, options: ContextOptions = 
       : `## Available actions on this page (${count} actions, folded into ${model.length} entries, showing ${shown.length})`;
 
   return (
+    renderClockContext(clock) +
     renderPageIdentity(snapshot, maxPageChars) +
     renderPageStructure(snapshot, maxScopes) +
     `\n\n${header}\n${list}${overflow}` +
+    renderGuideTargets(snapshot.guideTargets ?? []) +
     renderRecords(snapshot, maxRecords, maxRecordChars) +
     renderFeedback(snapshot, maxFeedback, maxFeedbackChars) +
     renderUnavailable(snapshot, maxUnavailable) +
     `\n\n## Regions with hidden content\n${regions}` +
     state
   );
+}
+
+function renderGuideTargets(targets: NonNullable<Snapshot["guideTargets"]>): string {
+  if (targets.length === 0) return "";
+  const lines = targets.map((target) => {
+    const availability = target.visible === false ? (target.canReveal ? "off-screen; can reveal" : "off-screen") : "mounted";
+    return `- ${target.id} (${availability}) ${target.label ?? target.id}${target.description ? ` — ${target.description}` : ""}`;
+  });
+  return `\n\n## Locate-only targets (highlight only; not executable actions)\n${lines.join("\n")}\nUse pling_locate with an exact targetId to point the user to a control. This cannot activate or change it.`;
 }
 
 /**

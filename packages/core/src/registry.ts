@@ -299,6 +299,8 @@ export interface Snapshot {
   /** 当前页面身份（S10a）；适配器没提供时省略 */
   page?: PageView;
   actions: ActionView[];
+  /** Mounted locate-only controls. These are not actions and cannot be invoked. */
+  guideTargets?: GuideTargetView[];
   /**
    * 这一页的「行」：一行业务数据一条（`v-record` 声明 / S2b 由动作形状派生）。
    * 按作用域裁剪 + 条数上限，完整数量看 `recordsTotal`。
@@ -345,6 +347,14 @@ export interface Snapshot {
   scopes: ScopeInfo[];
 }
 
+export interface GuideTargetView {
+  id: string;
+  label?: string;
+  description?: string;
+  visible?: boolean;
+  canReveal: boolean;
+}
+
 /**
  * 取快照时对「行数据」的窗口控制。
  *
@@ -377,6 +387,10 @@ export interface Registry {
   declareGuideTarget(id: string, target: GuideTarget): () => void;
   /** 给指引目标报视觉状态；返回 false 表示没有登记这个目标 */
   markGuideTarget(id: string, state: PresenceState): boolean;
+  /** 读取指引目标绑定，供只读定位执行器使用 */
+  getGuideTarget(id: string): GuideTarget | undefined;
+  /** 当前已挂载的定位目标，供模型上下文使用 */
+  guideTargetViews(): GuideTargetView[];
   /** 声明一个作用域（标签 / 探索动作），返回取消声明函数 */
   declareScope(declaration: ScopeDeclaration): () => void;
   get(id: string): Binding | undefined;
@@ -559,8 +573,12 @@ export function createRegistry(options: RegistryOptions = {}): Registry {
         throw new ActionError("DUPLICATE_GUIDE_TARGET", `guide target 重复: ${id}（一个元素一个指引目标 id）`);
       }
       guideTargets.set(id, target);
+      emit();
       return () => {
-        if (guideTargets.get(id) === target) guideTargets.delete(id);
+        if (guideTargets.get(id) === target) {
+          guideTargets.delete(id);
+          emit();
+        }
       };
     },
 
@@ -569,6 +587,28 @@ export function createRegistry(options: RegistryOptions = {}): Registry {
       if (!target) return false;
       target.presence(state);
       return true;
+    },
+
+    getGuideTarget(id) {
+      return guideTargets.get(id);
+    },
+
+    guideTargetViews() {
+      return [...guideTargets].map(([id, target]) => {
+        let visible: boolean | undefined;
+        try {
+          visible = target.isVisible?.();
+        } catch {
+          visible = false;
+        }
+        return {
+          id,
+          ...(target.label ? { label: target.label } : {}),
+          ...(target.description ? { description: target.description } : {}),
+          ...(visible === undefined ? {} : { visible }),
+          canReveal: Boolean(target.reveal),
+        };
+      });
     },
 
     declareScope(declaration) {
@@ -879,6 +919,21 @@ export function createRegistry(options: RegistryOptions = {}): Registry {
       return {
         ...(page ? { page } : {}),
         actions,
+        guideTargets: [...guideTargets].map(([id, target]) => {
+          let visible: boolean | undefined;
+          try {
+            visible = target.isVisible?.();
+          } catch {
+            visible = false;
+          }
+          return {
+            id,
+            ...(target.label ? { label: target.label } : {}),
+            ...(target.description ? { description: target.description } : {}),
+            ...(visible === undefined ? {} : { visible }),
+            canReveal: Boolean(target.reveal),
+          };
+        }),
         records: recordViews,
         recordsTotal: records.size,
         recordIds,

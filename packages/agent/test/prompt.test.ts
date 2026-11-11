@@ -361,6 +361,33 @@ describe("页面身份（S10a）", () => {
     expect(out.indexOf("## Current location")).toBeLessThan(out.indexOf("## Available actions on this page"));
   });
 
+  it("提供动态本地时钟、业务时区和仅可定位目标", () => {
+    const snapshot: Snapshot = {
+      ...snapshotWith([], []),
+      guideTargets: [{ id: "teacher.create", label: "新增老师", description: "打开老师档案表单", canReveal: true }],
+    };
+    const out = renderPageContext(snapshot, {
+      clock: {
+        now: () => new Date("2026-11-11T04:00:00.000Z"),
+        viewerTimeZone: "America/Los_Angeles",
+        businessTimeZone: "Asia/Shanghai",
+      },
+    });
+    expect(out).toContain("Viewer local time: 2026-11-10 20:00:00 (America/Los_Angeles)");
+    expect(out).toContain("Business local time: 2026-11-11 12:00:00 (Asia/Shanghai)");
+    expect(out).toContain("teacher.create (mounted) 新增老师 — 打开老师档案表单");
+    expect(out).toContain("Use pling_locate with an exact targetId");
+  });
+
+  it("拒绝无效时钟和时区，避免模型依据错误日期继续执行", () => {
+    expect(() => renderPageContext(snapshotWith([], []), {
+      clock: { now: () => new Date("invalid") },
+    })).toThrow(/valid Date/);
+    expect(() => renderPageContext(snapshotWith([], []), {
+      clock: { businessTimeZone: "Mars/Olympus_Mons" },
+    })).toThrow(/Invalid IANA timezone/);
+  });
+
   it("系统提示要求导航后确认页面身份", () => {
     expect(DEFAULT_SYSTEM_PROMPT).toContain("inspect the new page identity and action list");
   });

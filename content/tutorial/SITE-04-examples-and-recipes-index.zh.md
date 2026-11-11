@@ -20,6 +20,7 @@ status: drafted
 - [案例05：暴露能力给外部](/zh/examples/external-agent-surface)把具名能力暴露给页面之外的 Agent。
 - [案例06：持久目标创建课程](/zh/examples/course-workspace-vue3)在同一张课程页面上加一个目标。助手自己打开真实弹窗、操作真实控件、请用户上传封面，保存并回读课程库。
 - [案例07：只用指令创建课程](/zh/examples/course-create-directives-vue3)用 `v-scope`、`v-record`、`v-tool` 完成同样的创建流程，不引入任务层。适合一张稳定的单页表单。
+- [案例08：冰草商家工作台](/zh/examples/bingcao-merchant-workflows-vue3)对比普通业务页面与 Pling 接入后的学员查询、课程创建、排课预览和控件定位。
 
 每个案例页都提供可操作预览、带标记的源码与接入说明。模型请求通过服务端网关发出，浏览器不持有供应商密钥。
 

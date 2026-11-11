@@ -78,6 +78,28 @@ describe("会话接线：一份配置 → 一条能用的会话", () => {
     expect(llm.toolsSeen[0]!.map((tool) => tool.function.name)).toEqual(["add_todo", "pling_locate"]);
   });
 
+  it("runtime.clock 覆盖当前时刻时保留 context.clock 的用户与业务时区", async () => {
+    const llm = createReplayLlm([{ content: "已读取当前排课时间。" }]);
+    const runtime = createAgentRuntime({
+      config: config(),
+      registry: makeRegistry([{ id: "read_schedule", primitive: "call", kind: "read" }]),
+      context: {
+        clock: {
+          viewerTimeZone: "America/Los_Angeles",
+          businessTimeZone: "Asia/Shanghai",
+        },
+      },
+      clock: { now: () => new Date("2026-11-11T04:00:00.000Z") },
+      llm,
+    });
+
+    await runtime.session.send("现在是什么时间？");
+
+    const system = llm.received[0]![0]!.content!;
+    expect(system).toContain("Viewer local time: 2026-11-10 20:00:00 (America/Los_Angeles)");
+    expect(system).toContain("Business local time: 2026-11-11 12:00:00 (Asia/Shanghai)");
+  });
+
   it("应用自己的角色说明是追加在框架规则后面的", async () => {
     const registry = makeRegistry([{ id: "a" }]);
     const llm = createReplayLlm([{ content: "好" }]);

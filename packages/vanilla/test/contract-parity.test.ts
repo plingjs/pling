@@ -107,9 +107,13 @@ describe("Vanilla public contract", () => {
     const input = document.createElement("input");
     document.body.append(input);
     const pling = createPling({ onWarn: () => {} });
-    const unbind = pling.guideTarget(input, "captcha");
+    const unbind = pling.guideTarget(input, "captcha", { label: "验证码", description: "由用户填写" });
     expect(pling.registry.snapshot().actions).toEqual([]);
+    expect(pling.registry.snapshot().guideTargets).toMatchObject([
+      { id: "captcha", label: "验证码", description: "由用户填写" },
+    ]);
     unbind();
+    expect(pling.registry.snapshot().guideTargets).toEqual([]);
     pling.destroy();
   });
 

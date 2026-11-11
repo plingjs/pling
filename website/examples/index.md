@@ -19,7 +19,7 @@ Every tutorial chapter also has a complete runnable page. To inspect the result 
 
 ## Classic examples and one comparison
 
-The first six cover the product from different angles: the smallest working integration, a business workspace, a task that crosses client-side routes, a task that survives a full page navigation, a capability surface for an agent outside the page, and a guided task that completes a real create flow. The seventh rebuilds that same create flow with nothing but `v-scope`, `v-record`, and `v-tool`, so the trade-off is visible side by side.
+The first six cover the product from different angles: the smallest working integration, a business workspace, a task that crosses client-side routes, a task that survives a full page navigation, a capability surface for an agent outside the page, and a guided task that completes a real create flow. The seventh is a directives-only comparison of that course flow. The eighth is a larger simulated merchant admin, with visible results across student, course, teacher, membership, and scheduling workflows.
 
 <DemoGallery />
 

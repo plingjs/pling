@@ -7,6 +7,7 @@ import {
   courseQuickPrompts,
   createCourseTaskView,
   createCourseTaskRuntime,
+  decorateCourseDock,
   describeCourseState,
   registerCourseActions,
   type CourseTaskRuntime,
@@ -208,6 +209,12 @@ export function mountCourseWorkspace(pling: any, root: HTMLElement, locale: Loca
           });
           dock?.open();
           openTaskInChat("course.create");
+          decorateCourseDock(locale, {
+            runtime: taskRuntime ?? undefined,
+            onOpenDock: () => dock?.open(),
+            onOpenTask: openTaskInChat,
+            onReset: () => taskRuntime?.guide?.reset(),
+          });
         });
       });
 

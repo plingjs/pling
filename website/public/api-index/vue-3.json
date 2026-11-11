@@ -4,7 +4,7 @@
   "page": "vue3",
   "route": "/reference/api/vue-3",
   "package": "@plingjs/vue",
-  "version": "0.1.0-alpha.9",
+  "version": "0.1.0-alpha.10",
   "since": "0.1.0-alpha.2",
   "stability": "preview",
   "compatibility": null,
@@ -937,19 +937,19 @@
           "anchor": "api-guide-target",
           "name": "Guide target",
           "kind": "declaration",
-          "summary": "Highlights a non-action target while a person completes a handoff step.",
+          "summary": "Registers a locate-only visual target that the assistant can point out but cannot execute.",
           "imports": [
             "@plingjs/vue"
           ],
-          "signature": "v-guide-target=\"string\"",
+          "signature": "v-guide-target=\"string | { id: string; label?: string; description?: string }\"",
           "parameters": [
             {
-              "name": "id",
-              "type": "string",
+              "name": "value",
+              "type": "string | { id: string; label?: string; description?: string }",
               "required": true,
               "defaultValue": "",
-              "description": "Guide target id referenced by a HandoffStep.highlight value.",
-              "descriptionZh": "被 `HandoffStep.highlight` 引用的引导目标 id。"
+              "description": "Registers the element as a locate-only target. Vue uses its accessible label when label is omitted.",
+              "descriptionZh": "把元素登记为只定位目标。省略 `label` 时，Vue 会尝试读取元素的无障碍名称。"
             }
           ],
           "definition": null,
@@ -957,16 +957,16 @@
           "defaults": [],
           "examples": [
             {
-              "title": "Highlight a handoff target",
-              "titleZh": "高亮人工接力目标",
-              "code": "<input v-guide-target=\"'captcha'\" />",
+              "title": "Register a locate-only control",
+              "titleZh": "登记只定位控件",
+              "code": "<button v-guide-target=\"{ id: 'teachers.add', label: '新增老师', description: '打开老师档案表单' }\">新增老师</button>\n\n<!-- The assistant can locate this button, but cannot click it through the guide target. -->",
               "lang": "ts"
             }
           ],
           "support": {
             "vue3": "native",
             "react": "native",
-            "vue2": "none",
+            "vue2": "native",
             "vanilla": "native"
           },
           "symbols": [
@@ -1482,6 +1482,22 @@
               "defaultValue": "",
               "description": "Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults.",
               "descriptionZh": "模型与运行时的局部配置。未写的字段从 `VITE_AGENT_*` 环境变量或框架默认值读取。"
+            },
+            {
+              "name": "context",
+              "type": "ContextOptions",
+              "required": false,
+              "defaultValue": "",
+              "description": "Bounds the page information included in model context, including the live clock.",
+              "descriptionZh": "设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。"
+            },
+            {
+              "name": "clock",
+              "type": "AgentClock",
+              "required": false,
+              "defaultValue": "",
+              "description": "Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes.",
+              "descriptionZh": "每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。"
             },
             {
               "name": "llm",
@@ -4023,7 +4039,7 @@
           "anchor": "api-inspectcoverage",
           "name": "inspectCoverage",
           "kind": "method",
-          "summary": "Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.",
+          "summary": "Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.",
           "imports": [
             "@plingjs/vue",
             "@plingjs/dom"
@@ -4043,8 +4059,8 @@
               "type": "number",
               "required": false,
               "defaultValue": "",
-              "description": "Recognized actionable controls in the root.",
-              "descriptionZh": "根元素内识别到的可操作控件总数。"
+              "description": "Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected.",
+              "descriptionZh": "识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。"
             },
             {
               "name": "return.declared",
@@ -4071,6 +4087,14 @@
               "descriptionZh": "由祖先声明覆盖的控件数。需要人工复核映射关系。"
             },
             {
+              "name": "return.locatable",
+              "type": "number",
+              "required": false,
+              "defaultValue": "",
+              "description": "Controls registered for pointing and highlighting only; the user must operate them.",
+              "descriptionZh": "只登记了定位和高亮的控件数；仍由用户亲自操作。"
+            },
+            {
               "name": "return.missing",
               "type": "number",
               "required": false,
@@ -4083,16 +4107,16 @@
               "type": "number | null",
               "required": false,
               "defaultValue": "",
-              "description": "Covered controls divided by total; null when there are no controls.",
-              "descriptionZh": "覆盖控件数除以总数；没有控件时为 `null`。"
+              "description": "Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls.",
+              "descriptionZh": "有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。"
             },
             {
               "name": "return.targets",
               "type": "CoverageTarget[]",
               "required": false,
               "defaultValue": "",
-              "description": "Grouped and missing controls with labels and nearby action ids.",
-              "descriptionZh": "分组与缺失控件列表，包含标签和附近动作 id。"
+              "description": "Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids.",
+              "descriptionZh": "分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。"
             }
           ],
           "definition": null,
@@ -4109,7 +4133,7 @@
           "support": {
             "vue3": "native",
             "react": "native",
-            "vue2": "none",
+            "vue2": "native",
             "vanilla": "native"
           },
           "symbols": [

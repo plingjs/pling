@@ -116,14 +116,16 @@ const codeTargetRef = usePlingGuideTarget<HTMLInputElement>("verification_code")
 />
 ```
 
-这个输入框有了稳定的视觉指引目标，但不会进入动作清单。模型可以从接力说明中知道必须由人填写，却不能自己填入或点击。
+这个输入框会进入独立的只定位目标清单。助手可以用 `pling_locate` 指出它的位置，但不能通过这项声明填写或点击。
 
 两个方向要分清：
 
 - 智能体可以操作的元素，应声明成动作；
 - 只由人查看或操作的控件，可以是指引目标。
 
-`usePlingGuideTarget` 只改变展示，不产生权限、业务操作或工具 schema。
+`usePlingGuideTarget` 只开放定位能力，不开放执行能力。它不会产生权限或业务操作，也不会创建可执行工具。
+
+用户问验证码输入框在哪里时，助手会用 `targetId: "verification_code"` 调用 `pling_locate`。框架会在适配器支持时滚到输入框并高亮，不会代替用户输入验证码。
 
 ## 把人工步骤写进动作声明
 

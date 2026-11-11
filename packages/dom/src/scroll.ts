@@ -81,3 +81,12 @@ export function scrollElementIntoView(el: Element): void {
     (el as HTMLElement).scrollIntoView({ block: "center", inline: "nearest", behavior: scrollBehavior(win) });
   }
 }
+
+/** Whether an element intersects its document viewport (nested scroll containers included). */
+export function isElementInViewport(el: Element): boolean {
+  if (!el.isConnected || el.getClientRects().length === 0) return false;
+  const rect = el.getBoundingClientRect();
+  const win = el.ownerDocument.defaultView;
+  if (!win) return false;
+  return rect.bottom > 0 && rect.right > 0 && rect.top < win.innerHeight && rect.left < win.innerWidth;
+}

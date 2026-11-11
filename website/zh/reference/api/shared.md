@@ -16,9 +16,9 @@ locale: zh
 
 | 包 | 对等依赖 | 版本 |
 | --- | --- | --- |
-| `@plingjs/core` | — | `0.1.0-alpha.9` |
+| `@plingjs/core` | — | `0.1.0-alpha.10` |
 
-当前包版本为 `0.1.0-alpha.9`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
+当前包版本为 `0.1.0-alpha.10`；稳定性为 **preview**。这是 pre-1.0 alpha，次要版本仍可能改变 API。
 
 ## 最小示例
 
@@ -462,6 +462,8 @@ const ui = {
 | API | 类型 | 参考 |
 | --- | --- | --- |
 | [AgentRuntimeOptions](#api-agentruntimeoptions) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
+| [AgentClock](#api-agentclock) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
+| [ContextOptions](#api-contextoptions) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
 | [AgentConfigOverrides](#api-agentconfigoverrides) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
 | [HookRegistry](#api-hookregistry) | 类 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
 | [SessionEvent](#api-sessionevent) | 类型 | [参考](/zh/reference/agent-runtime-sessions-context-limits) |
@@ -486,6 +488,9 @@ AgentSetup 背后的运行时契约：配置、注册表、模型、事件、钩
 interface AgentRuntimeOptions {
   config: AgentConfig;
   registry?: Registry;
+  taskCatalog?: TaskCatalog;
+  context?: ContextOptions;
+  clock?: AgentClock;
   llm?: Llm;
   responseLocale?: string | (() => string);
   telemetry?: Telemetry;
@@ -512,6 +517,8 @@ interface AgentRuntimeOptions {
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfig` | 是 | — | 已经解析完成的模型与运行时配置。 |
 | `registry` | `Registry` | 否 | — | 页面能力注册表。纯聊天运行时可省略。 |
+| `context` | `ContextOptions` | 否 | — | 设置进入模型上下文的页面信息上限，也可配置每轮读取的实时时钟。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求都附带当前时刻、用户时区和业务时区。它只提供上下文；写入仍以业务服务校验为准。 |
 | `llm` | `Llm` | 否 | — | 注入模型调用函数。可用于测试模型、服务端代理或非 OpenAI 兼容传输。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 拼接回答语言约束时使用的语言。传函数时，每次模型请求前重新读取。 |
 | `telemetry` | `Telemetry` | 否 | — | 收集当前运行时的 token、耗时、成本与重试指标。 |
@@ -538,6 +545,112 @@ const runtime = createAgentRuntime({
   registry: pling.registry,
   hooks,
   trace: true,
+});
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/agent-runtime-sessions-context-limits)
+
+
+<a id="api-agentclock"></a>
+
+### `AgentClock`
+
+每次模型请求附带的实时时间及时区上下文，不替代业务服务校验。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// 共享包
+interface AgentClock {
+  now?: () => Date;
+  viewerTimeZone?: string | (() => string);
+  businessTimeZone?: string | (() => string);
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `now` | `() => Date` | 否 | — | 返回有效的当前时刻。每次模型请求前重新读取；默认使用运行环境的时钟。无效日期会阻止模型请求。 |
+| `viewerTimeZone` | `string \| (() => string)` | 否 | — | 用于显示用户本地时间的 IANA 时区。默认使用运行环境时区；服务端应传入已认证用户的时区。 |
+| `businessTimeZone` | `string \| (() => string)` | 否 | — | 用于排课等业务日期的 IANA 时区。默认沿用 `viewerTimeZone`。 |
+
+**示例 1 · 配置门店时区**
+
+```ts
+createPling({
+  agent: {
+    clock: {
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
+});
+```
+
+**精确契约**
+
+[查看对应参考页](/zh/reference/agent-runtime-sessions-context-limits)
+
+
+<a id="api-contextoptions"></a>
+
+### `ContextOptions`
+
+设置发给模型的页面上下文范围，也可配置每轮请求使用的时钟。
+
+**导入**
+
+`@plingjs/agent`
+
+**调用方式**
+
+```ts
+// 共享包
+interface ContextOptions {
+  maxActions?: number;
+  maxRecords?: number;
+  includeState?: boolean;
+  maxIdsInHint?: number;
+  maxUnavailable?: number;
+  maxStateChars?: number;
+  maxRecordChars?: number;
+  maxScopes?: number;
+  maxFeedback?: number;
+  maxFeedbackChars?: number;
+  maxPageChars?: number;
+  clock?: AgentClock;
+}
+```
+
+**参数与选项**
+
+| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| --- | --- | --- | --- | --- |
+| `maxActions` | `number` | 否 | — | 当前页面上下文中最多列出的动作数。 |
+| `maxRecords` | `number` | 否 | — | 当前页面上下文中最多列出的记录行数。 |
+| `includeState` | `boolean` | 否 | — | 是否附带只读页面状态。 |
+| `maxUnavailable` | `number` | 否 | — | 上下文中最多列出的不可用动作数。 |
+| `clock` | `AgentClock` | 否 | — | 每次模型请求使用的实时时间及时区上下文。 |
+
+**示例 1 · 为每次请求提供时钟**
+
+```ts
+createAgentRuntime({
+  config,
+  registry,
+  context: {
+    clock: {
+      viewerTimeZone: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+      businessTimeZone: "Asia/Shanghai",
+    },
+  },
 });
 ```
 
@@ -1187,7 +1300,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-扫描已挂载页面中尚未声明的交互控件。它只报告，不注册动作。
+把识别到的原生控件和 ARIA 控件分为直接声明、派生、祖先分组、只定位或缺失。它只报告、不注册动作，也无法发现任意非语义事件处理器。
 
 **导入**
 
@@ -1205,13 +1318,14 @@ inspectCoverage(root: Element | null): CoverageReport
 | 参数 | 类型 | 必填 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | 否 | — | 要扫描的应用根。Vue 使用挂载根；React 与原生调用方可传任意根元素。 |
-| `return.total` | `number` | 否 | — | 根元素内识别到的可操作控件总数。 |
+| `return.total` | `number` | 否 | — | 识别到的原生控件和带有受支持交互 ARIA role 的元素数。没有语义标记的自定义点击处理器无法被扫描发现。 |
 | `return.declared` | `number` | 否 | — | 有直接声明的控件数。 |
 | `return.derived` | `number` | 否 | — | 由可选 L1 派生生成的动作数。 |
 | `return.grouped` | `number` | 否 | — | 由祖先声明覆盖的控件数。需要人工复核映射关系。 |
+| `return.locatable` | `number` | 否 | — | 只登记了定位和高亮的控件数；仍由用户亲自操作。 |
 | `return.missing` | `number` | 否 | — | 祖先链上没有任何声明的可操作控件数。 |
-| `return.coveragePercent` | `number \| null` | 否 | — | 覆盖控件数除以总数；没有控件时为 `null`。 |
-| `return.targets` | `CoverageTarget[]` | 否 | — | 分组与缺失控件列表，包含标签和附近动作 id。 |
+| `return.coveragePercent` | `number \| null` | 否 | — | 有直接声明、派生、祖先分组或只定位声明的控件数除以总数。它表示声明覆盖率，不代表 Agent 可执行控件的比例；没有控件时为 `null`。 |
+| `return.targets` | `CoverageTarget[]` | 否 | — | 分组、只定位和未声明的控件列表，包含标签、目标 id 或附近动作 id。 |
 
 **示例 1 · 检查 DOM 根元素**
 
@@ -3401,7 +3515,7 @@ createAgentLoop(options: LoopOptions): AgentLoop
 | `handoff` | `HandoffGate` | 否 | — | 人工接力通道。省略时人工接力工具会失败，而不是被模拟执行。 |
 | `systemPrompt` | `string` | 否 | — | 附加系统说明。框架规则仍然有效。 |
 | `responseLocale` | `string \| (() => string)` | 否 | — | 回答语言提示；传函数时每轮重新读取。 |
-| `context` | `ContextOptions` | 否 | — | 模型上下文中动作、记录、状态、区域、反馈与页面身份的有界设置。 |
+| `context` | `ContextOptions` | 否 | — | 设置页面上下文范围，也可配置每次模型请求前使用的实时时钟。 |
 | `history` | `HistoryOptions` | 否 | — | 上下文预算、压缩水位、最近条目保留数与工具结果上限。 |
 | `historyState` | `HistorySnapshot` | 否 | — | 从检查点恢复摘要与消息；系统上下文会按当前页面重建。 |
 | `hooks` | `HookRegistry` | 否 | — | 工具生命周期钩子。 |
@@ -3502,6 +3616,7 @@ renderPageContext(snapshot: Snapshot, options?: ContextOptions): string
 | `options.maxFeedback` | `number` | 否 | `8` | 最多列出的反馈条目数，默认 8。 |
 | `options.maxFeedbackChars` | `number` | 否 | `800` | 反馈段的字符预算，默认 800。 |
 | `options.maxPageChars` | `number` | 否 | `500` | 页面身份段的字符预算，默认 500。 |
+| `options.clock` | `AgentClock` | 否 | — | 在页面上下文中加入当前时刻、用户本地时间和业务本地时间。 |
 
 **示例 1 · 渲染更小的上下文**
 
@@ -3754,10 +3869,10 @@ const config = resolveAgentConfig({
 
 | 包 | 版本 | 对等依赖 |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | 项目 | 值 |
 | --- | --- |

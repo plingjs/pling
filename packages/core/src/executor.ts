@@ -839,28 +839,31 @@ export function createExecutor(options: ExecutorOptions): Executor {
     if (!id) {
       return new ActionError(
         "INVALID_PARAMS",
-        'Missing required parameter actionId. Copy an exact action id from the current action list.',
+        'Missing required parameter targetId. Copy an exact id from the current locate-only target list or action list.',
       ).toResult();
     }
 
     const binding = registry.get(id);
-    if (!binding || binding.descriptor.modelVisible === false) {
+    const guideTarget = registry.getGuideTarget(id);
+    if ((!binding || binding.descriptor.modelVisible === false) && !guideTarget) {
       return new ActionError(
         "ACTION_NOT_FOUND",
-        `Cannot locate unknown action: ${id}. Use an exact action id from the current action list; do not invent one.`,
+        `Cannot locate unknown target: ${id}. Use an exact id from the current locate-only target list or action list; do not invent one.`,
       ).toResult();
     }
 
     // 定位是视觉操作：目标在视口外时先滚过去。它不需要过确认闸门，也不会产生副作用。
-    if (binding.isVisible && !binding.isVisible()) {
-      if (!binding.reveal) {
+    const isVisible = binding?.isVisible ?? guideTarget?.isVisible;
+    const reveal = binding?.reveal ?? guideTarget?.reveal;
+    if (isVisible && !isVisible()) {
+      if (!reveal) {
         return new ActionError(
           "ACTION_UNAVAILABLE",
           `The target of ${id} is outside the visible area and has no reveal handler, so it cannot be shown to the user.`,
         ).toResult();
       }
       try {
-        await binding.reveal();
+        await reveal();
         await settle?.();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -869,7 +872,7 @@ export function createExecutor(options: ExecutorOptions): Executor {
           `Could not scroll the target of ${id} into view; reason: ${message}`,
         ).toResult();
       }
-      if (binding.isVisible && !binding.isVisible()) {
+      if (isVisible && !isVisible()) {
         return new ActionError(
           "ACTION_UNAVAILABLE",
           `Tried to scroll the target of ${id} into view, but it is still not visible.`,
@@ -877,10 +880,11 @@ export function createExecutor(options: ExecutorOptions): Executor {
       }
     }
 
-    if (!binding.presence) {
+    const presence = binding?.presence ?? guideTarget?.presence;
+    if (!presence) {
       return new ActionError(
         "ACTION_UNAVAILABLE",
-        `Action ${id} has no visual target to highlight. Describe where it is in words, or declare a DOM-backed action for it.`,
+        `Target ${id} has no visual element to highlight. Describe where it is in words, or declare a DOM-backed action or guide target.`,
       ).toResult();
     }
 
@@ -888,11 +892,11 @@ export function createExecutor(options: ExecutorOptions): Executor {
       clearLocateTimer();
       // 与普通 handoff 的「等待」分开：用户明确问「在哪里」时，适配器应给出
       // 更强的聚焦提示，而不是一个容易被页面主题淹没的细环。
-      binding.presence("locate");
+      presence("locate");
       if (locateDurationMs > 0) {
         locateTimer = setTimeout(() => {
           locateTimer = undefined;
-          binding.presence?.("idle");
+          presence("idle");
         }, locateDurationMs);
       }
     } catch (error) {
@@ -907,8 +911,8 @@ export function createExecutor(options: ExecutorOptions): Executor {
         action: { id: LOCATE_ACTION_ID, description: "Highlighted the requested target without executing it" },
         located: {
           id,
-          ...(binding.descriptor.label ? { label: binding.descriptor.label } : {}),
-          description: binding.descriptor.description,
+          ...((binding?.descriptor.label ?? guideTarget?.label) ? { label: binding?.descriptor.label ?? guideTarget?.label } : {}),
+          description: binding?.descriptor.description ?? guideTarget?.description ?? "",
         },
       },
     };

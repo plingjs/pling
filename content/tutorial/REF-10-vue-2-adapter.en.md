@@ -142,7 +142,7 @@ The dock is the shared vanilla surface. It supports the same conversation, confi
 | `confirm` / `handoff` | Supported through tool options |
 | `derive` | Supported through vanilla options |
 | `v-feedback` | Missing |
-| `v-guide-target` | Missing |
+| `v-guide-target` | Supported: registers a locate-only target |
 | `v-task` | Missing |
 | Compound `steps` | Missing |
 | Model settings UI | Missing |
@@ -157,7 +157,7 @@ Do not infer Vue 3 parity from the shared directive names. Compare the [Vue 3 ad
 - `@plingjs/vue2` requires Vue 2.7. Upgrade 2.6 when possible; otherwise use the manual Vanilla path.
 - Install the plugin once, before the root component is created.
 - State and tools that rely on component lifecycle should be declared in `setup()`, not in a detached helper.
-- `v-feedback`, guide targets, task entrances, and compound flows require either a Vue 3 move or a new Vue 2 implementation.
+- `v-guide-target` is supported for locate-only targets. `v-feedback`, task entrances, and compound flows still require either a Vue 3 move or a separate Vue 2 implementation.
 - The adapter shares the vanilla dock, so styling is controlled through the shared `ui` options rather than Vue 3 component slots.
 
 ## Failure modes

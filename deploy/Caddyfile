@@ -21,10 +21,6 @@
 	@root path /
 	redir @root /demos/quickstart/ 302
 
-	handle_path /api/recipe/* {
-		reverse_proxy recipe:5193
-	}
-
 	handle_path /api/agent/* {
 		reverse_proxy api:5192
 	}

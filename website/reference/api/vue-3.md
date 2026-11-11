@@ -16,9 +16,9 @@ This page lists only `@plingjs/vue` entry points, plus the shared-package types 
 
 | Package | Peer dependencies | Version |
 | --- | --- | --- |
-| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.9` |
+| `@plingjs/vue` | vue ^3 | `0.1.0-alpha.10` |
 
-The current package version is `0.1.0-alpha.9`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
+The current package version is `0.1.0-alpha.10`; stability is **preview**. This is a pre-1.0 alpha, so a minor release may still change the API.
 
 ## Minimal example
 
@@ -620,7 +620,7 @@ pling.ask(prompt: string, options?: PlingAskOptions): Promise<void>
 
 ### `Guide target`
 
-Highlights a non-action target while a person completes a handoff step.
+Registers a locate-only visual target that the assistant can point out but cannot execute.
 
 **Imports**
 
@@ -630,19 +630,21 @@ Highlights a non-action target while a person completes a handoff step.
 
 ```ts
 // Vue 3
-v-guide-target="string"
+v-guide-target="string | { id: string; label?: string; description?: string }"
 ```
 
 **Parameters and options**
 
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `id` | `string` | Yes | — | Guide target id referenced by a HandoffStep.highlight value. |
+| `value` | `string \| { id: string; label?: string; description?: string }` | Yes | — | Registers the element as a locate-only target. Vue uses its accessible label when label is omitted. |
 
-**Example 1 · Highlight a handoff target**
+**Example 1 · Register a locate-only control**
 
 ```ts
-<input v-guide-target="'captcha'" />
+<button v-guide-target="{ id: 'teachers.add', label: '新增老师', description: '打开老师档案表单' }">新增老师</button>
+
+<!-- The assistant can locate this button, but cannot click it through the guide target. -->
 ```
 
 **Canonical reference**
@@ -954,6 +956,8 @@ type AgentSetup = Omit<AgentRuntimeOptions, "config" | "registry" | "gate"> & {
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `config` | `AgentConfigOverrides` | No | — | Partial model and runtime configuration. Omitted fields are read from VITE_AGENT_* environment variables or framework defaults. |
+| `context` | `ContextOptions` | No | — | Bounds the page information included in model context, including the live clock. |
+| `clock` | `AgentClock` | No | — | Adds the current instant, viewer timezone, and business timezone to every model request. This is context only; business services remain authoritative for writes. |
 | `llm` | `Llm` | No | — | Injects the model call function. Use it for a test model, a server proxy, or a non-OpenAI-compatible transport. |
 | `responseLocale` | `string \| (() => string)` | No | — | Locale used when composing the response-language instruction. A function is re-read before each model request. |
 | `telemetry` | `Telemetry` | No | — | Collects token, duration, cost, and retry metrics for the current runtime. |
@@ -2078,7 +2082,7 @@ createPling({ shared: page });
 
 ### `inspectCoverage`
 
-Scans the mounted page for interactive controls that have no declaration. It reports; it never registers an action.
+Classifies recognized native and ARIA controls as declared, derived, grouped, locate-only, or missing. It never registers actions and cannot detect arbitrary non-semantic event handlers.
 
 **Imports**
 
@@ -2096,13 +2100,14 @@ pling.inspectCoverage(): CoverageReport
 | Parameter | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `root` | `Element \| null` | No | — | Application root to scan. Vue uses its mount root; React and DOM callers may pass any root. |
-| `return.total` | `number` | No | — | Recognized actionable controls in the root. |
+| `return.total` | `number` | No | — | Recognized native controls and elements with supported interactive ARIA roles. Custom click handlers without semantic markup cannot be detected. |
 | `return.declared` | `number` | No | — | Controls with a direct declaration. |
 | `return.derived` | `number` | No | — | Controls produced by optional L1 derivation. |
 | `return.grouped` | `number` | No | — | Controls covered by a declaration on an ancestor. Review these manually. |
+| `return.locatable` | `number` | No | — | Controls registered for pointing and highlighting only; the user must operate them. |
 | `return.missing` | `number` | No | — | Actionable controls with no declaration in their ancestry. |
-| `return.coveragePercent` | `number \| null` | No | — | Covered controls divided by total; null when there are no controls. |
-| `return.targets` | `CoverageTarget[]` | No | — | Grouped and missing controls with labels and nearby action ids. |
+| `return.coveragePercent` | `number \| null` | No | — | Controls with an explicit, derived, grouped, or locate-only treatment divided by total; this is declaration coverage, not the percentage of controls the agent can execute. Null when there are no controls. |
+| `return.targets` | `CoverageTarget[]` | No | — | Grouped, locate-only, and missing controls with labels, target ids, or nearby action ids. |
 
 **Example 1 · Inspect Vue coverage**
 
@@ -4230,10 +4235,10 @@ interface GuideActionItem {
 
 | Package | Version | Peer dependencies |
 | --- | --- | --- |
-| `@plingjs/vue` | `0.1.0-alpha.9` | `vue ^3` |
-| `@plingjs/react` | `0.1.0-alpha.9` | `react >=16.3` |
-| `@plingjs/vue2` | `0.1.0-alpha.9` | `vue ^2.7.0` |
-| `@plingjs/vanilla` | `0.1.0-alpha.9` | — |
+| `@plingjs/vue` | `0.1.0-alpha.10` | `vue ^3` |
+| `@plingjs/react` | `0.1.0-alpha.10` | `react >=16.3` |
+| `@plingjs/vue2` | `0.1.0-alpha.10` | `vue ^2.7.0` |
+| `@plingjs/vanilla` | `0.1.0-alpha.10` | — |
 
 | Item | Value |
 | --- | --- |

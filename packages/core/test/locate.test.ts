@@ -81,4 +81,27 @@ describe("executor.locate：只指向，不执行", () => {
     expect(await executor.locate("save")).toMatchObject({ error: { code: "ACTION_UNAVAILABLE" } });
     expect(run).not.toHaveBeenCalled();
   });
+
+  it("定位独立指引目标，不要求它注册成可执行动作", async () => {
+    const registry = createRegistry();
+    const marks: PresenceState[] = [];
+    let visible = false;
+    registry.declareGuideTarget("teacher.create", {
+      label: "新增老师",
+      description: "打开老师档案表单",
+      isVisible: () => visible,
+      reveal: () => { visible = true; },
+      presence: (state) => marks.push(state),
+    });
+    const executor = createExecutor({ registry, policy: allowAll, locateDurationMs: 0 });
+
+    expect(registry.snapshot().actions).toHaveLength(0);
+    expect(registry.snapshot().guideTargets).toEqual([
+      { id: "teacher.create", label: "新增老师", description: "打开老师档案表单", visible: false, canReveal: true },
+    ]);
+    expect(await executor.locate("teacher.create")).toMatchObject({
+      result: { ok: true, executed: false, located: { id: "teacher.create", label: "新增老师", description: "打开老师档案表单" } },
+    });
+    expect(marks).toEqual(["locate"]);
+  });
 });

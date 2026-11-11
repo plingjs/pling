@@ -420,13 +420,15 @@ export function createAgentLoop(options: LoopOptions): AgentLoop {
         return result;
       }
 
-      const rawTarget = typeof args.actionId === "string" ? args.actionId.trim() : "";
+      const rawTarget = typeof args.targetId === "string" && args.targetId.trim()
+        ? args.targetId.trim()
+        : typeof args.actionId === "string" ? args.actionId.trim() : "";
       const targetId = protocol.nameToId.get(rawTarget) ?? knownNames.get(rawTarget) ?? rawTarget;
       if (!targetId) {
         const result: ExecResult = {
           error: {
             code: "INVALID_PARAMS",
-            message: `Missing required parameter actionId. Copy an exact action id from the current action list: ${listActionIds(current)}`,
+            message: `Missing required parameter targetId. Copy an exact target id from the locate-only target list, or an action id from the current action list: ${listActionIds(current)}${current.guideTargets?.length ? `; locate-only targets: ${current.guideTargets.map((target) => target.id).join(" / ")}` : ""}`,
           },
         };
         state.errors += 1;
